@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "build:local": "eas build --local --platform android --profile development",
+    "build:local": "pnpm exec eas build --local --platform android --profile development",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -33,7 +33,7 @@
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
     "react-native-gesture-handler": "~2.30.0",
-    "react-native-litert-lm": "^0.3.6",
+    "react-native-litert-lm": "^0.3.7",
     "react-native-nitro-modules": "^0.35.6",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eas-cli": "^18.11.0",
     "typescript": "~5.9.2"
   },
   "private": true

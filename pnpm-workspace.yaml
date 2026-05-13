@@ -1,2 +1,3 @@
 allowBuilds:
+  dtrace-provider: true
   react-native-litert-lm: true

@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { GEMMA_3N_E2B_IT_INT4, getRecommendedBackend, useModel } from 'react-native-litert-lm';
 
 export function useGemmaModel() {
-  // Choose recommended backend (prefers 'gpu' when available)
+  // Use the library-recommended backend and fall back to cpu if unavailable.
   const recommended = getRecommendedBackend();
-  const backend = useMemo(() => recommended ?? 'gpu', [recommended]);
+  const backend = useMemo(() => recommended ?? 'cpu', [recommended]);
 
   const { model, isReady, downloadProgress, error, load, deleteModel, memorySummary } = useModel(
     GEMMA_3N_E2B_IT_INT4,
