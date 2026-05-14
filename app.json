@@ -40,6 +40,14 @@
         }
       ],
       "react-native-litert-lm",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow SS Search to access your screenshots.",
+          "savePhotosPermission": "Allow SS Search to save screenshots.",
+          "granularPermissions": ["photo"]
+        }
+      ],
       "expo-font",
       "expo-image",
       "expo-web-browser"
