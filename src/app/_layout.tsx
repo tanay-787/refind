@@ -5,6 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ModelDownloadGate } from '@/features/model/components/ModelDownloadGate';
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? MD3DarkTheme : MD3LightTheme;
@@ -15,6 +17,7 @@ export default function RootLayout() {
         <PaperProvider theme={theme}>
           <StatusBar style={theme.dark ? 'light' : 'dark'} />
           <Stack screenOptions={{ headerShown: false }} />
+          <ModelDownloadGate />
         </PaperProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

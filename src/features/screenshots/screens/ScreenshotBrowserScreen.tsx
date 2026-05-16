@@ -1,4 +1,5 @@
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Appbar, Text, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +11,7 @@ import { useScreenshotLibrary } from '../hooks/useScreenshotLibrary';
 import { useScreenshotViewer } from '../hooks/useScreenshotViewer';
 
 export default function ScreenshotBrowserScreen() {
+  const router = useRouter();
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const { assets, error, loading, granted, denied, requestAccess, refresh } = useScreenshotLibrary();
@@ -25,7 +27,7 @@ export default function ScreenshotBrowserScreen() {
         <Appbar.BackAction onPress={() => undefined} />
         <Appbar.Content title="Screenshots" subtitle={`${visibleAssets.length} items`} />
         <Appbar.Action icon="filter-variant" onPress={() => undefined} />
-        <Appbar.Action icon="dots-vertical" onPress={() => undefined} />
+        <Appbar.Action icon="memory" onPress={() => router.push('/model')} />
       </Appbar.Header>
 
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
