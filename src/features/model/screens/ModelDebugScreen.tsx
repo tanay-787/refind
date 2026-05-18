@@ -5,14 +5,13 @@ import { Appbar, Button, Card, Text, TextInput, useTheme } from 'react-native-pa
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useGemmaModelDownload } from '../hooks/useGemmaModelDownload';
-import { useGemmaModel } from '../hooks/useGemmaModel';
+import { useModelContext } from '../hooks/useModelContext';
 
 export default function ModelDebugScreen() {
   const router = useRouter();
   const theme = useTheme();
   const download = useGemmaModelDownload();
-  const [isLoadingLocalModel, setIsLoadingLocalModel] = useState(false);
-  const { state, generate, load, deleteModel, memorySummary } = useGemmaModel({
+  const { state, generate, load, deleteModel, memorySummary } = useModelContext({
     modelSourceUri: download.downloaded ? download.fileUri : null,
     autoLoad: false,
   });
@@ -22,15 +21,6 @@ export default function ModelDebugScreen() {
   const runPrompt = async () => {
     const result = await generate(prompt);
     setOutput(result);
-  };
-
-  const loadLocalModel = async () => {
-    setIsLoadingLocalModel(true);
-    try {
-      await load();
-    } finally {
-      setIsLoadingLocalModel(false);
-    }
   };
 
   return (
@@ -48,7 +38,7 @@ export default function ModelDebugScreen() {
               <Text>Download status: {download.status}</Text>
               <Text>Backend: {state.backend}</Text>
               <Text>Ready: {state.isReady ? 'yes' : 'no'}</Text>
-              <Text>Loading: {isLoadingLocalModel ? 'yes' : 'no'}</Text>
+              <Text>Loading: {state.isLoading ? 'yes' : 'no'}</Text>
               <Text>Generating: {state.isGenerating ? 'yes' : 'no'}</Text>
               <Text>Load progress: {Math.round((state.downloadProgress || 0) * 100)}%</Text>
               <Text>Download progress: {Math.round((download.progress || 0) * 100)}%</Text>
@@ -72,10 +62,10 @@ export default function ModelDebugScreen() {
               </Button>
               <Button
                 mode="outlined"
-                onPress={() => void loadLocalModel()}
-                disabled={!download.downloaded || isLoadingLocalModel}
+                onPress={() => void load()}
+                disabled={!download.downloaded || state.isLoading}
               >
-                {isLoadingLocalModel ? 'Loading local model...' : 'Load local model'}
+                {state.isLoading ? 'Loading local model...' : 'Load local model'}
               </Button>
               <Button mode="outlined" onPress={() => void deleteModel()}>
                 Delete model
