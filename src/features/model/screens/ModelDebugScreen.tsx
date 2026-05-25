@@ -27,7 +27,7 @@ export default function ModelDebugScreen() {
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header mode="small" elevated={false} style={styles.header}>
         <Appbar.BackAction onPress={() => router.back()} />
-        <Appbar.Content title="Gemma 4 E2B" subtitle={state.status} />
+        <Appbar.Content title="Gemma 3n E2B" subtitle={state.status} />
       </Appbar.Header>
 
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>

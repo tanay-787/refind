@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ModelDownloadGate } from '@/features/model/components/ModelDownloadGate';
+import { PipelineInitializer } from '@/features/pipeline/components/PipelineInitializer';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -15,9 +16,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PaperProvider theme={theme}>
-          <StatusBar style={theme.dark ? 'light' : 'dark'} />
-          <Stack screenOptions={{ headerShown: false }} />
-          <ModelDownloadGate />
+          <PipelineInitializer>
+            <StatusBar style={theme.dark ? 'light' : 'dark'} />
+            <Stack screenOptions={{ headerShown: false }} />
+            <ModelDownloadGate />
+          </PipelineInitializer>
         </PaperProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

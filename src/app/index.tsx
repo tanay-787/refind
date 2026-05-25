@@ -1,1 +1,2 @@
-export { default } from '@/features/screenshots/screens/ScreenshotBrowserScreen';
+export { SearchScreen as default } from '@/features/pipeline/screens/SearchScreen';
+

@@ -1,20 +1,20 @@
 import * as BackgroundTask from 'expo-background-task';
-import * as FileSystem from 'expo-file-system/legacy';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as TaskManager from 'expo-task-manager';
 
 import { GEMMA_MODEL_URL } from '../constants';
 
 export const MODEL_DOWNLOAD_TASK = 'gemma-model-download-task';
-export const MODEL_FILE_NAME = 'gemma-4-E2B-it.litertlm';
+export const MODEL_FILE_NAME = 'gemma-3n-E2B-it-int4.litertlm';
 
-const MODEL_DIRECTORY = `${FileSystem.documentDirectory ?? ''}models/`;
-const MODEL_FILE_URI = `${MODEL_DIRECTORY}${MODEL_FILE_NAME}`;
-const STATE_FILE_URI = `${MODEL_DIRECTORY}download-state.json`;
+const MODEL_DIRECTORY = new Directory(Paths.document, 'models');
+const MODEL_FILE = new File(MODEL_DIRECTORY, MODEL_FILE_NAME);
+const STATE_FILE = new File(MODEL_DIRECTORY, 'download-state.json');
 
 type DownloadState = {
   fileUri: string | null;
   progress: number;
-  resumeData: string | null;
+  resumeData: null;
   status: 'idle' | 'checking' | 'downloading' | 'paused' | 'ready' | 'error';
   error: string | null;
   dismissed: boolean;
@@ -32,10 +32,11 @@ const defaultState: DownloadState = {
 };
 
 let state: DownloadState = defaultState;
-let resumable: FileSystem.DownloadResumable | null = null;
 let initialized = false;
 let initializationPromise: Promise<void> | null = null;
 const listeners = new Set<Listener>();
+let cancelRequested = false;
+let pauseRequested = false;
 
 function emit() {
   for (const listener of listeners) {
@@ -44,21 +45,23 @@ function emit() {
 }
 
 async function ensureDirectory() {
-  if (!FileSystem.documentDirectory) {
-    throw new Error('Document directory is unavailable.');
+  if (!MODEL_DIRECTORY.exists) {
+    await MODEL_DIRECTORY.create({ intermediates: true });
   }
-
-  await FileSystem.makeDirectoryAsync(MODEL_DIRECTORY, { intermediates: true });
 }
 
 async function persistState() {
   await ensureDirectory();
-  await FileSystem.writeAsStringAsync(STATE_FILE_URI, JSON.stringify(state));
+  await STATE_FILE.write(JSON.stringify(state));
 }
 
 async function loadPersistedState() {
   try {
-    const contents = await FileSystem.readAsStringAsync(STATE_FILE_URI);
+    if (!STATE_FILE.exists) {
+      state = defaultState;
+      return;
+    }
+    const contents = await STATE_FILE.text();
     const parsed = JSON.parse(contents) as Partial<DownloadState>;
     state = { ...defaultState, ...parsed };
   } catch {
@@ -68,11 +71,10 @@ async function loadPersistedState() {
 
 async function refreshFileState() {
   await ensureDirectory();
-  const info = await FileSystem.getInfoAsync(MODEL_FILE_URI);
-  if (info.exists) {
+  if (MODEL_FILE.exists) {
     state = {
       ...state,
-      fileUri: MODEL_FILE_URI,
+      fileUri: MODEL_FILE.uri,
       progress: 1,
       status: 'ready',
       error: null,
@@ -94,13 +96,6 @@ export async function initializeModelDownloadState() {
   }
 
   initializationPromise = (async () => {
-    if (!FileSystem.documentDirectory) {
-      state = defaultState;
-      emit();
-      initialized = true;
-      return;
-    }
-
     state = { ...defaultState, status: 'checking' };
     emit();
     await loadPersistedState();
@@ -141,7 +136,7 @@ export async function unregisterModelDownloadTask() {
 }
 
 export function getModelFileUri() {
-  return MODEL_FILE_URI;
+  return MODEL_FILE.uri;
 }
 
 export function isModelDownloaded() {
@@ -152,37 +147,42 @@ export async function startModelDownload() {
   await ensureDirectory();
   state = { ...state, status: 'downloading', error: null, dismissed: false };
   emit();
-
-  resumable = FileSystem.createDownloadResumable(
-    GEMMA_MODEL_URL,
-    MODEL_FILE_URI,
-    {
-      sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
-      cache: true,
-    },
-    (progress) => {
-      const nextProgress =
-        progress.totalBytesExpectedToWrite > 0
-          ? progress.totalBytesWritten / progress.totalBytesExpectedToWrite
-          : state.progress;
-
-      state = { ...state, progress: nextProgress, status: 'downloading' };
-      emit();
-    },
-    state.resumeData ?? undefined,
-  );
+  cancelRequested = false;
+  pauseRequested = false;
 
   await registerModelDownloadTask();
 
   try {
-    const result = await resumable.downloadAsync();
+    const result = await File.downloadFileAsync(GEMMA_MODEL_URL, MODEL_FILE, { idempotent: true });
     if (!result) {
+      return;
+    }
+
+    if (cancelRequested || pauseRequested) {
+      try {
+        if (MODEL_FILE.exists) {
+          await MODEL_FILE.delete();
+        }
+      } catch {
+        // ignore if file already absent
+      }
+      state = {
+        ...state,
+        fileUri: null,
+        progress: 0,
+        resumeData: null,
+        status: cancelRequested ? 'idle' : 'paused',
+        error: null,
+      };
+      emit();
+      await persistState();
+      await unregisterModelDownloadTask();
       return;
     }
 
     state = {
       ...state,
-      fileUri: result.uri,
+      fileUri: result.uri ?? MODEL_FILE.uri,
       progress: 1,
       resumeData: null,
       status: 'ready',
@@ -200,20 +200,19 @@ export async function startModelDownload() {
     emit();
     await persistState();
     throw cause;
-  } finally {
-    resumable = null;
   }
 }
 
 export async function pauseModelDownload() {
-  if (!resumable) return;
-
-  const pauseState = await resumable.pauseAsync();
+  if (state.status !== 'downloading') {
+    return;
+  }
+  pauseRequested = true;
   state = {
     ...state,
     status: 'paused',
     progress: state.progress,
-    resumeData: pauseState.resumeData ?? null,
+    resumeData: null,
     error: null,
   };
   emit();
@@ -221,57 +220,15 @@ export async function pauseModelDownload() {
 }
 
 export async function resumeModelDownload() {
-  if (state.status !== 'paused' || !state.resumeData) {
+  if (state.status !== 'paused') {
     return;
   }
-
-  await ensureDirectory();
-  resumable = FileSystem.createDownloadResumable(
-    GEMMA_MODEL_URL,
-    MODEL_FILE_URI,
-    {
-      sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
-      cache: true,
-    },
-    (progress) => {
-      const nextProgress =
-        progress.totalBytesExpectedToWrite > 0
-          ? progress.totalBytesWritten / progress.totalBytesExpectedToWrite
-          : state.progress;
-
-      state = { ...state, progress: nextProgress, status: 'downloading' };
-      emit();
-    },
-    state.resumeData,
-  );
-
-  state = { ...state, status: 'downloading', error: null };
-  emit();
-  await registerModelDownloadTask();
-
-  const result = await resumable.resumeAsync();
-  if (!result) {
-    return;
-  }
-
-  state = {
-    ...state,
-    fileUri: result.uri,
-    progress: 1,
-    resumeData: null,
-    status: 'ready',
-    error: null,
-  };
-  emit();
-  await persistState();
-  await unregisterModelDownloadTask();
-  resumable = null;
+  await startModelDownload();
 }
 
 export async function cancelModelDownload() {
-  if (resumable) {
-    await resumable.cancelAsync();
-    resumable = null;
+  if (state.status === 'downloading') {
+    cancelRequested = true;
   }
 
   state = {
@@ -294,7 +251,9 @@ export async function dismissModelDownloadPrompt() {
 export async function clearDownloadedModel() {
   await cancelModelDownload();
   try {
-    await FileSystem.deleteAsync(MODEL_FILE_URI);
+    if (MODEL_FILE.exists) {
+      await MODEL_FILE.delete();
+    }
   } catch {
     // ignore if file already absent
   }
@@ -306,7 +265,7 @@ export async function clearDownloadedModel() {
 
 export function getModelDownloadSummary() {
   return {
-    modelFileUri: MODEL_FILE_URI,
+    modelFileUri: MODEL_FILE.uri,
     state,
   };
 }

@@ -43,7 +43,7 @@ export function ModelDownloadGate() {
           <View style={styles.overlay}>
             <Card mode="outlined" style={[styles.card, { backgroundColor: theme.colors.surface }]}>
               <Card.Content style={styles.stack}>
-                <Text variant="headlineSmall">Install Gemma 4 E2B</Text>
+                <Text variant="headlineSmall">Install Gemma 3n E2B</Text>
                 <Text style={{ color: theme.colors.onSurfaceVariant }}>
                   The model is downloaded from a public HTTPS URL and can keep running in the
                   background. You can pause and resume it later.
@@ -101,7 +101,7 @@ export function ModelDownloadGate() {
         duration={2500}
         style={styles.snackbar}
       >
-        Gemma 4 E2B is ready
+        Gemma 3n E2B is ready
       </Snackbar>
     </>
   );
