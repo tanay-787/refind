@@ -43,6 +43,28 @@ export async function loadScreenshotAssets() {
   return uniqueAssets(albumAssets.flat()).sort((left, right) => right.creationTime - left.creationTime);
 }
 
+/**
+ * Watches the device media library and refreshes the screenshot snapshot on change.
+ */
+export async function watchScreenshotAssets(
+  onChange: (assets: MediaLibrary.Asset[]) => void | Promise<void>,
+  onError: (cause: unknown) => void,
+) {
+  await onChange(await loadScreenshotAssets());
+
+  const subscription = MediaLibrary.addListener(() => {
+    void (async () => {
+      try {
+        await onChange(await loadScreenshotAssets());
+      } catch (cause) {
+        onError(cause);
+      }
+    })();
+  });
+
+  return () => subscription.remove();
+}
+
 export function isWithinRange(creationTime: number, filter: 'all' | 'today' | 'week' | 'month') {
   if (filter === 'all') return true;
 

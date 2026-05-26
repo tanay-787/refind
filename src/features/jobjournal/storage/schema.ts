@@ -1,0 +1,37 @@
+export const JOB_JOURNAL_SCHEMA = `
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS job_journal_jobs (
+  id TEXT PRIMARY KEY,
+  image_uri TEXT NOT NULL,
+  image_hash TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS job_journal_stage_executions (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL REFERENCES job_journal_jobs(id) ON DELETE CASCADE,
+  stage TEXT NOT NULL,
+  attempt INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,
+  lease_until INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  last_error TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS job_journal_stage_executions_job_stage_idx
+  ON job_journal_stage_executions(job_id, stage);
+
+CREATE TABLE IF NOT EXISTS job_journal_checkpoints (
+  job_id TEXT NOT NULL REFERENCES job_journal_jobs(id) ON DELETE CASCADE,
+  stage TEXT NOT NULL,
+  output_path TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (job_id, stage)
+);
+`;
