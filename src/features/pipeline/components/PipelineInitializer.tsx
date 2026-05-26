@@ -1,12 +1,9 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Directory, Paths } from 'expo-file-system';
-import {
-  initializePipelineDatabase,
-  registerBackgroundTasks,
-  scheduleBackgroundTasks,
-  initializeSiglipModels,
-} from '../index';
+import { registerBackgroundTasks, scheduleBackgroundTasks } from '../backgroundTasks';
+import { initializeSiglipModels } from '../siglipModelManager';
+import { initializePipelineDatabase } from '../storage/database';
 
 export function PipelineInitializer({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = React.useState(false);

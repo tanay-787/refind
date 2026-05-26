@@ -23,32 +23,24 @@ export async function loadScreenshotAssets() {
   const albums = await MediaLibrary.getAlbumsAsync({ includeSmartAlbums: true });
   const screenshotAlbums = albums.filter((album) => SCREENSHOT_NAME_RE.test(album.title));
 
-  if (screenshotAlbums.length > 0) {
-    const albumAssets = await Promise.all(
-      screenshotAlbums.map(async (album) => {
-        const page = await MediaLibrary.getAssetsAsync({
-          album,
-          first: 100,
-          mediaType: [MediaLibrary.MediaType.photo],
-          sortBy: [MediaLibrary.SortBy.creationTime],
-        });
-
-        return page.assets;
-      }),
-    );
-
-    return uniqueAssets(albumAssets.flat()).sort(
-      (left, right) => right.creationTime - left.creationTime,
-    );
+  if (screenshotAlbums.length === 0) {
+    return [];
   }
 
-  const page = await MediaLibrary.getAssetsAsync({
-    first: 200,
-    mediaType: [MediaLibrary.MediaType.photo],
-    sortBy: [MediaLibrary.SortBy.creationTime],
-  });
+  const albumAssets = await Promise.all(
+    screenshotAlbums.map(async (album) => {
+      const page = await MediaLibrary.getAssetsAsync({
+        album,
+        first: 100,
+        mediaType: [MediaLibrary.MediaType.photo],
+        sortBy: [MediaLibrary.SortBy.creationTime],
+      });
 
-  return page.assets.filter(isScreenshotAsset).sort((left, right) => right.creationTime - left.creationTime);
+      return page.assets;
+    }),
+  );
+
+  return uniqueAssets(albumAssets.flat()).sort((left, right) => right.creationTime - left.creationTime);
 }
 
 export function isWithinRange(creationTime: number, filter: 'all' | 'today' | 'week' | 'month') {

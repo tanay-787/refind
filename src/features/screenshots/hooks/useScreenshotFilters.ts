@@ -1,21 +1,32 @@
 import { useMemo, useState } from 'react';
 
-import { TIME_FILTERS } from '../constants';
-import type { ScreenshotAsset, TimeFilterKey } from '../types';
-import { isWithinRange } from '../utils';
+import { SCREENSHOT_STATUS_FILTERS } from '../constants';
+import type { ScreenshotAsset, ScreenshotStatusFilterKey } from '../types';
 
 export function useScreenshotFilters(assets: ScreenshotAsset[]) {
-  const [timeFilter, setTimeFilter] = useState<TimeFilterKey>('all');
+  const [statusFilter, setStatusFilter] = useState<ScreenshotStatusFilterKey>('all');
 
-  const visibleAssets = useMemo(
-    () => assets.filter((item) => isWithinRange(item.creationTime, timeFilter)),
-    [assets, timeFilter],
+  const visibleAssets = useMemo(() => {
+    if (statusFilter === 'all') return assets;
+    return assets.filter((item) => item.pipelineState === statusFilter);
+  }, [assets, statusFilter]);
+
+  const statusFilters = useMemo(
+    () =>
+      SCREENSHOT_STATUS_FILTERS.map((filter) => ({
+        ...filter,
+        count:
+          filter.key === 'all'
+            ? assets.length
+            : assets.filter((item) => item.pipelineState === filter.key).length,
+      })),
+    [assets],
   );
 
   return {
-    timeFilter,
-    setTimeFilter,
-    timeFilters: TIME_FILTERS,
+    statusFilter,
+    setStatusFilter,
+    statusFilters,
     visibleAssets,
   };
 }

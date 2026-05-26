@@ -1,5 +1,4 @@
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Appbar, Text, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,11 +10,11 @@ import { useScreenshotLibrary } from '../hooks/useScreenshotLibrary';
 import { useScreenshotViewer } from '../hooks/useScreenshotViewer';
 
 export default function ScreenshotBrowserScreen() {
-  const router = useRouter();
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const { assets, error, loading, granted, denied, requestAccess, refresh } = useScreenshotLibrary();
-  const { timeFilter, setTimeFilter, timeFilters, visibleAssets } = useScreenshotFilters(assets);
+  const { statusFilter, setStatusFilter, statusFilters, visibleAssets } =
+    useScreenshotFilters(assets);
   const { activeIndex, openViewer, closeViewer, setActiveIndex, viewerVisible } =
     useScreenshotViewer(visibleAssets.length);
 
@@ -27,7 +26,6 @@ export default function ScreenshotBrowserScreen() {
         <Appbar.BackAction onPress={() => undefined} />
         <Appbar.Content title="Screenshots" subtitle={`${visibleAssets.length} items`} />
         <Appbar.Action icon="filter-variant" onPress={() => undefined} />
-        <Appbar.Action icon="memory" onPress={() => router.push('/model')} />
       </Appbar.Header>
 
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -50,11 +48,11 @@ export default function ScreenshotBrowserScreen() {
             error={error}
             loading={loading}
             subtitleCount={assets.length}
-            timeFilter={timeFilter}
-            timeFilters={timeFilters}
+            statusFilter={statusFilter}
+            statusFilters={statusFilters}
             onOpenItem={openViewer}
             onRefresh={refresh}
-            onSetTimeFilter={setTimeFilter}
+            onSetStatusFilter={setStatusFilter}
           />
         )}
       </SafeAreaView>

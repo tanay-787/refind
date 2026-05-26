@@ -2,7 +2,14 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-
 import { Image } from 'expo-image';
 import { Chip, Text, useTheme } from 'react-native-paper';
 
-import type { ScreenshotAsset, TimeFilterKey } from '../types';
+import type { ScreenshotAsset, ScreenshotStatusFilterKey } from '../types';
+
+function getPipelineLabel(asset: ScreenshotAsset) {
+  if (asset.pipelineState === 'error') return 'Error';
+  if (asset.pipelineState === 'working') return `Working · ${asset.pipelineStage}`;
+  if (asset.pipelineState === 'indexed') return 'Indexed';
+  return `Queued · ${asset.pipelineStage}`;
+}
 
 type Props = {
   assets: ScreenshotAsset[];
@@ -10,11 +17,11 @@ type Props = {
   error: string | null;
   loading: boolean;
   subtitleCount: number;
-  timeFilter: TimeFilterKey;
-  timeFilters: { key: TimeFilterKey; label: string }[];
+  statusFilter: ScreenshotStatusFilterKey;
+  statusFilters: { key: ScreenshotStatusFilterKey; label: string; count: number }[];
   onOpenItem: (index: number) => void;
   onRefresh: () => void;
-  onSetTimeFilter: (filter: TimeFilterKey) => void;
+  onSetStatusFilter: (filter: ScreenshotStatusFilterKey) => void;
 };
 
 export function ScreenshotGrid({
@@ -23,11 +30,11 @@ export function ScreenshotGrid({
   error,
   loading,
   subtitleCount,
-  timeFilter,
-  timeFilters,
+  statusFilter,
+  statusFilters,
   onOpenItem,
   onRefresh,
-  onSetTimeFilter,
+  onSetStatusFilter,
 }: Props) {
   const theme = useTheme();
 
@@ -54,12 +61,12 @@ export function ScreenshotGrid({
           </View>
 
           <View style={styles.filterRow}>
-            {timeFilters.map((filter) => (
+            {statusFilters.map((filter) => (
               <Chip
                 key={filter.key}
-                selected={timeFilter === filter.key}
-                onPress={() => onSetTimeFilter(filter.key)}>
-                {filter.label}
+                selected={statusFilter === filter.key}
+                onPress={() => onSetStatusFilter(filter.key)}>
+                {filter.label} ({filter.count})
               </Chip>
             ))}
           </View>
@@ -88,6 +95,11 @@ export function ScreenshotGrid({
         <Pressable style={styles.tilePressable} onPress={() => onOpenItem(index)}>
           <View style={styles.tile}>
             <Image source={{ uri: item.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            <View style={styles.badgeWrap}>
+              <Chip compact style={styles.badge}>
+                {getPipelineLabel(item)}
+              </Chip>
+            </View>
           </View>
         </Pressable>
       )}
@@ -132,6 +144,14 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     backgroundColor: '#1c1c1c',
     overflow: 'hidden',
+  },
+  badgeWrap: {
+    position: 'absolute',
+    left: 8,
+    top: 8,
+  },
+  badge: {
+    alignSelf: 'flex-start',
   },
   emptyState: {
     paddingHorizontal: 20,

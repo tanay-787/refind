@@ -5,6 +5,10 @@ export type ScreenshotAsset = {
   creationTime: number;
   width: number;
   height: number;
+  pipelineStage: 'ocr' | 'embedding' | 'enrichment' | 'done' | 'new';
+  pipelineState: 'queued' | 'working' | 'indexed' | 'error';
+  retryCount: number;
+  lastError: string | null;
 };
 
-export type TimeFilterKey = 'all' | 'today' | 'week' | 'month';
+export type ScreenshotStatusFilterKey = 'all' | 'queued' | 'working' | 'indexed' | 'error';

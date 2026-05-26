@@ -1,5 +1,5 @@
 import * as TaskManager from 'expo-task-manager';
-import * as BackgroundFetch from 'expo-background-fetch';
+import * as BackgroundTask from 'expo-background-task';
 import { getPipelineDatabase } from './storage/database';
 import { extractOcrFromScreenshot } from './ocr';
 import { generateImageEmbedding, storeImageEmbedding } from './embeddings';
@@ -12,20 +12,20 @@ export async function registerBackgroundTasks() {
   await TaskManager.defineTask(OCR_TASK_NAME, async () => {
     try {
       await processOcrQueue();
-      return BackgroundFetch.BackgroundFetchResult.NewData;
+      return BackgroundTask.BackgroundTaskResult.Success;
     } catch (error) {
       console.error('OCR task failed:', error);
-      return BackgroundFetch.BackgroundFetchResult.Failed;
+      return BackgroundTask.BackgroundTaskResult.Failed;
     }
   });
 
   await TaskManager.defineTask(EMBEDDING_TASK_NAME, async () => {
     try {
       await processEmbeddingQueue();
-      return BackgroundFetch.BackgroundFetchResult.NewData;
+      return BackgroundTask.BackgroundTaskResult.Success;
     } catch (error) {
       console.error('Embedding task failed:', error);
-      return BackgroundFetch.BackgroundFetchResult.Failed;
+      return BackgroundTask.BackgroundTaskResult.Failed;
     }
   });
 }
@@ -117,16 +117,12 @@ async function processEmbeddingQueue() {
 
 export async function scheduleBackgroundTasks() {
   try {
-    await BackgroundFetch.registerTaskAsync(OCR_TASK_NAME, {
-      minimumInterval: 60 * 5,
-      stopOnTerminate: false,
-      startOnBoot: true,
+    await BackgroundTask.registerTaskAsync(OCR_TASK_NAME, {
+      minimumInterval: 15,
     });
 
-    await BackgroundFetch.registerTaskAsync(EMBEDDING_TASK_NAME, {
-      minimumInterval: 60 * 10,
-      stopOnTerminate: false,
-      startOnBoot: true,
+    await BackgroundTask.registerTaskAsync(EMBEDDING_TASK_NAME, {
+      minimumInterval: 30,
     });
   } catch (error) {
     console.error('Failed to schedule background tasks:', error);

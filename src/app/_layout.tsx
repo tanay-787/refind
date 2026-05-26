@@ -5,7 +5,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { ModelDownloadGate } from '@/features/model/components/ModelDownloadGate';
 import { PipelineInitializer } from '@/features/pipeline/components/PipelineInitializer';
 
 export default function RootLayout() {
@@ -19,7 +18,6 @@ export default function RootLayout() {
           <PipelineInitializer>
             <StatusBar style={theme.dark ? 'light' : 'dark'} />
             <Stack screenOptions={{ headerShown: false }} />
-            <ModelDownloadGate />
           </PipelineInitializer>
         </PaperProvider>
       </SafeAreaProvider>

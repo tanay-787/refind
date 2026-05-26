@@ -21,7 +21,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.tanay22.sssearch"
+      "package": "com.tanay22.sssearch",
+      "permissions": [
+        "ACCESS_MEDIA_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
