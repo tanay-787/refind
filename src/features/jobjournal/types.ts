@@ -1,4 +1,4 @@
-export type JobJournalStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type JobJournalStatus = 'pending' | 'running' | 'completed' | 'failed' | 'waiting_for_model';
 
 export type JobJournalStage =
   | 'metadata'

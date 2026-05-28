@@ -1,14 +1,32 @@
-export { JOB_JOURNAL_SCHEMA } from './storage/schema';
-export { getJobJournalDatabase, initializeJobJournalDatabase } from './storage/database';
 export {
   loadJobJournalScreenshotSource,
-  watchJobJournalScreenshotSource,
-} from './screenshotSource';
+  watchJobJournalScreenshotSource
+} from './01-source';
+export {
+  ingestJobJournalScreenshots, syncJobJournalScreenshots,
+  watchJobJournalIntake, type JobJournalIntakeResult
+} from './02-intake';
+export {
+  claimNextStageExecution,
+  completeStageExecution,
+  failStageExecution, getStageExecutionStats, markExecutionWaitingForModel, recoveryExpiredLeases, retryWaitingForModelExecutions
+} from './03-executor';
+
+export {
+  getExecutorStats, runNextStageExecution
+} from './05-runner';
+export { ensureReady as ensureModelReady, getStatus as getModelStatus, isReady as isModelReady } from './modelManager';
+export { initModelMonitor } from './modelMonitor';
+export { runKeywordsStage } from './stages/05-keywords.stage';
+export { runIndexStage } from './stages/06-index.stage';
+export { getJobJournalDatabase, initializeJobJournalDatabase } from './storage/database';
+export { JOB_JOURNAL_SCHEMA } from './storage/schema';
 
 export type {
   JobJournalCheckpoint,
   JobJournalJob,
   JobJournalStage,
   JobJournalStageExecution,
-  JobJournalStatus,
+  JobJournalStatus
 } from './types';
+
