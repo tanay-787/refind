@@ -29,6 +29,29 @@ import { runOcrPostprocessStage } from './stages/03-ocr_postprocess.stage';
 import { runKeywordsStage } from './stages/05-keywords.stage';
 import { runIndexStage } from './stages/06-index.stage';
 
+const STAGE_TIMEOUTS: Record<JobJournalStage, number> = {
+  metadata: 30_000, // 30s
+  ocr: 120_000, // 2m
+  ocr_postprocess: 30_000, // 30s
+  embedding: 10 * 60_000, // 10m
+  keywords: 60_000, // 1m
+  index: 120_000, // 2m
+};
+
+async function promiseWithTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return await new Promise<T>((resolve, reject) => {
+    timer = setTimeout(() => reject(new Error('Stage timed out')), ms);
+    p.then((v) => {
+      if (timer) clearTimeout(timer);
+      resolve(v);
+    }).catch((err) => {
+      if (timer) clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
 let currentExecutionId: string | null = null;
 let shutdownHandlerInstalled = false;
 
@@ -155,33 +178,58 @@ export async function runNextStageExecution(): Promise<boolean> {
     heartbeat = setInterval(() => {
       void renewExecutionLease(execution.id);
     }, 60_000);
+    const timeoutMs = STAGE_TIMEOUTS[execution.stage];
     switch (execution.stage as JobJournalStage) {
       case 'metadata': {
-        const metadata = await runMetadataStage(job);
-        result = metadata.fileExists
-          ? { status: 'completed' }
-          : { status: 'failed', error: 'Image file does not exist' };
+        try {
+          const metadata = await promiseWithTimeout(runMetadataStage(job), timeoutMs);
+          result = metadata.fileExists
+            ? { status: 'completed' }
+            : { status: 'failed', error: 'Image file does not exist' };
+        } catch (err) {
+          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
+        }
         break;
       }
       case 'ocr': {
-        result = await runOcrStage(job);
+        try {
+          result = await promiseWithTimeout(runOcrStage(job), timeoutMs);
+        } catch (err) {
+          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
+        }
         break;
       }
       case 'ocr_postprocess': {
-        await runOcrPostprocessStage(job);
-        result = { status: 'completed' };
+        try {
+          await promiseWithTimeout(runOcrPostprocessStage(job), timeoutMs);
+          result = { status: 'completed' };
+        } catch (err) {
+          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
+        }
         break;
       }
       case 'embedding': {
-        result = await runEmbeddingStage(job, execution);
+        try {
+          result = await promiseWithTimeout(runEmbeddingStage(job, execution), timeoutMs);
+        } catch (err) {
+          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
+        }
         break;
       }
       case 'keywords': {
-        result = await runKeywordsStage(job);
+        try {
+          result = await promiseWithTimeout(runKeywordsStage(job), timeoutMs);
+        } catch (err) {
+          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
+        }
         break;
       }
       case 'index': {
-        result = await runIndexStage(job);
+        try {
+          result = await promiseWithTimeout(runIndexStage(job), timeoutMs);
+        } catch (err) {
+          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
+        }
         break;
       }
       default:
