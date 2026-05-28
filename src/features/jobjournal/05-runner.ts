@@ -58,7 +58,7 @@ let shutdownHandlerInstalled = false;
 async function getJob(jobId: string): Promise<JobJournalJob | null> {
   const db = await getJobJournalDatabase();
   return db.getFirstAsync<JobJournalJob>(
-    `SELECT id, image_uri as imageUri, image_hash as imageHash, status, created_at as createdAt, updated_at as updatedAt FROM job_journal_jobs WHERE id = ?`,
+    `SELECT id, image_uri as imageUri, image_hash as imageHash, status, vector_required as vectorRequired, created_at as createdAt, updated_at as updatedAt FROM job_journal_jobs WHERE id = ?`,
     [jobId],
   );
 }

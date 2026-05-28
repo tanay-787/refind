@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS job_journal_jobs (
   image_uri TEXT NOT NULL,
   image_hash TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL,
+  vector_required INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

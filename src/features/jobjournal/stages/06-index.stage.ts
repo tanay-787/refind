@@ -41,6 +41,18 @@ export async function runIndexStage(job: JobJournalJob): Promise<{ status: 'comp
     // Fetch and register embeddings in vector index
     let vectorReady = false;
     const vecStatus = getJobJournalVecStatus();
+
+    // If job requests vector indexing but vec extension is unavailable, fail early
+    if (job.vectorRequired && !vecStatus.available) {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO search_readiness
+         (job_id, fts_ready, vector_ready, keywords_ready, indexed_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [job.id, ftsReady ? 1 : 0, 0, keywordsReady ? 1 : 0, null, now],
+      );
+      return { status: 'failed', error: 'Vector indexing required but vec extension unavailable' };
+    }
+
     if (vecStatus.available) {
       const embeddingRows = await db.getAllAsync<{ modality: string; vector: ArrayBuffer }>(
         `SELECT modality, vector FROM embedding_stage_results WHERE job_id = ?`,

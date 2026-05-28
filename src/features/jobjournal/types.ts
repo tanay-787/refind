@@ -13,6 +13,7 @@ export type JobJournalJob = {
   imageUri: string;
   imageHash: string;
   status: JobJournalStatus;
+  vectorRequired?: boolean;
   createdAt: number;
   updatedAt: number;
 };
