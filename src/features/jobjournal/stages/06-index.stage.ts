@@ -27,19 +27,11 @@ export async function runIndexStage(job: JobJournalJob): Promise<{ status: 'comp
     );
     const keywordsText = keywordRows.map((row) => row.keyword).join(' ');
     const ftsReady = ocrText.trim().length > 0 || keywordsText.trim().length > 0;
-    const keywordsReady = true;
+    const keywordsReady = keywordsText.trim().length > 0;
 
-    if (!ftsReady) {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO search_readiness
-         (job_id, fts_ready, vector_ready, keywords_ready, indexed_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [job.id, 0, 0, keywordsReady ? 1 : 0, null, now],
-      );
-      return { status: 'failed', error: 'No searchable OCR or keyword content to index' };
-    }
-
-    // Insert into FTS5 screenshot_search_index
+    // Always insert an FTS5 row for the job, even if content is empty. This ensures
+    // the job appears in indices and keeps search_readiness authoritative about
+    // whether FTS content is actually present.
     await db.runAsync(
       `INSERT OR REPLACE INTO screenshot_search_index (job_id, ocr_text, keywords)
        VALUES (?, ?, ?)`,
@@ -80,7 +72,7 @@ export async function runIndexStage(job: JobJournalJob): Promise<{ status: 'comp
       `INSERT OR REPLACE INTO search_readiness
        (job_id, fts_ready, vector_ready, keywords_ready, indexed_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [job.id, 1, vectorReady ? 1 : 0, keywordsReady ? 1 : 0, now, now],
+      [job.id, ftsReady ? 1 : 0, vectorReady ? 1 : 0, keywordsReady ? 1 : 0, now, now],
     );
 
     if (vecStatus.available && !vectorReady) {
