@@ -35,3 +35,5 @@ export type {
   JobJournalStatus,
   SiglipModelState
 } from './types';
+
+export { parseStageLastError } from './utils/error';
