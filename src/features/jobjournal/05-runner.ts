@@ -247,12 +247,18 @@ export async function runNextStageExecution(): Promise<boolean> {
   }
 
   if (result.status === 'completed') {
-    await completeStageExecution(
-      execution.id,
-      execution.jobId,
-      execution.stage,
-      getCheckpointPointer(execution.jobId, execution.stage),
-    );
+    try {
+      await completeStageExecution(
+        execution.id,
+        execution.jobId,
+        execution.stage,
+        getCheckpointPointer(execution.jobId, execution.stage),
+      );
+    } catch (err) {
+      // If the atomic completion fails (e.g., missing output), mark execution failed so it can be retried.
+      const msg = err instanceof Error ? err.message : String(err);
+      await failStageExecution(execution.id, `Completion validation failed: ${msg}`);
+    }
   } else if (result.status === 'waiting_for_model') {
     await markExecutionWaitingForModel(execution.id, result.error || 'Waiting for model');
   } else {

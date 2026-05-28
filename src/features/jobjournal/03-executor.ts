@@ -166,6 +166,34 @@ export async function completeStageExecution(
 
   await db.execAsync('BEGIN IMMEDIATE');
   try {
+    // Verify that the stage has produced the expected output before marking completed.
+    // This avoids enqueueing children when parent outputs haven't been persisted yet.
+    if (stage === 'metadata') {
+      const row = await db.getFirstAsync<{ job_id: string }>(
+        `SELECT job_id FROM metadata_stage_results WHERE job_id = ?`,
+        [jobId],
+      );
+      if (!row) throw new Error(`Metadata result missing for job ${jobId}`);
+    } else if (stage === 'ocr') {
+      const row = await db.getFirstAsync<{ job_id: string }>(`SELECT job_id FROM ocr_stage_results WHERE job_id = ?`, [jobId]);
+      if (!row) throw new Error(`OCR result missing for job ${jobId}`);
+    } else if (stage === 'ocr_postprocess') {
+      const row = await db.getFirstAsync<{ job_id: string }>(
+        `SELECT job_id FROM ocr_postprocess_stage_results WHERE job_id = ?`,
+        [jobId],
+      );
+      if (!row) throw new Error(`OCR postprocess result missing for job ${jobId}`);
+    } else if (stage === 'embedding') {
+      const row = await db.getFirstAsync<{ id: string }>(
+        `SELECT id FROM embedding_stage_results WHERE job_id = ? LIMIT 1`,
+        [jobId],
+      );
+      if (!row) throw new Error(`Embedding result missing for job ${jobId}`);
+    } else if (stage === 'index') {
+      const row = await db.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM screenshot_search_index WHERE job_id = ?`, [jobId]);
+      if (!row) throw new Error(`Index entries missing for job ${jobId}`);
+    }
+
     const completion = await db.runAsync(
       `UPDATE stage_executions
        SET status = 'completed', lease_until = NULL, updated_at = ?, last_error = NULL

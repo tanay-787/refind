@@ -40,10 +40,66 @@ async function loadVecExtension(db: SQLite.SQLiteDatabase) {
 
 async function initializeDatabase(db: SQLite.SQLiteDatabase) {
   await db.execAsync(JOB_JOURNAL_SCHEMA);
+
+  // Ensure system_health table exists for storing periodic integrity checks
+  await db.execAsync(`CREATE TABLE IF NOT EXISTS system_health (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    check_time INTEGER NOT NULL,
+    check_type TEXT NOT NULL,
+    result TEXT NOT NULL
+  );`);
+
   await loadVecExtension(db);
   if (vecStatus.available) {
     await db.execAsync(JOB_JOURNAL_VEC_SCHEMA);
   }
+
+  // Perform an immediate integrity check at startup and persist the result
+  try {
+    await performIntegrityCheck(db);
+  } catch (err) {
+    // best-effort: don't block initialization on health check failures
+    // eslint-disable-next-line no-console
+    console.warn('Database integrity check at startup failed:', err);
+  }
+}
+
+async function performIntegrityCheck(db: SQLite.SQLiteDatabase) {
+  // PRAGMA integrity_check returns one-row, one-column result (usually column named 'integrity_check')
+  try {
+    const row = await (db as any).getFirstAsync?.(`PRAGMA integrity_check;`);
+    let result = '';
+    if (row) {
+      // get the first column value regardless of column name
+      const vals = Object.values(row) as string[];
+      result = vals.length > 0 ? String(vals[0]) : '';
+    }
+
+    const now = Date.now();
+    await db.runAsync(
+      `INSERT INTO system_health (check_time, check_type, result) VALUES (?, ?, ?)`,
+      [now, 'integrity_check', result],
+    );
+
+    return { ok: result === 'ok', result };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const now = Date.now();
+    try {
+      await db.runAsync(
+        `INSERT INTO system_health (check_time, check_type, result) VALUES (?, ?, ?)`,
+        [now, 'integrity_check', msg],
+      );
+    } catch {
+      // ignore failures while trying to persist health result
+    }
+    return { ok: false, result: msg };
+  }
+}
+
+export async function runDatabaseHealthCheck() {
+  const db = await getJobJournalDatabase();
+  return performIntegrityCheck(db);
 }
 
 export async function initializeJobJournalDatabase() {
