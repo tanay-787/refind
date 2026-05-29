@@ -252,14 +252,14 @@ export async function failStageExecution(
   }
 
   const nextAttempt = execution.attempt + 1;
-  const lastErrorStored = `${errorCode ?? 'ERROR'}|${errorMessage}`;
+  const code = errorCode ?? 'ERROR';
 
   if (nextAttempt >= maxRetries) {
     await db.runAsync(
       `UPDATE stage_executions
-       SET status = 'failed', lease_until = NULL, updated_at = ?, last_error = ?
+       SET status = 'failed', lease_until = NULL, updated_at = ?, last_error_code = ?, last_error_message = ?
        WHERE id = ?`,
-      [now, lastErrorStored, executionId],
+      [now, code, errorMessage, executionId],
     );
 
     const jobId = await db.getFirstAsync<{ job_id: string }>(
@@ -277,9 +277,9 @@ export async function failStageExecution(
 
   await db.runAsync(
     `UPDATE stage_executions
-     SET status = 'pending', attempt = ?, lease_until = NULL, updated_at = ?, last_error = ?
+     SET status = 'pending', attempt = ?, lease_until = NULL, updated_at = ?, last_error_code = ?, last_error_message = ?
      WHERE id = ?`,
-    [nextAttempt, now, lastErrorStored, executionId],
+    [nextAttempt, now, code, errorMessage, executionId],
   );
 }
 
@@ -290,12 +290,12 @@ export async function markExecutionWaitingForModel(
 ): Promise<void> {
   const db = await getJobJournalDatabase();
   const now = Date.now();
-  const lastErrorStored = `${errorCode ?? 'WAIT_MODEL'}|${errorMessage}`;
+  const code = errorCode ?? 'WAIT_MODEL';
   await db.runAsync(
     `UPDATE stage_executions
-     SET status = 'waiting_for_model', lease_until = NULL, updated_at = ?, last_error = ?
+     SET status = 'waiting_for_model', lease_until = NULL, updated_at = ?, last_error_code = ?, last_error_message = ?
      WHERE id = ?`,
-    [now, lastErrorStored, executionId],
+    [now, code, errorMessage, executionId],
   );
 }
 

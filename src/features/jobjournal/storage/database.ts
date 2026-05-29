@@ -41,6 +41,9 @@ async function loadVecExtension(db: SQLite.SQLiteDatabase) {
 async function initializeDatabase(db: SQLite.SQLiteDatabase) {
   await db.execAsync(JOB_JOURNAL_SCHEMA);
 
+  // Run one-time migration for last_error column split
+  await migrateLastErrorColumn(db);
+
   // Ensure system_health table exists for storing periodic integrity checks
   await db.execAsync(`CREATE TABLE IF NOT EXISTS system_health (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,8 +62,45 @@ async function initializeDatabase(db: SQLite.SQLiteDatabase) {
     await performIntegrityCheck(db);
   } catch (err) {
     // best-effort: don't block initialization on health check failures
-    // eslint-disable-next-line no-console
+     
     console.warn('Database integrity check at startup failed:', err);
+  }
+}
+
+async function migrateLastErrorColumn(db: SQLite.SQLiteDatabase) {
+  try {
+    // If migration already done, skip
+    const hasNewColumns = await (db as any).getAllAsync?.(
+      `PRAGMA table_info(stage_executions) WHERE name IN ('last_error_code', 'last_error_message');`,
+    );
+    if (hasNewColumns && hasNewColumns.length >= 2) {
+      return;
+    }
+
+    // Backfill: parse existing last_error strings (format: "CODE|message") into new columns
+    const rows = await db.getAllAsync<{ id: string; last_error: string | null }>(
+      `SELECT id, last_error FROM stage_executions WHERE last_error IS NOT NULL`,
+    );
+
+    for (const row of rows) {
+      let code: string | null = null;
+      let message: string | null = null;
+
+      if (row.last_error) {
+        const parts = row.last_error.split('|');
+        code = parts[0] || null;
+        message = parts.slice(1).join('|') || null;
+      }
+
+      await db.runAsync(
+        `UPDATE stage_executions SET last_error_code = ?, last_error_message = ? WHERE id = ?`,
+        [code, message, row.id],
+      );
+    }
+  } catch (err) {
+    // Migration is best-effort; if columns already exist or update fails, continue
+     
+    console.warn('Failed to migrate last_error column:', err);
   }
 }
 

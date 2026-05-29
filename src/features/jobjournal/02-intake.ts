@@ -55,14 +55,14 @@ async function seedJobForAsset(asset: MediaLibrary.Asset, vectorRequired: boolea
   const imageUri = asset.uri;
 
   const existingJob = hashResult.isReliable
-    ? await db.getFirstAsync<{ id: string; vector_required?: number }>(`SELECT id, vector_required FROM job_journal_jobs WHERE image_hash = ?`, [
+    ? await db.getFirstAsync<{ id: string; vector_required: number }>(`SELECT id, vector_required FROM job_journal_jobs WHERE image_hash = ?`, [
         imageHash,
       ])
-    : await db.getFirstAsync<{ id: string; vector_required?: number }>(`SELECT id, vector_required FROM job_journal_jobs WHERE id = ?`, [jobId]);
+    : await db.getFirstAsync<{ id: string; vector_required: number }>(`SELECT id, vector_required FROM job_journal_jobs WHERE id = ?`, [jobId]);
 
   if (existingJob) {
     // If caller requested vector indexing and job previously did not require it, update the job record.
-    if (vectorRequired && !(existingJob.vector_required === 1)) {
+    if (vectorRequired && !Boolean(existingJob.vector_required)) {
       await db.runAsync(`UPDATE job_journal_jobs SET vector_required = 1, updated_at = ? WHERE id = ?`, [now, existingJob.id]);
     }
 

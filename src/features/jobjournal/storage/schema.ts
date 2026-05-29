@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS stage_executions (
   lease_until INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  last_error TEXT
+  last_error TEXT,
+  last_error_code TEXT,
+  last_error_message TEXT
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS stage_executions_job_stage_idx

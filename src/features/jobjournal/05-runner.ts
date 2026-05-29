@@ -57,10 +57,30 @@ let shutdownHandlerInstalled = false;
 
 async function getJob(jobId: string): Promise<JobJournalJob | null> {
   const db = await getJobJournalDatabase();
-  return db.getFirstAsync<JobJournalJob>(
-    `SELECT id, image_uri as imageUri, image_hash as imageHash, status, vector_required as vectorRequired, created_at as createdAt, updated_at as updatedAt FROM job_journal_jobs WHERE id = ?`,
+  const row = await db.getFirstAsync<{
+    id: string;
+    imageUri: string;
+    imageHash: string;
+    status: string;
+    vector_required: number | null;
+    createdAt: number;
+    updatedAt: number;
+  }>(
+    `SELECT id, image_uri as imageUri, image_hash as imageHash, status, vector_required, created_at as createdAt, updated_at as updatedAt FROM job_journal_jobs WHERE id = ?`,
     [jobId],
   );
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    imageUri: row.imageUri,
+    imageHash: row.imageHash,
+    status: row.status as any,
+    vectorRequired: Boolean(row.vector_required),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
 }
 
 function getCheckpointPointer(jobId: string, stage: JobJournalStage) {
@@ -141,11 +161,11 @@ export async function runNextStageExecution(): Promise<boolean> {
           if (currentExecutionId) {
             // best-effort revoke; ignore errors
             await revokeExecutionLease(currentExecutionId);
-            // eslint-disable-next-line no-console
+             
             console.log(`revoked execution lease for ${currentExecutionId} due to signal ${sig}`);
           }
         } catch (err) {
-          // eslint-disable-next-line no-console
+           
           console.error('Error revoking execution lease during shutdown', err);
         } finally {
           // exit after attempting revoke
