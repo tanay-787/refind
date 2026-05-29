@@ -99,7 +99,7 @@ async function migrateLastErrorColumn(db: SQLite.SQLiteDatabase) {
     }
   } catch (err) {
     // Migration is best-effort; if columns already exist or update fails, continue
-     
+    // eslint-disable-next-line no-console
     console.warn('Failed to migrate last_error column:', err);
   }
 }
