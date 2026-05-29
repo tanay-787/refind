@@ -23,7 +23,7 @@ function getJobId(asset: MediaLibrary.Asset) {
 
 async function getImageHash(asset: MediaLibrary.Asset) {
   const file = new File(asset.uri);
-  const info = file.info({ md5: true });
+  const info = await file.info({ md5: true });
   if (info.exists && info.md5) {
     return { hash: `md5:${info.md5}`, isReliable: true };
   }

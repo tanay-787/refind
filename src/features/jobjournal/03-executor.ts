@@ -34,6 +34,19 @@ async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: 
   const children = STAGE_CHILDREN[stage];
   for (const child of children) {
     const dependencies = STAGE_DEPENDENCIES[child];
+
+    // If child has no dependencies, enqueue unconditionally
+    if (dependencies.length === 0) {
+      const executionId = getExecutionId(jobId, child);
+      await db.runAsync(
+        `INSERT OR IGNORE INTO stage_executions
+         (id, job_id, stage, attempt, status, lease_until, created_at, updated_at, last_error)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [executionId, jobId, child, 0, 'pending', null, now, now, null],
+      );
+      continue;
+    }
+
     const rows = await db.getAllAsync<{ stage: string }>(
       `SELECT stage
        FROM stage_executions
