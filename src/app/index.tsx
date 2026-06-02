@@ -1,19 +1,19 @@
 import { useRouter } from 'expo-router';
+import { Card } from 'heroui-native/card';
+import { Spinner } from 'heroui-native/spinner';
+import { Text } from 'heroui-native/text';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { Appbar, Text, useTheme } from 'react-native-paper';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { initializeJobJournalDatabase, initModelMonitor, registerJobJournalBackgroundTask, scheduleJobJournalBackgroundTask } from '@/features/jobjournal';
 import { unregisterBackgroundTasks } from '@/features/pipeline/backgroundTasks';
 
 export default function IndexScreen() {
-  const theme = useTheme();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
 
     (async () => {
       try {
@@ -22,41 +22,37 @@ export default function IndexScreen() {
         await registerJobJournalBackgroundTask();
         await scheduleJobJournalBackgroundTask();
         initModelMonitor();
+        router.replace('/(tabs)/home')
 
-        if (active) {
-          router.replace('/(tabs)/home');
-        }
       } catch (cause) {
-        if (!active) return;
         setError(cause instanceof Error ? cause.message : 'Failed to initialize app');
       }
     })();
 
     return () => {
-      active = false;
     };
   }, [router]);
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header mode="small" elevated={false} style={styles.header}>
-        <Appbar.Content title="SS-Search" />
-      </Appbar.Header>
-
+    <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.body}>
-          {error ? (
-            <Text variant="bodyLarge" style={{ color: theme.colors.error, textAlign: 'center' }}>
-              Sum Ting Wong: {error}
-            </Text>
-          ) : (
-            <>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text variant="bodyLarge" style={{ marginTop: 16, color: theme.colors.onSurfaceVariant }}>
-                Preparing your library...
-              </Text>
-            </>
-          )}
+          <Card className='w-full'>
+            <View style={styles.content}>
+              {error ? (
+                <>
+                  <Text style={styles.errorTitle}>Initialization failed</Text>
+                  <Text style={styles.errorText}>{error}</Text>
+                </>
+              ) : (
+                <>
+                  <Spinner />
+                  <Text style={styles.title}>Preparing your library</Text>
+                  <Text style={styles.subtitle}>Loading screens, search data, and background tasks.</Text>
+                </>
+              )}
+            </View>
+          </Card>
         </View>
       </SafeAreaView>
     </View>
@@ -66,17 +62,42 @@ export default function IndexScreen() {
 const styles = {
   screen: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   safeArea: {
     flex: 1,
-  },
-  header: {
-    backgroundColor: 'transparent',
   },
   body: {
     flex: 1,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     paddingHorizontal: 24,
+  },
+  card: {
+    width: '100%',
+  },
+  content: {
+    alignItems: 'center' as const,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  title: {
+    textAlign: 'center' as const,
+    fontSize: 18,
+    fontWeight: '600' as const,
+  },
+  subtitle: {
+    textAlign: 'center' as const,
+    opacity: 0.7,
+  },
+  errorTitle: {
+    textAlign: 'center' as const,
+    fontSize: 18,
+    fontWeight: '600' as const,
+  },
+  errorText: {
+    textAlign: 'center' as const,
+    opacity: 0.8,
   },
 };

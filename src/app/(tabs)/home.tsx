@@ -1,12 +1,14 @@
+import * as MediaLibrary from 'expo-media-library';
+import { Button as HeroButton } from 'heroui-native/button';
+import { Card } from 'heroui-native/card';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, Button, Chip, Text, useTheme } from 'react-native-paper';
-import * as MediaLibrary from 'expo-media-library';
+import { Text, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useLibrarySummary } from '@/features/home/hooks/useLibrarySummary';
 import { syncJobJournalScreenshots } from '@/features/jobjournal';
 import PermissionPrimer from '@/features/onboarding/PermissionPrimer';
-import { useLibrarySummary } from '@/features/home/hooks/useLibrarySummary';
 
 const suggestedSearches = [
   { query: 'bug', emoji: '🐛' },
@@ -73,11 +75,13 @@ export default function HomeScreen() {
   return (
     <>
       <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-        <Appbar.Header mode="small" elevated={false} style={styles.header}>
-          <Appbar.Content title="SS-Search" />
-        </Appbar.Header>
+        <View style={styles.header}>
+          <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onBackground }]}>
+            SS-Search
+          </Text>
+        </View>
 
-        <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
           <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
             {/* Hero Section */}
             <View style={styles.hero}>
@@ -123,16 +127,15 @@ export default function HomeScreen() {
                     variant="bodySmall"
                     style={[styles.emptyStateText, { color: theme.colors.onSurfaceVariant }]}
                   >
-                    Grant access to your photo library and we'll index them in the background.
+                    Grant access to your photo library and we&apos;ll index them in the background.
                   </Text>
                   {!permissionGranted && (
-                    <Button
-                      mode="contained"
+                    <HeroButton
                       style={styles.emptyStateCta}
                       onPress={() => setPrimerVisible(true)}
                     >
                       Grant Access
-                    </Button>
+                    </HeroButton>
                   )}
                 </View>
 
@@ -163,15 +166,15 @@ export default function HomeScreen() {
                   </Text>
                   <View style={styles.examplesGrid}>
                     {suggestedSearches.map((item) => (
-                      <Chip
+                      <HeroButton
                         key={item.query}
-                        icon={item.emoji}
-                        compact
+                        variant="outline"
+                        size="sm"
                         style={styles.exampleChip}
                         onPress={() => setQuery(item.query)}
                       >
-                        {item.query}
-                      </Chip>
+                        {item.emoji} {item.query}
+                      </HeroButton>
                     ))}
                   </View>
                 </View>
@@ -234,7 +237,7 @@ function Feature({
 }) {
   const theme = useTheme();
   return (
-    <View style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
+    <Card style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
       <Text style={styles.featureIcon}>{icon}</Text>
       <Text
         variant="labelMedium"
@@ -248,7 +251,7 @@ function Feature({
       >
         {description}
       </Text>
-    </View>
+    </Card>
   );
 }
 
@@ -264,6 +267,12 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  headerTitle: {
+    fontWeight: '700',
   },
   // Hero Section
   hero: {
@@ -343,8 +352,6 @@ const styles = StyleSheet.create({
   featureCard: {
     flex: 1,
     minWidth: '45%',
-    borderRadius: 12,
-    padding: 16,
     alignItems: 'center',
   },
   featureIcon: {

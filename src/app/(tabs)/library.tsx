@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, Button, ProgressBar, Text, useTheme } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { getJobJournalDatabase } from '@/features/jobjournal';
 import { useLibrarySummary } from '@/features/home/hooks/useLibrarySummary';
+import { getJobJournalDatabase } from '@/features/jobjournal';
+import { Button as HeroButton } from 'heroui-native/button';
+import { Card } from 'heroui-native/card';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { ProgressBar, Text, useTheme } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type SearchReadyStats = {
   powerSearchReady: number;
@@ -106,11 +108,13 @@ export default function LibraryScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <Appbar.Header mode="small" elevated={false} style={styles.header}>
-        <Appbar.Content title="Library" />
-      </Appbar.Header>
+      <View style={styles.header}>
+        <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onBackground }]}>
+          Library
+        </Text>
+      </View>
 
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         <ScrollView contentContainerStyle={styles.container}>
           {/* Title & Total */}
           <View style={styles.titleSection}>
@@ -242,7 +246,7 @@ export default function LibraryScreen() {
                     variant="bodySmall"
                     style={[styles.cardHint, { color: theme.colors.onSurfaceVariant }]}
                   >
-                    Try: "bug in login", "design system", "error handling"
+                    Try: &quot;bug in login&quot;, &quot;design system&quot;, &quot;error handling&quot;
                   </Text>
                   <Text
                     variant="bodySmall"
@@ -283,7 +287,7 @@ export default function LibraryScreen() {
                     variant="bodySmall"
                     style={[styles.cardHint, { color: theme.colors.onSurfaceVariant }]}
                   >
-                    Try: "login", "api", "deployment"
+                    Try: &quot;login&quot;, &quot;api&quot;, &quot;deployment&quot;
                   </Text>
                   <Text
                     variant="bodySmall"
@@ -340,9 +344,9 @@ export default function LibraryScreen() {
               <Text variant="bodySmall" style={[styles.ctaLabel, { color: theme.colors.onSurfaceVariant }]}>
                 Search now with {searchReadyTotal.toLocaleString()} ready screenshots
               </Text>
-              <Button mode="contained" style={styles.cta}>
+              <HeroButton style={styles.cta}>
                 Go to Search
-              </Button>
+              </HeroButton>
             </View>
           )}
 
@@ -377,13 +381,15 @@ function StatCard({
   const labelColor = theme.colors.onSurfaceVariant;
 
   return (
-    <View style={[
-      styles.statCard,
-      {
-        backgroundColor: isDimmed ? theme.colors.surfaceVariant : theme.colors.surface,
-        borderColor: theme.colors.outlineVariant,
-      },
-    ]}>
+    <Card
+      style={[
+        styles.statCard,
+        {
+          backgroundColor: isDimmed ? theme.colors.surfaceVariant : theme.colors.surface,
+          borderColor: theme.colors.outlineVariant,
+        },
+      ]}
+    >
       <Text variant="labelSmall" style={[styles.statCardLabel, { color: labelColor }]}>
         {label}
       </Text>
@@ -393,7 +399,7 @@ function StatCard({
       <Text variant="bodySmall" style={[{ color: labelColor, fontSize: 11 }]}>
         {description}
       </Text>
-    </View>
+    </Card>
   );
 }
 
@@ -409,6 +415,12 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  headerTitle: {
+    fontWeight: '700',
   },
   titleSection: {
     paddingHorizontal: 20,
