@@ -6,7 +6,9 @@ export type JobJournalStage =
   | 'ocr_postprocess'
   | 'embedding'
   | 'keywords'
-  | 'index';
+  | 'index'
+  | 'index_fts'
+  | 'index_vec';
 
 export type JobJournalJob = {
   id: string;
@@ -47,6 +49,8 @@ export type SiglipModelConfig = {
 export type SiglipModelState = {
   config: SiglipModelConfig;
   status: 'idle' | 'downloading' | 'ready' | 'error';
+  isLoaded: boolean;
+  isTextLoaded: boolean;
   progress: number;
   error: string | null;
   visionPath: string | null;

@@ -13,6 +13,8 @@ const DEFAULT_STATE: SiglipModelState = {
     tokenizerUrl: process.env.EXPO_PUBLIC_SIGLIP_TOKENIZER_URL ?? null,
   },
   status: 'idle',
+  isLoaded: false,
+  isTextLoaded: false,
   progress: 0,
   error: null,
   visionPath: null,
@@ -25,6 +27,11 @@ const listeners = new Set<(nextState: SiglipModelState) => void>();
 
 function emit() {
   listeners.forEach((listener) => listener(state));
+}
+
+// Helper to strip file:// prefix for native modules
+function toNativePath(uri: string) {
+  return uri.replace('file://', '');
 }
 
 export function getSiglipModelState() {
@@ -138,8 +145,15 @@ export async function loadSiglipModels() {
     throw new Error('SigLIP vision model not available');
   }
 
+  const nativePath = toNativePath(state.visionPath);
+  console.log(`[siglipModelManager] Loading vision model from: ${nativePath}`);
+
   const siglip = createSigLIP();
-  await siglip.loadVisionModel(state.visionPath);
+  await siglip.loadVisionModel(nativePath);
+  
+  state = { ...state, isLoaded: true };
+  emit();
+  
   return siglip;
 }
 
@@ -147,7 +161,14 @@ export async function loadSiglipTextModel(siglip: ReturnType<typeof createSigLIP
   if (!state.textPath) {
     throw new Error('SigLIP text model not available');
   }
-  await siglip.loadTextModel(state.textPath);
+
+  const nativePath = toNativePath(state.textPath);
+  console.log(`[siglipModelManager] Loading text model from: ${nativePath}`);
+  
+  await siglip.loadTextModel(nativePath);
+  
+  state = { ...state, isTextLoaded: true };
+  emit();
 }
 
 export async function loadSiglipTokenizer() {

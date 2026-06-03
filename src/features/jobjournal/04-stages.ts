@@ -8,6 +8,6 @@ export { runEmbeddingStage } from './stages/04-embedding.stage';
 
 export { runKeywordsStage } from './stages/05-keywords.stage';
 
-export { runIndexStage } from './stages/06-index.stage';
+export { runIndexFtsStage } from './stages/06-index_fts.stage';
 
 

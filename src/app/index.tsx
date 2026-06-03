@@ -11,7 +11,6 @@ import {
   registerJobJournalBackgroundTask, 
   scheduleJobJournalBackgroundTask 
 } from '@/features/jobjournal';
-import { unregisterBackgroundTasks } from '@/features/pipeline/backgroundTasks';
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -22,9 +21,6 @@ export default function IndexScreen() {
       try {
         // Initialize the durable workflow system
         await initializeJobJournalDatabase();
-        
-        // Clean up legacy pipeline background tasks
-        await unregisterBackgroundTasks();
         
         // Setup new job journal background execution
         await registerJobJournalBackgroundTask();

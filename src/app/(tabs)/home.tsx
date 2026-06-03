@@ -1,420 +1,289 @@
-import * as MediaLibrary from 'expo-media-library';
-import { Button as HeroButton } from 'heroui-native/button';
+import { useRouter } from 'expo-router';
+import { Button } from 'heroui-native/button';
 import { Card } from 'heroui-native/card';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { Spinner } from 'heroui-native/spinner';
+import { Text } from 'heroui-native/text';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  View, 
+  StyleSheet, 
+  TextInput, 
+  FlatList, 
+  Pressable, 
+  Keyboard,
+  Dimensions
+} from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSearch, useJobJournalStats, useJobJournalOperations } from '@/lib/hooks';
 
-import { useLibrarySummary } from '@/features/home/hooks/useLibrarySummary';
-import { syncJobJournalScreenshots } from '@/features/jobjournal';
-import PermissionPrimer from '@/features/onboarding/PermissionPrimer';
-
-const suggestedSearches = [
-  { query: 'bug', emoji: '🐛' },
-  { query: 'api error', emoji: '⚠️' },
-  { query: 'login', emoji: '🔑' },
-  { query: 'deployment', emoji: '🚀' },
-];
+const { width } = Dimensions.get('window');
+const COLUMN_COUNT = 3;
+const ITEM_SIZE = width / COLUMN_COUNT;
 
 export default function HomeScreen() {
-  const theme = useTheme();
   const [query, setQuery] = useState('');
-  const [primerVisible, setPrimerVisible] = useState(false);
-  const [permissionGranted, setPermissionGranted] = useState(false);
-  const summary = useLibrarySummary();
+  const { results, search, loading, error, isModelReady } = useSearch();
+  const { totalJobs, pending, running } = useJobJournalStats();
+  const { sync, isSyncing } = useJobJournalOperations();
+
+  const handleSearch = useCallback(() => {
+    Keyboard.dismiss();
+    search(query);
+  }, [query, search]);
 
   useEffect(() => {
-    (async () => {
-      const permission = await MediaLibrary.getPermissionsAsync();
-      if (permission.granted) {
-        setPermissionGranted(true);
-        return;
-      }
-      setPrimerVisible(true);
-    })();
+    // Auto-sync on mount
+    sync();
   }, []);
 
-  useEffect(() => {
-    if (!permissionGranted) {
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        await syncJobJournalScreenshots();
-      } catch (err) {
-        if (!cancelled) {
-          console.warn('JobJournal initial sync failed', err);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [permissionGranted]);
-
-  const searchableCount = summary.screenshots;
-  const isBuilding = summary.loading || (summary.pendingStages > 0 || summary.runningStages > 0);
-
-  // Empty state copy
-  const heroTitle = useMemo(() => {
-    if (searchableCount === 0) return 'Search anything\nyou\'ve seen.';
-    return 'Find that screenshot\nin seconds.';
-  }, [searchableCount]);
-
-  const heroSubtitle = useMemo(() => {
-    if (searchableCount === 0) return 'Never lose important information again.';
-    if (isBuilding) return `${searchableCount} ready to search • ${summary.pendingStages + summary.runningStages} being added`;
-    return `${searchableCount} searchable screenshots • Offline & private`;
-  }, [searchableCount, isBuilding, summary]);
+  const isIndexing = pending > 0 || running > 0;
 
   return (
-    <>
-      <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+    <View style={styles.screen}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        {/* Header & Search Bar */}
         <View style={styles.header}>
-          <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onBackground }]}>
-            SS-Search
-          </Text>
+          <Text style={styles.appTitle}>SS-Search</Text>
+          <View style={styles.searchBox}>
+            <TextInput
+              style={styles.input}
+              placeholder="Search your screenshots..."
+              placeholderTextColor="#666"
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+            {loading ? (
+              <Spinner size="sm" />
+            ) : (
+              <Pressable onPress={handleSearch} disabled={!query.trim()}>
+                <Text style={[styles.searchButton, !query.trim() && styles.disabledText]}>
+                  Search
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
-        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-          <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-            {/* Hero Section */}
-            <View style={styles.hero}>
-              <Text variant="displaySmall" style={[styles.title, { color: theme.colors.onBackground }]}>
-                {heroTitle}
-              </Text>
-              <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-                {heroSubtitle}
-              </Text>
+        {/* Results or Welcome */}
+        <View style={styles.content}>
+          {results.length > 0 ? (
+            <FlatList
+              data={results}
+              keyExtractor={(item) => item.jobId}
+              numColumns={COLUMN_COUNT}
+              renderItem={({ item }) => (
+                <Pressable style={styles.resultItem}>
+                  <Image
+                    source={{ uri: item.uri }}
+                    style={styles.resultImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                  <View style={styles.scoreBadge}>
+                    <Text style={styles.scoreText}>
+                      {(item.score * 100).toFixed(0)}%
+                    </Text>
+                  </View>
+                </Pressable>
+              )}
+              contentContainerStyle={styles.resultGrid}
+            />
+          ) : query && !loading ? (
+            <View style={styles.center}>
+              <Text style={styles.mutedText}>No results found for "{query}"</Text>
             </View>
-
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              <View style={[styles.searchInputWrapper, { backgroundColor: theme.colors.surfaceVariant }]}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <Text
-                  style={[
-                    styles.searchPlaceholder,
-                    query && { color: theme.colors.onBackground },
-                    { color: theme.colors.onSurfaceVariant },
-                  ]}
-                  onPress={() => {
-                    // Would trigger actual search
-                  }}
-                >
-                  {query || 'Search anything you\'ve seen before'}
-                </Text>
-              </View>
-              <Text style={[styles.searchHint, { color: theme.colors.onSurfaceVariant }]}>
-                Type to search across text, visuals, and concepts
+          ) : (
+            <View style={styles.welcome}>
+              <Text style={styles.welcomeTitle}>
+                Find anything you've seen.
               </Text>
-            </View>
+              <Text style={styles.welcomeSubtitle}>
+                Search through {totalJobs} screenshots by text, visuals, or concepts.
+              </Text>
+              
+              {!isModelReady && (
+                <Card className="mt-6 p-4 bg-yellow-900/20 border-yellow-700/50">
+                  <Text style={styles.warningText}>
+                    Semantic search is warming up...
+                  </Text>
+                  <Text style={styles.warningSub}>
+                    Text search is available, but visual/conceptual matching will be ready once the model is loaded.
+                  </Text>
+                </Card>
+              )}
 
-            {/* Empty State or Suggested Searches */}
-            {searchableCount === 0 ? (
-              <View style={styles.emptyStateSection}>
-                <View style={[styles.emptyStateCard, { backgroundColor: theme.colors.surfaceVariant }]}>
-                  <Text style={[styles.emptyStateEmoji]}>📸</Text>
-                  <Text variant="headlineSmall" style={[styles.emptyStateTitle, { color: theme.colors.onBackground }]}>
-                    Start by importing screenshots
-                  </Text>
-                  <Text
-                    variant="bodySmall"
-                    style={[styles.emptyStateText, { color: theme.colors.onSurfaceVariant }]}
-                  >
-                    Grant access to your photo library and we&apos;ll index them in the background.
-                  </Text>
-                  {!permissionGranted && (
-                    <HeroButton
-                      style={styles.emptyStateCta}
-                      onPress={() => setPrimerVisible(true)}
+              <View style={styles.suggestions}>
+                <Text style={styles.suggestionHeader}>Try searching for:</Text>
+                <View style={styles.suggestionChips}>
+                  {['login screen', 'error message', 'recipe', 'design'].map(s => (
+                    <Button 
+                      key={s} 
+                      size="sm" 
+                      variant="secondary"
+                      onPress={() => {
+                        setQuery(s);
+                        search(s);
+                      }}
                     >
-                      Grant Access
-                    </HeroButton>
-                  )}
-                </View>
-
-                <View style={styles.featuresGrid}>
-                  <Feature
-                    icon="⚡"
-                    title="Lightning Fast"
-                    description="Search runs on device, no internet needed"
-                  />
-                  <Feature
-                    icon="🔒"
-                    title="Completely Private"
-                    description="Your data never leaves your phone"
-                  />
-                  <Feature
-                    icon="🎯"
-                    title="Smart Search"
-                    description="Find by text, visuals, concepts, and more"
-                  />
+                      {s}
+                    </Button>
+                  ))}
                 </View>
               </View>
-            ) : (
-              <>
-                {/* Quick Examples */}
-                <View style={styles.section}>
-                  <Text variant="labelLarge" style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
-                    Try searching for:
-                  </Text>
-                  <View style={styles.examplesGrid}>
-                    {suggestedSearches.map((item) => (
-                      <HeroButton
-                        key={item.query}
-                        variant="outline"
-                        size="sm"
-                        style={styles.exampleChip}
-                        onPress={() => setQuery(item.query)}
-                      >
-                        {item.emoji} {item.query}
-                      </HeroButton>
-                    ))}
-                  </View>
-                </View>
+            </View>
+          )}
+        </View>
 
-                {/* Indexing Status (if still building) */}
-                {isBuilding && (
-                  <View style={[styles.section, styles.buildingStatus]}>
-                    <View style={[styles.statusBadge, { backgroundColor: theme.colors.surfaceVariant }]}>
-                      <Text style={styles.statusEmoji}>⧖</Text>
-                      <View style={styles.statusText}>
-                        <Text
-                          variant="labelMedium"
-                          style={{ color: theme.colors.onBackground, fontWeight: '600' }}
-                        >
-                          Building your library
-                        </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                          {summary.pendingStages + summary.runningStages} screenshots being added • ~5 min
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                {/* Bottom hint */}
-                <View style={styles.hintSection}>
-                  <Text
-                    variant="bodySmall"
-                    style={[styles.hint, { color: theme.colors.onSurfaceVariant }]}
-                  >
-                    💡 Tap Library tab to see detailed indexing progress
-                  </Text>
-                </View>
-              </>
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </View>
-
-      <PermissionPrimer
-        visible={primerVisible}
-        onDismiss={() => setPrimerVisible(false)}
-        onGranted={() => {
-          setPermissionGranted(true);
-          setPrimerVisible(false);
-        }}
-      />
-    </>
-  );
-}
-
-function Feature({
-  icon,
-  title,
-  description,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-}) {
-  const theme = useTheme();
-  return (
-    <Card style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
-      <Text style={styles.featureIcon}>{icon}</Text>
-      <Text
-        variant="labelMedium"
-        style={[styles.featureTitle, { color: theme.colors.onBackground }]}
-      >
-        {title}
-      </Text>
-      <Text
-        variant="bodySmall"
-        style={[styles.featureDescription, { color: theme.colors.onSurfaceVariant }]}
-      >
-        {description}
-      </Text>
-    </Card>
+        {/* Bottom Status Bar */}
+        {(isIndexing || isSyncing) && (
+          <View style={styles.statusBar}>
+            <Spinner size="sm" />
+            <Text style={styles.statusText}>
+              {isSyncing ? 'Syncing library...' : `Indexing ${pending + running} screens...`}
+            </Text>
+          </View>
+        )}
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: '#000',
   },
   safeArea: {
     flex: 1,
   },
-  container: {
-    paddingBottom: 40,
-  },
   header: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    padding: 20,
+    gap: 16,
   },
-  headerTitle: {
-    fontWeight: '700',
+  appTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
   },
-  // Hero Section
-  hero: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 32,
-  },
-  title: {
-    fontWeight: '700',
-    lineHeight: 40,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  // Search
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  searchInputWrapper: {
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#111',
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
-    gap: 12,
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#222',
   },
-  searchIcon: {
-    fontSize: 20,
-  },
-  searchPlaceholder: {
+  input: {
     flex: 1,
-    fontSize: 14,
+    color: '#fff',
+    fontSize: 16,
+    marginRight: 12,
   },
-  searchHint: {
-    fontSize: 11,
-    marginTop: 4,
+  searchButton: {
+    color: '#007AFF',
+    fontWeight: '600',
   },
-  // Empty State
-  emptyStateSection: {
-    paddingHorizontal: 20,
+  disabledText: {
+    opacity: 0.5,
   },
-  emptyStateCard: {
-    borderRadius: 16,
+  content: {
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  welcome: {
+    flex: 1,
     padding: 24,
-    alignItems: 'center',
-    marginBottom: 32,
+    justifyContent: 'center',
   },
-  emptyStateEmoji: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyStateTitle: {
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  emptyStateCta: {
-    marginTop: 12,
-    alignSelf: 'center',
-  },
-  // Features Grid
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
-  },
-  featureCard: {
-    flex: 1,
-    minWidth: '45%',
-    alignItems: 'center',
-  },
-  featureIcon: {
+  welcomeTitle: {
     fontSize: 32,
-    marginBottom: 8,
+    fontWeight: 'bold',
+    color: '#fff',
+    lineHeight: 40,
   },
-  featureTitle: {
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 12,
+    lineHeight: 24,
+  },
+  suggestions: {
+    marginTop: 40,
+    gap: 12,
+  },
+  suggestionHeader: {
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  featureDescription: {
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  // Section
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    marginBottom: 12,
+    color: '#666',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '600',
+    letterSpacing: 1,
   },
-  // Examples Grid
-  examplesGrid: {
+  suggestionChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  exampleChip: {
-    marginBottom: 8,
+  mutedText: {
+    color: '#666',
+    textAlign: 'center',
   },
-  // Building Status
-  buildingStatus: {
-    marginBottom: 16,
+  warningText: {
+    color: '#fbbf24',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
-  statusBadge: {
+  warningSub: {
+    color: '#d97706',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  resultGrid: {
+    padding: 1,
+  },
+  resultItem: {
+    width: ITEM_SIZE,
+    height: ITEM_SIZE,
+    padding: 1,
+  },
+  resultImage: {
+    flex: 1,
+    backgroundColor: '#111',
+  },
+  scoreBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  scoreText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  statusBar: {
     flexDirection: 'row',
-    borderRadius: 12,
-    padding: 16,
     alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#111',
+    borderTopWidth: 1,
+    borderTopColor: '#222',
     gap: 12,
   },
-  statusEmoji: {
-    fontSize: 24,
-  },
   statusText: {
-    flex: 1,
-  },
-  // Hint
-  hintSection: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  hint: {
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
+    color: '#999',
+    fontSize: 13,
   },
 });

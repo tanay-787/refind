@@ -23,6 +23,7 @@ import { initializeEmbeddings } from './embeddings';
 let siglipInstance: any | null = null;
 let tokenizerInstance: any | null = null;
 let loaded = false;
+let textModelLoaded = false;
 let loadingPromise: Promise<void> | null = null;
 
 export async function configureModelUrls(visionUrl: string, textUrl: string, tokenizerUrl: string) {
@@ -31,9 +32,8 @@ export async function configureModelUrls(visionUrl: string, textUrl: string, tok
 
 /**
  * Lightweight idempotent ModelManager for job-journal embedding stage.
- * - isReady(): quick check
- * - ensureReady(): idempotent download+load of vision+tokenizer
- * - ensureTextReady(): ensure text model is loaded as well
+ * - isReady(): quick check for BOTH vision and text models
+ * - ensureReady(): idempotent download+load of vision+tokenizer+text
  * - getStatus()/subscribe() => delegate to local model state
  */
 export function getStatus(): SiglipModelState {
@@ -46,7 +46,7 @@ export function subscribe(listener: (s: SiglipModelState) => void) {
 
 export function isReady(): boolean {
   const s = getSiglipModelState();
-  return s.status === 'ready' && loaded && siglipInstance !== null && tokenizerInstance !== null;
+  return s.status === 'ready' && s.isLoaded && s.isTextLoaded && siglipInstance !== null && tokenizerInstance !== null;
 }
 
 export async function ensureReady(): Promise<void> {
@@ -60,9 +60,17 @@ export async function ensureReady(): Promise<void> {
         throw new Error(state.error || 'SigLIP download failed');
       }
 
-      // Load runtime models
+      // Load runtime models (Vision)
       siglipInstance = await loadSiglipModels();
       tokenizerInstance = await loadSiglipTokenizer();
+
+      // Ensure Text model is also loaded for search readiness
+      const currentState = getSiglipModelState();
+      if (!currentState.textPath) {
+        await downloadSiglipTextModel();
+      }
+      await loadSiglipTextModel(siglipInstance);
+      textModelLoaded = true;
 
       // Wire into job-journal embeddings module so other callers can use it
       try {
@@ -79,22 +87,7 @@ export async function ensureReady(): Promise<void> {
 }
 
 export async function ensureTextReady(): Promise<void> {
-  // Ensure vision/tokenizer are loaded first
-  await ensureReady();
-  if (!siglipInstance) throw new Error('SigLIP instance missing after ensureReady');
-
-  const state = getSiglipModelState();
-  if (!state.textPath) {
-    await downloadSiglipTextModel();
-  }
-
-  // Load text model into the existing SigLIP instance
-  await loadSiglipTextModel(siglipInstance);
-
-  // Re-initialize embeddings to ensure text model is available downstream
-  try {
-    initializeEmbeddings(siglipInstance, tokenizerInstance);
-  } catch { /* ignore */ }
+  return ensureReady();
 }
 
 export function unload(): void {
@@ -107,5 +100,6 @@ export function unload(): void {
   siglipInstance = null;
   tokenizerInstance = null;
   loaded = false;
+  textModelLoaded = false;
   loadingPromise = null;
 }

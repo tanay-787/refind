@@ -27,7 +27,8 @@ import {
 import { runOcrStage } from './stages/02-ocr.stage';
 import { runOcrPostprocessStage } from './stages/03-ocr_postprocess.stage';
 import { runKeywordsStage } from './stages/05-keywords.stage';
-import { runIndexStage } from './stages/06-index.stage';
+import { runIndexFtsStage } from './stages/06-index_fts.stage';
+import { runIndexVecStage } from './stages/07-index_vec.stage';
 
 const STAGE_TIMEOUTS: Record<JobJournalStage, number> = {
   metadata: 30_000, // 30s
@@ -36,6 +37,8 @@ const STAGE_TIMEOUTS: Record<JobJournalStage, number> = {
   embedding: 10 * 60_000, // 10m
   keywords: 60_000, // 1m
   index: 120_000, // 2m
+  index_fts: 120_000, // 2m
+  index_vec: 120_000, // 2m
 };
 
 async function promiseWithTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -84,7 +87,8 @@ async function getJob(jobId: string): Promise<JobJournalJob | null> {
 }
 
 function getCheckpointPointer(jobId: string, stage: JobJournalStage) {
-  if (stage === 'index') return `screenshot_search_index:${jobId}`;
+  if (stage === 'index' || stage === 'index_fts') return `screenshot_search_index:${jobId}`;
+  if (stage === 'index_vec') return `image_embedding_index:${jobId}`;
   if (stage === 'embedding') return `embedding_stage_results:${jobId}`;
   if (stage === 'keywords') return `keyword_stage_results:${jobId}`;
   if (stage === 'ocr_postprocess') return `ocr_postprocess_stage_results:${jobId}`;
@@ -114,7 +118,7 @@ async function validateStageInput(jobId: string, stage: JobJournalStage): Promis
     return null;
   }
 
-  if (stage === 'embedding' || stage === 'keywords') {
+  if (stage === 'embedding' || stage === 'keywords' || stage === 'index') {
     const post = await db.getFirstAsync<{ text: string | null }>(
       `SELECT text FROM ocr_postprocess_stage_results WHERE job_id = ?`,
       [jobId],
@@ -123,34 +127,42 @@ async function validateStageInput(jobId: string, stage: JobJournalStage): Promis
     return null;
   }
 
-  if (stage === 'index') {
-    const deps = await db.getAllAsync<{ stage: string }>(
-      `SELECT stage FROM stage_executions WHERE job_id = ? AND status = 'completed' AND stage IN ('embedding', 'keywords')`,
-      [jobId],
-    );
-    const done = new Set(deps.map((row) => row.stage));
-    if (!done.has('embedding') || !done.has('keywords')) {
-      return 'Index dependencies incomplete';
-    }
+  if (stage === 'index_fts') {
     const post = await db.getFirstAsync<{ text: string | null }>(
       `SELECT text FROM ocr_postprocess_stage_results WHERE job_id = ?`,
       [jobId],
     );
     if (!post) return 'OCR postprocess result missing';
+    return null;
+  }
+
+  if (stage === 'index_vec') {
+    const embedding = await db.getFirstAsync<{ id: string }>(
+      `SELECT id FROM embedding_stage_results WHERE job_id = ? AND modality = 'image'`,
+      [jobId],
+    );
+    if (!embedding) return 'Embedding result missing';
     return null;
   }
 
   return null;
 }
 
+/**
+ * Runner orchestrates stage execution.
+ * It periodically renews execution leases (heartbeat) and wraps stages 
+ * in timeouts to ensure system stability.
+ */
 export async function runNextStageExecution(): Promise<boolean> {
   await recoveryExpiredLeases();
   const execution = await claimNextStageExecution();
-  if (!execution) {
-    return false;
-  }
+  if (!execution) return false;
+
+  console.log(`[runner] Claimed: ${execution.stage} (Job: ${execution.jobId})`);
+  // ...
 
   const job = await getJob(execution.jobId);
+  
   // Track current claimed execution so that graceful shutdown can revoke the lease
   currentExecutionId = execution.id;
   if (!shutdownHandlerInstalled) {
@@ -181,7 +193,9 @@ export async function runNextStageExecution(): Promise<boolean> {
     }
     shutdownHandlerInstalled = true;
   }
+
   if (!job) {
+    console.error(`[runner] Job not found: ${execution.jobId}`);
     await failStageExecution(execution.id, `Job not found: ${execution.jobId}`);
     return true;
   }
@@ -189,6 +203,7 @@ export async function runNextStageExecution(): Promise<boolean> {
   let result: { status: 'completed' | 'failed' | 'waiting_for_model'; error?: string; errorCode?: string };
   const inputError = await validateStageInput(job.id, execution.stage);
   if (inputError) {
+    console.warn(`[runner] Input validation failed for ${execution.stage} (${execution.jobId}): ${inputError}`);
     await failStageExecution(execution.id, inputError);
     return true;
   }
@@ -199,6 +214,9 @@ export async function runNextStageExecution(): Promise<boolean> {
       void renewExecutionLease(execution.id);
     }, 60_000);
     const timeoutMs = STAGE_TIMEOUTS[execution.stage];
+    
+    console.log(`[runner] Running stage: ${execution.stage} (timeout: ${timeoutMs}ms)`);
+    
     switch (execution.stage as JobJournalStage) {
       case 'metadata': {
         try {
@@ -249,9 +267,18 @@ export async function runNextStageExecution(): Promise<boolean> {
         }
         break;
       }
-      case 'index': {
+      case 'index':
+      case 'index_fts': {
         try {
-          result = await promiseWithTimeout(runIndexStage(job), timeoutMs);
+          result = await promiseWithTimeout(runIndexFtsStage(job), timeoutMs);
+        } catch (err) {
+          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
+        }
+        break;
+      }
+      case 'index_vec': {
+        try {
+          result = await promiseWithTimeout(runIndexVecStage(job), timeoutMs);
         } catch (err) {
           result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
         }
@@ -271,6 +298,8 @@ export async function runNextStageExecution(): Promise<boolean> {
     currentExecutionId = null;
   }
 
+  console.log(`[runner] Stage ${execution.stage} finished with status: ${result.status}${result.error ? ` (Error: ${result.error})` : ''}`);
+
   if (result.status === 'completed') {
     try {
       await completeStageExecution(
@@ -279,9 +308,10 @@ export async function runNextStageExecution(): Promise<boolean> {
         execution.stage,
         getCheckpointPointer(execution.jobId, execution.stage),
       );
+      console.log(`[runner] Successfully completed and checkpointed ${execution.stage} for ${execution.jobId}`);
     } catch (err) {
-      // If the atomic completion fails (e.g., missing output), mark execution failed so it can be retried.
       const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[runner] Completion logic failed for ${execution.stage}: ${msg}`);
       await failStageExecution(execution.id, `Completion validation failed: ${msg}`);
     }
   } else if (result.status === 'waiting_for_model') {

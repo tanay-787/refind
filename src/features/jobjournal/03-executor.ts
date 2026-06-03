@@ -9,16 +9,20 @@ const STAGE_DEPENDENCIES: Record<JobJournalStage, JobJournalStage[]> = {
   ocr_postprocess: ['ocr'],
   embedding: ['ocr_postprocess'],
   keywords: ['ocr_postprocess'],
-  index: ['embedding', 'keywords'],
+  index: ['ocr_postprocess', 'keywords'],
+  index_fts: ['ocr_postprocess', 'keywords'],
+  index_vec: ['embedding'],
 };
 
 const STAGE_CHILDREN: Record<JobJournalStage, JobJournalStage[]> = {
   metadata: ['ocr'],
   ocr: ['ocr_postprocess'],
-  ocr_postprocess: ['embedding', 'keywords'],
-  embedding: ['index'],
-  keywords: ['index'],
+  ocr_postprocess: ['embedding', 'keywords', 'index_fts', 'index'],
+  embedding: ['index_vec'],
+  keywords: ['index_fts', 'index'],
   index: [],
+  index_fts: [],
+  index_vec: [],
 };
 
 function getExecutionId(jobId: string, stage: JobJournalStage) {
@@ -29,46 +33,65 @@ function placeholders(count: number) {
   return new Array(count).fill('?').join(', ');
 }
 
+/**
+ * Enqueues children stages for a given job and stage.
+ * Validates dependencies to ensure all prerequisites are completed.
+ */
 async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: number) {
   const db = await getJobJournalDatabase();
   const children = STAGE_CHILDREN[stage];
-  for (const child of children) {
-    const dependencies = STAGE_DEPENDENCIES[child];
 
-    // If child has no dependencies, enqueue unconditionally
-    if (dependencies.length === 0) {
-      const executionId = getExecutionId(jobId, child);
-      await db.runAsync(
-        `INSERT OR IGNORE INTO stage_executions
-         (id, job_id, stage, attempt, status, lease_until, created_at, updated_at, last_error)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [executionId, jobId, child, 0, 'pending', null, now, now, null],
-      );
+  if (!children || children.length === 0) {
+    return;
+  }
+
+  // Fetch job to check vector_required
+  const job = await db.getFirstAsync<{ vector_required: number }>(
+    'SELECT vector_required FROM job_journal_jobs WHERE id = ?',
+    [jobId],
+  );
+  const vectorRequired = !!job?.vector_required;
+
+  console.log(`[executor] Checking children for ${stage} (Job: ${jobId}): [${children.join(', ')}]`);
+
+  for (const child of children) {
+    // Skip vector-related stages if not required for this job
+    if ((child === 'embedding' || child === 'index_vec') && !vectorRequired) {
       continue;
     }
 
+    const dependencies = STAGE_DEPENDENCIES[child];
+
+    // Check if ALL dependencies for this child are 'completed'
+    // This maintains the DAG integrity.
     const rows = await db.getAllAsync<{ stage: string }>(
       `SELECT stage
        FROM stage_executions
        WHERE job_id = ? AND status = 'completed' AND stage IN (${placeholders(dependencies.length)})`,
       [jobId, ...dependencies],
     );
-    const completedDeps = new Set(rows.map((row) => row.stage));
-    const allDependenciesMet = dependencies.every((dependency) => completedDeps.has(dependency));
 
-    if (!allDependenciesMet) {
-      continue;
+    if (rows.length === dependencies.length) {
+      // All dependencies met, enqueue child if not already there
+      const executionId = getExecutionId(jobId, child);
+
+      const result = await db.runAsync(
+        `INSERT OR IGNORE INTO stage_executions (id, job_id, stage, status, attempt, created_at, updated_at)
+         VALUES (?, ?, ?, 'pending', 0, ?, ?)`,
+        [executionId, jobId, child, now, now],
+      );
+
+      if ((result.changes ?? 0) > 0) {
+        console.log(`[executor] Enqueued child stage ${child} for job ${jobId}`);
+      }
+    } else {
+      console.log(
+        `[executor] Child stage ${child} for job ${jobId} waiting for more dependencies. Got ${rows.length}/${dependencies.length}`,
+      );
     }
-
-    const executionId = getExecutionId(jobId, child);
-    await db.runAsync(
-      `INSERT OR IGNORE INTO stage_executions
-       (id, job_id, stage, attempt, status, lease_until, created_at, updated_at, last_error)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [executionId, jobId, child, 0, 'pending', null, now, now, null],
-    );
   }
 }
+    
 
 async function markJobCompletedIfTerminal(jobId: string, now: number) {
   const db = await getJobJournalDatabase();
@@ -110,7 +133,9 @@ export async function claimNextStageExecution(): Promise<JobJournalStageExecutio
       `SELECT id, job_id, stage, attempt, created_at, updated_at
        FROM stage_executions
        WHERE status = 'pending'
-       ORDER BY created_at ASC
+       ORDER BY 
+         (CASE WHEN stage = 'index_fts' THEN 0 ELSE 1 END) ASC,
+         created_at ASC
        LIMIT 1`,
     );
 
@@ -174,6 +199,7 @@ export async function completeStageExecution(
   stage: JobJournalStage,
   outputPath?: string,
 ): Promise<void> {
+  console.log(`[executor] Completing stage ${stage} for job ${jobId}`);
   const db = await getJobJournalDatabase();
   const now = Date.now();
 
@@ -202,9 +228,12 @@ export async function completeStageExecution(
         [jobId],
       );
       if (!row) throw new Error(`Embedding result missing for job ${jobId}`);
-    } else if (stage === 'index') {
+    } else if (stage === 'index_fts') {
       const row = await db.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM screenshot_search_index WHERE job_id = ?`, [jobId]);
-      if (!row) throw new Error(`Index entries missing for job ${jobId}`);
+      if (!row) throw new Error(`Index FTS entries missing for job ${jobId}`);
+    } else if (stage === 'index_vec') {
+      const row = await db.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM image_embedding_index WHERE job_id = ?`, [jobId]);
+      if (!row) throw new Error(`Index Vec entries missing for job ${jobId}`);
     }
 
     const completion = await db.runAsync(

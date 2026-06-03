@@ -6,11 +6,6 @@ export {
   ingestJobJournalScreenshots, syncJobJournalScreenshots,
   watchJobJournalIntake, type JobJournalIntakeResult
 } from './02-intake';
-export {
-  claimNextStageExecution,
-  completeStageExecution,
-  failStageExecution, getStageExecutionStats, markExecutionWaitingForModel, recoveryExpiredLeases, retryWaitingForModelExecutions
-} from './03-executor';
 
 export {
   getExecutorStats, runNextStageExecution
@@ -28,7 +23,6 @@ export {
 } from './modelManager';
 export { initModelMonitor } from './modelMonitor';
 export { runKeywordsStage } from './stages/05-keywords.stage';
-export { runIndexStage } from './stages/06-index.stage';
 export { getJobJournalDatabase, getJobJournalVecStatus, initializeJobJournalDatabase } from './storage/database';
 export { JOB_JOURNAL_SCHEMA, JOB_JOURNAL_VEC_SCHEMA } from './storage/schema';
 

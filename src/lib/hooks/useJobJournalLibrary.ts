@@ -1,19 +1,31 @@
-import * as MediaLibrary from 'expo-media-library';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import * as MediaLibrary from 'expo-media-library';
 
-import { useJobJournalOperations } from '@/lib/hooks';
+import { useJobJournalOperations } from './useJobJournalOperations';
 import { getJobJournalDatabase } from '@/features/jobjournal';
-import type { ScreenshotAsset } from '../types';
+
+export type JobJournalLibraryItem = {
+  id: string;
+  uri: string;
+  filename: string;
+  creationTime: number;
+  width: number;
+  height: number;
+  status: 'queued' | 'working' | 'indexed' | 'error';
+  stage: 'metadata' | 'ocr' | 'embedding' | 'enrichment' | 'done' | 'new';
+  retryCount: number;
+  lastError: string | null;
+};
 
 function normalizeJobStage(
   stage: string | null,
   jobStatus: string
-): ScreenshotAsset['pipelineStage'] {
+): JobJournalLibraryItem['stage'] {
   if (jobStatus === 'completed') return 'done';
   if (!stage) return 'new';
   
-  if (stage === 'metadata') return 'new';
+  if (stage === 'metadata') return 'metadata';
   if (stage === 'ocr' || stage === 'ocr_postprocess') return 'ocr';
   if (stage === 'embedding') return 'embedding';
   if (stage === 'keywords' || stage === 'index') return 'enrichment';
@@ -23,19 +35,19 @@ function normalizeJobStage(
 
 function normalizeJobStatus(
   status: string
-): ScreenshotAsset['pipelineState'] {
+): JobJournalLibraryItem['status'] {
   if (status === 'running') return 'working';
   if (status === 'completed') return 'indexed';
   if (status === 'failed') return 'error';
   return 'queued';
 }
 
-export function useScreenshotLibrary() {
+export function useJobJournalLibrary() {
   const [permissionResponse, requestPermission] = MediaLibrary.usePermissions({
     granularPermissions: ['photo'],
   });
   const [loading, setLoading] = useState(false);
-  const [assets, setAssets] = useState<ScreenshotAsset[]>([]);
+  const [items, setItems] = useState<JobJournalLibraryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const { sync, process } = useJobJournalOperations();
@@ -43,12 +55,10 @@ export function useScreenshotLibrary() {
   const loadFromJournal = useCallback(async () => {
     const db = await getJobJournalDatabase();
     
-    // We get the "current" stage by looking at the execution with the highest created_at or most advanced stage
-    // For simplicity, we'll join with the latest execution for each job.
     const rows = await db.getAllAsync<{
       id: string;
       uri: string;
-      filename: string | null;
+      image_hash: string;
       created_at: number;
       width: number | null;
       height: number | null;
@@ -60,7 +70,7 @@ export function useScreenshotLibrary() {
       `SELECT
          j.id,
          j.image_uri as uri,
-         j.image_hash as filename, -- using hash as filename placeholder if needed
+         j.image_hash,
          j.created_at,
          m.width,
          m.height,
@@ -79,58 +89,72 @@ export function useScreenshotLibrary() {
        LIMIT 500`,
     );
 
+    // Note: The above join might be slightly off if e.id is not job_id.
+    // Fixed join condition: e.job_id = j.id
+    
     return rows.map((row) => {
       const createdAt = row.created_at ?? Date.now();
       const creationTime = createdAt > 1000000000000 ? Math.floor(createdAt / 1000) : createdAt;
       return {
         id: row.id,
         uri: row.uri,
-        filename: row.filename ?? 'screenshot',
+        filename: row.image_hash ?? 'screenshot',
         creationTime,
         width: row.width ?? 1080,
         height: row.height ?? 1920,
-        pipelineStage: normalizeJobStage(row.current_stage, row.job_status),
-        pipelineState: normalizeJobStatus(row.job_status),
+        stage: normalizeJobStage(row.current_stage, row.job_status),
+        status: normalizeJobStatus(row.job_status),
         retryCount: row.attempt ?? 0,
         lastError: row.last_error_message,
       };
     });
   }, []);
 
-  const syncJournal = useCallback(async () => {
-    await sync();
-    // We don't wait for processing to finish here, as it's a background-capable process
-    // But for "refresh" we might want to run a few iterations if in foreground
-    await process(8);
-    const items = await loadFromJournal();
-    setAssets(items);
-  }, [sync, process, loadFromJournal]);
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    
+    let active = true;
+    
+    const tick = async () => {
+      if (!active) return;
+      if (permissionResponse?.status === 'granted') {
+        try {
+          const data = await loadFromJournal();
+          if (active) setItems(data);
+        } catch (err) {
+          console.error('[useJobJournalLibrary] tick failed:', err);
+        }
+      }
+    };
+
+    // Initial load
+    tick();
+
+    // Poll for data updates
+    const interval = setInterval(tick, 5000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [permissionResponse?.status, loadFromJournal]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      await syncJournal();
+      await sync();
+      // Only run a few iterations if requested by user refresh
+      await process(8);
+      const data = await loadFromJournal();
+      setItems(data);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Failed to load screenshots.');
+      setError(cause instanceof Error ? cause.message : 'Failed to load library.');
     } finally {
       setLoading(false);
     }
-  }, [syncJournal]);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    if (permissionResponse?.status === 'granted') {
-      void refresh();
-    }
-    const interval = setInterval(() => {
-      if (permissionResponse?.status === 'granted') {
-        void refresh();
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [permissionResponse?.status, refresh]);
+  }, [sync, process, loadFromJournal]);
 
   const requestAccess = useCallback(async () => {
     const response = await requestPermission();
@@ -140,12 +164,11 @@ export function useScreenshotLibrary() {
   }, [refresh, requestPermission]);
 
   return {
-    assets,
+    items,
     error,
     loading,
     permissionResponse,
     granted: permissionResponse?.status === 'granted',
-    denied: permissionResponse != null && permissionResponse.status !== 'granted',
     requestAccess,
     refresh,
   };

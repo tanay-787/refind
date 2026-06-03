@@ -1,0 +1,73 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {"type":"rectangle","x":0,"y":0,"width":1400,"height":980,"fillStyle":"solid","fillColor":"#ffffff","strokeColor":"#e5e7eb","strokeWidth":2},
+    {"type":"rectangle","x":0,"y":0,"width":1400,"height":64,"fillStyle":"solid","fillColor":"#1f2937","strokeColor":"#1f2937","strokeWidth":0},
+    {"type":"text","x":0,"y":14,"width":1400,"height":26,"text":"Durable Workflow Journal — doc-driven model","fontSize":22,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#ffffff","fontWeight":"bold"},
+    {"type":"text","x":0,"y":40,"width":1400,"height":16,"text":"One screenshot = one workflow, replayed through idempotent stage executions and durable checkpoints","fontSize":11,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#d1d5db"},
+
+    {"type":"rectangle","x":24,"y":92,"width":320,"height":190,"fillStyle":"solid","fillColor":"#eff6ff","strokeColor":"#3b82f6","strokeWidth":2,"roundness":12},
+    {"type":"text","x":40,"y":108,"width":288,"height":16,"text":"1. Stable identity","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#1d4ed8","fontWeight":"bold"},
+    {"type":"text","x":40,"y":136,"width":288,"height":120,"text":"Screenshot Captured\\n→ SHA256(image bytes)\\n→ duplicate detection\\n→ single durable job row","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#1e3a8a"},
+    {"type":"text","x":40,"y":236,"width":288,"height":18,"text":"imageHash is the idempotency key","fontSize":11,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#2563eb","fontStyle":"italic"},
+
+    {"type":"rectangle","x":364,"y":92,"width":320,"height":190,"fillStyle":"solid","fillColor":"#f0fdf4","strokeColor":"#22c55e","strokeWidth":2,"roundness":12},
+    {"type":"text","x":380,"y":108,"width":288,"height":16,"text":"2. Durable journal","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#15803d","fontWeight":"bold"},
+    {"type":"text","x":380,"y":136,"width":288,"height":120,"text":"job_journal_jobs\\nstage_executions\\nstage_checkpoints\\nresult tables (metadata / OCR / embeddings / keywords / index)","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#14532d"},
+    {"type":"text","x":380,"y":236,"width":288,"height":18,"text":"queue holds stage executions, not screenshots","fontSize":11,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#16a34a","fontStyle":"italic"},
+
+    {"type":"rectangle","x":704,"y":92,"width":320,"height":190,"fillStyle":"solid","fillColor":"#fff7ed","strokeColor":"#f59e0b","strokeWidth":2,"roundness":12},
+    {"type":"text","x":720,"y":108,"width":288,"height":16,"text":"3. Stage execution","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#b45309","fontWeight":"bold"},
+    {"type":"text","x":720,"y":136,"width":288,"height":120,"text":"PENDING\\n↓ claimNextStageExecution()\\nRUNNING + lease_until\\n↓ complete / fail / waiting_for_model","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#92400e"},
+    {"type":"text","x":720,"y":236,"width":288,"height":18,"text":"recovery replays state, not work","fontSize":11,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#d97706","fontStyle":"italic"},
+
+    {"type":"rectangle","x":1044,"y":92,"width":332,"height":190,"fillStyle":"solid","fillColor":"#f5f3ff","strokeColor":"#8b5cf6","strokeWidth":2,"roundness":12},
+    {"type":"text","x":1060,"y":108,"width":300,"height":16,"text":"4. Recovery & replay","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#6d28d9","fontWeight":"bold"},
+    {"type":"text","x":1060,"y":136,"width":300,"height":120,"text":"if COMPLETED → skip\\nif RUNNING → verify lease\\nif FAILED → retry\\nif waiting_for_model → pause until modelMonitor retries","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#5b21b6"},
+    {"type":"text","x":1060,"y":236,"width":300,"height":18,"text":"lease expiry requeues stale work","fontSize":11,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#7c3aed","fontStyle":"italic"},
+
+    {"type":"text","x":344,"y":178,"width":24,"height":22,"text":"→","fontSize":20,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+    {"type":"text","x":684,"y":178,"width":24,"height":22,"text":"→","fontSize":20,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+    {"type":"text","x":1024,"y":178,"width":24,"height":22,"text":"→","fontSize":20,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+
+    {"type":"rectangle","x":24,"y":320,"width":816,"height":250,"fillStyle":"solid","fillColor":"#fafafa","strokeColor":"#d1d5db","strokeWidth":2,"roundness":12},
+    {"type":"text","x":40,"y":336,"width":784,"height":16,"text":"Pipeline DAG and atomic commit rule","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#111827","fontWeight":"bold"},
+    {"type":"text","x":40,"y":368,"width":784,"height":90,"text":"Metadata\\n   ↓\\nOCR\\n   ↓\\nOCR Postprocess\\n   ↙        ↘\\nEmbedding   Keywords\\n   ↘        ↙\\n      Index","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#111827"},
+    {"type":"text","x":500,"y":364,"width":320,"height":120,"text":"Atomic commit pattern\\nrun stage\\nwrite output file\\nfsync\\ncommit DB checkpoint\\nthen mark COMPLETED","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#374151"},
+    {"type":"text","x":40,"y":492,"width":784,"height":48,"text":"Parallelism: embedding and keywords can run after OCR postprocess; index waits for both.","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#4b5563"},
+
+    {"type":"rectangle","x":868,"y":320,"width":508,"height":250,"fillStyle":"solid","fillColor":"#fffbeb","strokeColor":"#f59e0b","strokeWidth":2,"roundness":12},
+    {"type":"text","x":884,"y":336,"width":476,"height":16,"text":"Suggested checkpoint graph","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#92400e","fontWeight":"bold"},
+    {"type":"text","x":884,"y":368,"width":476,"height":172,"text":"Job\\n├─ metadata checkpoint\\n├─ OCR checkpoint\\n├─ SigLIP checkpoint\\n├─ keywords checkpoint\\n└─ index checkpoint\\n\\nstage_key = (job_id, stage_name)\\nimage_hash = SHA256(image)\\nresume from last committed checkpoint","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#78350f"},
+
+    {"type":"rectangle","x":24,"y":604,"width":1352,"height":328,"fillStyle":"solid","fillColor":"#f8fafc","strokeColor":"#cbd5e1","strokeWidth":2,"roundness":12},
+    {"type":"text","x":40,"y":620,"width":1320,"height":16,"text":"Stage state machine and durable recovery loop","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#0f172a","fontWeight":"bold"},
+    {"type":"rectangle","x":64,"y":660,"width":182,"height":78,"fillStyle":"solid","fillColor":"#dbeafe","strokeColor":"#3b82f6","strokeWidth":2,"roundness":10},
+    {"type":"text","x":82,"y":678,"width":146,"height":18,"text":"PENDING","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#1d4ed8","fontWeight":"bold"},
+    {"type":"text","x":82,"y":704,"width":146,"height":24,"text":"ready to execute","fontSize":11,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#1e3a8a"},
+    {"type":"text","x":246,"y":690,"width":56,"height":18,"text":"↓","fontSize":24,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+    {"type":"rectangle","x":316,"y":660,"width":182,"height":78,"fillStyle":"solid","fillColor":"#fef3c7","strokeColor":"#f59e0b","strokeWidth":2,"roundness":10},
+    {"type":"text","x":334,"y":678,"width":146,"height":18,"text":"RUNNING","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#b45309","fontWeight":"bold"},
+    {"type":"text","x":334,"y":704,"width":146,"height":24,"text":"lease_until heartbeat","fontSize":11,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#92400e"},
+    {"type":"text","x":498,"y":690,"width":56,"height":18,"text":"↓","fontSize":24,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+    {"type":"rectangle","x":568,"y":660,"width":182,"height":78,"fillStyle":"solid","fillColor":"#dcfce7","strokeColor":"#22c55e","strokeWidth":2,"roundness":10},
+    {"type":"text","x":586,"y":678,"width":146,"height":18,"text":"COMPLETED","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#15803d","fontWeight":"bold"},
+    {"type":"text","x":586,"y":704,"width":146,"height":24,"text":"checkpoint committed","fontSize":11,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#166534"},
+    {"type":"text","x":750,"y":690,"width":56,"height":18,"text":"↺","fontSize":24,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+    {"type":"rectangle","x":820,"y":660,"width":182,"height":78,"fillStyle":"solid","fillColor":"#fee2e2","strokeColor":"#ef4444","strokeWidth":2,"roundness":10},
+    {"type":"text","x":838,"y":678,"width":146,"height":18,"text":"FAILED","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#b91c1c","fontWeight":"bold"},
+    {"type":"text","x":838,"y":704,"width":146,"height":24,"text":"retry or terminal fail","fontSize":11,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#991b1b"},
+    {"type":"text","x":1002,"y":690,"width":56,"height":18,"text":"↺","fontSize":24,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+    {"type":"rectangle","x":1072,"y":660,"width":236,"height":78,"fillStyle":"solid","fillColor":"#ede9fe","strokeColor":"#8b5cf6","strokeWidth":2,"roundness":10},
+    {"type":"text","x":1090,"y":678,"width":200,"height":18,"text":"waiting_for_model","fontSize":16,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#6d28d9","fontWeight":"bold"},
+    {"type":"text","x":1090,"y":704,"width":200,"height":24,"text":"modelMonitor replays later","fontSize":11,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#5b21b6"},
+    {"type":"text","x":66,"y":760,"width":1240,"height":120,"text":"Recovery path: startup scans non-terminal executions, expired leases are requeued, and only missing or uncommitted checkpoints are retried. That is the durable-execution guarantee in one diagram.","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#334155"}
+  ],
+  "appState": {
+    "gridMode": "dot",
+    "gridSize": 20,
+    "gridModeEnabled": false
+  }
+}

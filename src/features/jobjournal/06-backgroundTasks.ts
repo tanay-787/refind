@@ -2,11 +2,9 @@
  * - Defines a short-lived background task that claims and executes a small number
  *   of stage executions per invocation to respect OS background time budgets.
  * - Limits work per invocation via processOnce(maxIterations) to avoid overruns.
- * - Use registerJobJournalBackgroundTask() to define the TaskManager task,
- *   scheduleJobJournalBackgroundTask() to register with the OS, and
+ * - Use scheduleJobJournalBackgroundTask() to register with the OS, and
  *   processJobJournalNow() for immediate foreground debugging.
- * - This module intentionally does NOT auto-wire into app startup; callers decide
- *   when to register/schedule to avoid coupling with other features.
+ * - Task definition MUST happen at the top level for Expo TaskManager.
  */
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
@@ -33,27 +31,34 @@ async function processOnce(maxIterations = 8) {
   return processed;
 }
 
+// Define task at top level for reliable registration
+try {
+  TaskManager.defineTask(JOB_JOURNAL_TASK_NAME, async () => {
+    try {
+      await processOnce();
+      return BackgroundTask.BackgroundTaskResult.Success;
+    } catch (err) {
+      console.error('JobJournal background task failed:', err);
+      return BackgroundTask.BackgroundTaskResult.Failed;
+    }
+  });
+} catch (err) {
+  console.warn('Failed to define JobJournal background task:', err);
+}
+
 export async function registerJobJournalBackgroundTask() {
-  try {
-    await TaskManager.defineTask(JOB_JOURNAL_TASK_NAME, async () => {
-      try {
-        await processOnce();
-        return BackgroundTask.BackgroundTaskResult.Success;
-      } catch (err) {
-        console.error('JobJournal background task failed:', err);
-        return BackgroundTask.BackgroundTaskResult.Failed;
-      }
-    });
-  } catch {
-    // defineTask may throw if already defined — ignore
-  }
+  // defineTask is handled at top level. 
+  // This is kept for compatibility with existing initialization flows.
 }
 
 export async function scheduleJobJournalBackgroundTask(minimumIntervalMinutes = 15) {
   try {
-    await BackgroundTask.registerTaskAsync(JOB_JOURNAL_TASK_NAME, {
-      minimumInterval: minimumIntervalMinutes,
-    });
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(JOB_JOURNAL_TASK_NAME);
+    if (!isRegistered) {
+      await BackgroundTask.registerTaskAsync(JOB_JOURNAL_TASK_NAME, {
+        minimumInterval: minimumIntervalMinutes,
+      });
+    }
   } catch (err) {
     console.error('Failed to schedule JobJournal background task:', err);
   }
@@ -61,7 +66,10 @@ export async function scheduleJobJournalBackgroundTask(minimumIntervalMinutes = 
 
 export async function unregisterJobJournalBackgroundTask() {
   try {
-    await BackgroundTask.unregisterTaskAsync(JOB_JOURNAL_TASK_NAME);
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(JOB_JOURNAL_TASK_NAME);
+    if (isRegistered) {
+      await BackgroundTask.unregisterTaskAsync(JOB_JOURNAL_TASK_NAME);
+    }
   } catch (err) {
     console.warn('Failed to unregister JobJournal background task:', err);
   }

@@ -1,20 +1,22 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { 
   getExecutorStats, 
-  getJobJournalDatabase, 
-  getStatus as getModelStatus, 
+  getJobJournalDatabase,
+  initModelMonitor,
+  ingestJobJournalScreenshots,
+  type JobJournalStatus,
+  type SiglipModelState,
+  type JobJournalIntakeResult,
+} from '@/features/jobjournal';
+import { 
+  getStatus as getModelStatus,
   subscribe as subscribeModel,
   ensureReady as ensureModelReady,
   ensureTextReady as ensureModelTextReady,
   unload as unloadModel,
-  initModelMonitor,
-  ingestJobJournalScreenshots,
-  processJobJournalNow,
-  type JobJournalStatus,
-  type SiglipModelState,
-  type JobJournalIntakeResult,
-  type JobJournalErrorCode
-} from '@/features/jobjournal';
+   } from '@/features/jobjournal/modelManager';
+import { processJobJournalNow } from '@/features/jobjournal/06-backgroundTasks';
+import { JobJournalErrorCode } from '@/features/jobjournal/types';
 
 interface JobJournalStats {
   pending: number;
@@ -66,6 +68,8 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
   });
 
   const isMounted = useRef(true);
+  const syncLock = useRef(false);
+  const processLock = useRef(false);
 
   const refreshStats = useCallback(async () => {
     try {
@@ -91,9 +95,11 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const sync = useCallback(async (options?: { vectorRequired?: boolean }) => {
-    if (state.isSyncing) return null;
+    if (syncLock.current) return null;
     
+    syncLock.current = true;
     setState(prev => ({ ...prev, isSyncing: true, lastError: null, lastErrorCode: null }));
+    
     try {
       const result = await ingestJobJournalScreenshots(undefined, options);
       await refreshStats();
@@ -104,16 +110,19 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
       console.error('[JobJournalProvider] Sync error:', error);
       return null;
     } finally {
+      syncLock.current = false;
       if (isMounted.current) {
         setState(prev => ({ ...prev, isSyncing: false }));
       }
     }
-  }, [state.isSyncing, refreshStats]);
+  }, [refreshStats]);
 
   const process = useCallback(async (iterations = 8) => {
-    if (state.isProcessing) return 0;
+    if (processLock.current) return 0;
 
+    processLock.current = true;
     setState(prev => ({ ...prev, isProcessing: true, lastError: null, lastErrorCode: null }));
+    
     try {
       const processed = await processJobJournalNow(iterations);
       await refreshStats();
@@ -124,11 +133,12 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
       console.error('[JobJournalProvider] Processing error:', error);
       return 0;
     } finally {
+      processLock.current = false;
       if (isMounted.current) {
         setState(prev => ({ ...prev, isProcessing: false }));
       }
     }
-  }, [state.isProcessing, refreshStats]);
+  }, [refreshStats]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -140,7 +150,7 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     const statsInterval = setInterval(refreshStats, 5000);
 
     // Subscribe to model state
-    const unsubscribeModel = subscribeModel((modelState) => {
+    const unsubscribeModel = subscribeModel((modelState: SiglipModelState) => {
       if (isMounted.current) {
         setState(prev => ({ ...prev, model: modelState }));
       }
@@ -157,14 +167,14 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     };
   }, [refreshStats]);
 
-  const value: JobJournalContextValue = {
+  const value = React.useMemo<JobJournalContextValue>(() => ({
     ...state,
     sync,
     process,
     ensureModelReady,
     ensureModelTextReady,
     unloadModel,
-  };
+  }), [state, sync, process]);
 
   return (
     <JobJournalContext.Provider value={value}>

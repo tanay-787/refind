@@ -1,0 +1,64 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {"type":"rectangle","x":0,"y":0,"width":1400,"height":980,"fillStyle":"solid","fillColor":"#ffffff","strokeColor":"#e5e7eb","strokeWidth":2},
+    {"type":"rectangle","x":0,"y":0,"width":1400,"height":64,"fillStyle":"solid","fillColor":"#111827","strokeColor":"#111827","strokeWidth":0},
+    {"type":"text","x":0,"y":14,"width":1400,"height":26,"text":"JobJournal runtime workflow — app execution view","fontSize":22,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#ffffff","fontWeight":"bold"},
+    {"type":"text","x":0,"y":40,"width":1400,"height":16,"text":"How the feature behaves while the app is live: source watch, durable seeding, lease-based execution, model retries, and persistent indexing","fontSize":11,"fontFamily":1,"textAlign":"center","verticalAlign":"top","fontColor":"#d1d5db"},
+
+    {"type":"rectangle","x":24,"y":92,"width":416,"height":250,"fillStyle":"solid","fillColor":"#eff6ff","strokeColor":"#3b82f6","strokeWidth":2,"roundness":12},
+    {"type":"text","x":40,"y":108,"width":384,"height":16,"text":"A. Live screenshot source + intake","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#1d4ed8","fontWeight":"bold"},
+    {"type":"text","x":40,"y":136,"width":384,"height":172,"text":"1) watchJobJournalScreenshotSource()\\n2) loadJobJournalScreenshotSource()\\n3) ingestJobJournalScreenshots()\\n4) seedJobForAsset()\\n   • hash asset bytes\\n   • dedupe by imageHash\\n   • insert job_journal_jobs\\n   • create initial metadata stage execution","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#1e3a8a"},
+    {"type":"text","x":40,"y":302,"width":384,"height":20,"text":"job identity stays stable even when the app restarts", "fontSize":11,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#2563eb","fontStyle":"italic"},
+
+    {"type":"rectangle","x":492,"y":92,"width":416,"height":250,"fillStyle":"solid","fillColor":"#f0fdf4","strokeColor":"#22c55e","strokeWidth":2,"roundness":12},
+    {"type":"text","x":508,"y":108,"width":384,"height":16,"text":"B. Durable journal + executor","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#15803d","fontWeight":"bold"},
+    {"type":"text","x":508,"y":136,"width":384,"height":172,"text":"5) recoveryExpiredLeases()\\n6) claimNextStageExecution()\\n   • set RUNNING\\n   • assign lease_until\\n7) validateStageInput()\\n8) completeStageExecution()\\n   • atomic checkpoint write\\n   • enqueue ready children\\n9) failStageExecution() / waiting_for_model","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#14532d"},
+    {"type":"text","x":508,"y":302,"width":384,"height":20,"text":"this is the durable journal, not a traditional queue","fontSize":11,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#16a34a","fontStyle":"italic"},
+
+    {"type":"rectangle","x":960,"y":92,"width":416,"height":250,"fillStyle":"solid","fillColor":"#fff7ed","strokeColor":"#f59e0b","strokeWidth":2,"roundness":12},
+    {"type":"text","x":976,"y":108,"width":384,"height":16,"text":"C. Background task runner","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#b45309","fontWeight":"bold"},
+    {"type":"text","x":976,"y":136,"width":384,"height":172,"text":"10) registerJobJournalBackgroundTask()\\n11) scheduleJobJournalBackgroundTask()\\n12) processOnce(maxIterations)\\n13) runNextStageExecution()\\n   • timeout guard per stage\\n   • heartbeat lease renewal\\n   • SIGINT / SIGTERM revoke path","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#92400e"},
+    {"type":"text","x":976,"y":302,"width":384,"height":20,"text":"short-lived invocations keep moving the journal forward","fontSize":11,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#d97706","fontStyle":"italic"},
+
+    {"type":"text","x":444,"y":198,"width":40,"height":24,"text":"→","fontSize":26,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+    {"type":"text","x":910,"y":198,"width":40,"height":24,"text":"→","fontSize":26,"fontFamily":1,"textAlign":"center","verticalAlign":"middle","fontColor":"#6b7280"},
+
+    {"type":"rectangle","x":24,"y":390,"width":492,"height":240,"fillStyle":"solid","fillColor":"#fafafa","strokeColor":"#d1d5db","strokeWidth":2,"roundness":12},
+    {"type":"text","x":40,"y":406,"width":460,"height":16,"text":"Stage DAG executed by the runner","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#111827","fontWeight":"bold"},
+    {"type":"text","x":40,"y":436,"width":460,"height":128,"text":"metadata → ocr → ocr_postprocess\\n           ↙              ↘\\n     embedding         keywords\\n           ↘              ↙\\n                index","fontSize":16,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#111827"},
+    {"type":"text","x":40,"y":566,"width":460,"height":42,"text":"Parallel branch: embedding and keywords can run after OCR postprocess.\\nIndex waits for both before writing search readiness.","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#4b5563"},
+
+    {"type":"rectangle","x":532,"y":390,"width":408,"height":240,"fillStyle":"solid","fillColor":"#f5f3ff","strokeColor":"#8b5cf6","strokeWidth":2,"roundness":12},
+    {"type":"text","x":548,"y":406,"width":376,"height":16,"text":"Model lifecycle and retry path","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#6d28d9","fontWeight":"bold"},
+    {"type":"text","x":548,"y":436,"width":376,"height":160,"text":"modelMonitor.initModelMonitor()\\n→ subscribe to SigLIP state\\n→ ensureReady() on startup\\n→ retryWaitingForModelExecutions()\\n\\nrunEmbeddingStage() returns waiting_for_model\\nwhen SigLIP is not ready","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#5b21b6"},
+    {"type":"text","x":548,"y":570,"width":376,"height":36,"text":"embeddings.ts uses SiglipTokenizer + loaded models;\\nsiglipModelManager owns download/load state","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#7c3aed"},
+
+    {"type":"rectangle","x":960,"y":390,"width":416,"height":240,"fillStyle":"solid","fillColor":"#fffbeb","strokeColor":"#f59e0b","strokeWidth":2,"roundness":12},
+    {"type":"text","x":976,"y":406,"width":384,"height":16,"text":"Persistent storage and search surfaces","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#92400e","fontWeight":"bold"},
+    {"type":"text","x":976,"y":436,"width":384,"height":160,"text":"SQLite tables\\n• job_journal_jobs\\n• stage_executions\\n• stage_checkpoints\\n• metadata / OCR / postprocess / embedding / keywords\\n\\nSearch indexes\\n• screenshot_search_index (FTS5)\\n• image_embedding_index (vec0)\\n• search_readiness","fontSize":13,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#78350f"},
+    {"type":"text","x":976,"y":570,"width":384,"height":36,"text":"index stage writes both text and vector readiness,\\nand preserves the job id as the document key","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#b45309"},
+
+    {"type":"rectangle","x":24,"y":664,"width":1352,"height":254,"fillStyle":"solid","fillColor":"#f8fafc","strokeColor":"#cbd5e1","strokeWidth":2,"roundness":12},
+    {"type":"text","x":40,"y":680,"width":1320,"height":16,"text":"Observed app behavior: a durable state machine rather than a one-shot pipeline","fontSize":15,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#0f172a","fontWeight":"bold"},
+    {"type":"rectangle","x":56,"y":718,"width":312,"height":156,"fillStyle":"solid","fillColor":"#dbeafe","strokeColor":"#3b82f6","strokeWidth":2,"roundness":10},
+    {"type":"text","x":72,"y":736,"width":280,"height":16,"text":"Startup / live sync","fontSize":14,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#1d4ed8","fontWeight":"bold"},
+    {"type":"text","x":72,"y":764,"width":280,"height":94,"text":"• load live screenshots\\n• seed missing jobs\\n• create initial stage execution\\n• keep watching for source changes","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#1e3a8a"},
+    {"type":"rectangle","x":396,"y":718,"width":312,"height":156,"fillStyle":"solid","fillColor":"#dcfce7","strokeColor":"#22c55e","strokeWidth":2,"roundness":10},
+    {"type":"text","x":412,"y":736,"width":280,"height":16,"text":"Execution loop","fontSize":14,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#15803d","fontWeight":"bold"},
+    {"type":"text","x":412,"y":764,"width":280,"height":94,"text":"• claim lease\\n• run one stage\\n• persist output before completion\\n• enqueue only ready children","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#14532d"},
+    {"type":"rectangle","x":736,"y":718,"width":312,"height":156,"fillStyle":"solid","fillColor":"#ede9fe","strokeColor":"#8b5cf6","strokeWidth":2,"roundness":10},
+    {"type":"text","x":752,"y":736,"width":280,"height":16,"text":"Model back-pressure","fontSize":14,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#6d28d9","fontWeight":"bold"},
+    {"type":"text","x":752,"y":764,"width":280,"height":94,"text":"• embedding waits when SigLIP is unavailable\\n• monitor retries when ready\\n• jobs resume without replaying committed stages","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#5b21b6"},
+    {"type":"rectangle","x":1076,"y":718,"width":300,"height":156,"fillStyle":"solid","fillColor":"#ffedd5","strokeColor":"#f59e0b","strokeWidth":2,"roundness":10},
+    {"type":"text","x":1092,"y":736,"width":268,"height":16,"text":"Search-ready output","fontSize":14,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#b45309","fontWeight":"bold"},
+    {"type":"text","x":1092,"y":764,"width":268,"height":94,"text":"• FTS5 row\\n• vector row\\n• readiness flags\\n• searchable on-device without recomputing prior work","fontSize":12,"fontFamily":1,"textAlign":"left","verticalAlign":"top","fontColor":"#92400e"}
+  ],
+  "appState": {
+    "gridMode": "dot",
+    "gridSize": 20,
+    "gridModeEnabled": false
+  }
+}
