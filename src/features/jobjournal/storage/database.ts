@@ -2,7 +2,6 @@ import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 import { drizzle, ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
-import { sql } from 'drizzle-orm';
 
 import * as schema from './drizzle-schema';
 import migrations from '../../../../drizzle/migrations';
@@ -14,7 +13,7 @@ type VecStatus = {
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
 let drizzlePromise: Promise<ExpoSQLiteDatabase<typeof schema>> | null = null;
-let initializationPromise: Promise<void> | null = null;
+let initializationPromise: Promise<ExpoSQLiteDatabase<typeof schema>> | null = null;
 let vecStatus: VecStatus = { available: false, error: null };
 
 export function getJobJournalVecStatus() {
@@ -44,19 +43,22 @@ async function loadVecExtension(db: SQLite.SQLiteDatabase) {
   }
 }
 
-async function initializeDatabase(expoDb: SQLite.SQLiteDatabase) {
+/**
+ * Shared initialization logic. Ensures extensions, migrations, and virtual tables are ready.
+ */
+async function initializeDatabase(expoDb: SQLite.SQLiteDatabase): Promise<ExpoSQLiteDatabase<typeof schema>> {
   if (initializationPromise) {
     return initializationPromise;
   }
 
   initializationPromise = (async () => {
-    // 1. Load Vector Extension
+    // 1. Extensions
     await loadVecExtension(expoDb);
 
-    // 2. Initialize Drizzle
+    // 2. Instance
     const db = drizzle(expoDb, { schema });
 
-    // 3. Run Drizzle Migrations
+    // 3. Migrations
     try {
       await migrate(db, migrations);
       console.log('[database] Drizzle migrations applied successfully');
@@ -65,8 +67,7 @@ async function initializeDatabase(expoDb: SQLite.SQLiteDatabase) {
       throw err;
     }
 
-    // 4. Create Virtual Tables (FTS5 & sqlite-vec)
-    // These are not handled by Drizzle Kit
+    // 4. Virtual Tables (Manual FTS5 & sqlite-vec setup)
     await expoDb.execAsync(`
       CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_index USING fts5(
         job_id UNINDEXED,
@@ -91,7 +92,7 @@ async function initializeDatabase(expoDb: SQLite.SQLiteDatabase) {
       `);
     }
 
-    // 5. System Health Table
+    // 5. Shared Health check logic
     await expoDb.execAsync(`CREATE TABLE IF NOT EXISTS system_health (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       check_time INTEGER NOT NULL,
@@ -99,12 +100,11 @@ async function initializeDatabase(expoDb: SQLite.SQLiteDatabase) {
       result TEXT NOT NULL
     );`);
 
-    // 6. Initial Integrity Check
     try {
       await performIntegrityCheck(expoDb);
-    } catch (err) {
-      console.warn('Database integrity check at startup failed:', err);
-    }
+    } catch { /* ignore */ }
+
+    return db;
   })();
 
   return initializationPromise;
@@ -154,7 +154,6 @@ export async function getJobJournalDatabase() {
       const db = await SQLite.openDatabaseAsync('ss-search.db', {
         enableChangeListener: true
       });
-      await initializeDatabase(db);
       return db;
     })();
   }
@@ -166,7 +165,7 @@ export async function getDrizzleDb() {
   if (!drizzlePromise) {
     drizzlePromise = (async () => {
       const expoDb = await getJobJournalDatabase();
-      return drizzle(expoDb, { schema });
+      return await initializeDatabase(expoDb);
     })();
   }
   return drizzlePromise;

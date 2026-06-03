@@ -1,6 +1,6 @@
 import { eq, sql, and, asc, desc } from 'drizzle-orm';
 import { generateTextEmbedding } from '../embeddings';
-import { getDrizzleDb, getJobJournalDatabase } from '../storage/database';
+import { getDrizzleDb } from '../storage/database';
 import { 
   jobJournalJobs, 
   ocrPostprocessStageResults,
@@ -22,7 +22,6 @@ export async function hybridSearch(
   useEmbeddings: boolean = true,
 ): Promise<SearchResult[]> {
   const db = await getDrizzleDb();
-  const expoDb = await getJobJournalDatabase(); // Needed for raw virtual table queries
   const candidates = new Map<string, SearchResult>();
 
   const sanitizedQuery = query.trim();
@@ -35,26 +34,22 @@ export async function hybridSearch(
       const queryEmbedding = await generateTextEmbedding(sanitizedQuery);
       const embeddingJson = JSON.stringify(Array.from(queryEmbedding));
 
-      const vectorResults = await expoDb.getAllAsync<{
-        job_id: string;
-        distance: number;
-        uri: string;
-        ocrText: string;
-      }>(`
+      // Drizzle handles the parameter binding safely
+      const vectorResults = await db.execute(sql`
         SELECT 
           v.job_id,
-          vec_distance(v.embedding, ?) as distance,
+          vec_distance(v.embedding, ${embeddingJson}) as distance,
           j.image_uri as uri,
           o.text as ocrText
         FROM image_embedding_index v
         JOIN job_journal_jobs j ON j.id = v.job_id
         LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = v.job_id
-        WHERE vec_distance(v.embedding, ?) < 0.7
+        WHERE vec_distance(v.embedding, ${embeddingJson}) < 0.7
         ORDER BY distance ASC
-        LIMIT ?
-      `, [embeddingJson, embeddingJson, limit]);
+        LIMIT ${limit}
+      `);
 
-      vectorResults.forEach((row) => {
+      vectorResults.forEach((row: any) => {
         candidates.set(row.job_id, {
           jobId: row.job_id,
           uri: row.uri,
@@ -74,17 +69,12 @@ export async function hybridSearch(
   const tokens = sanitizedQuery.replace(/[^\w\s]/g, ' ').trim().split(/\s+/).filter(Boolean);
   
   if (tokens.length > 0) {
-    // Standard FTS
+    // Layer A: Standard Word-based Prefix Matching
     const ftsQuery = tokens.map(t => `${t}*`).join(' AND ');
     console.log(`[hybridSearch] Attempting standard FTS search with: "${ftsQuery}"`);
     
     try {
-      const ftsResults = await expoDb.getAllAsync<{
-        job_id: string;
-        ocr_text: string;
-        keywords: string;
-        uri: string;
-      }>(`
+      const ftsResults = await db.execute(sql`
         SELECT 
           idx.job_id,
           idx.ocr_text,
@@ -92,12 +82,12 @@ export async function hybridSearch(
           j.image_uri as uri
         FROM screenshot_search_index idx
         JOIN job_journal_jobs j ON j.id = idx.job_id
-        WHERE screenshot_search_index MATCH ?
+        WHERE screenshot_search_index MATCH ${ftsQuery}
         ORDER BY rank
-        LIMIT ?
-      `, [ftsQuery, limit]);
+        LIMIT ${limit}
+      `);
 
-      ftsResults.forEach((row) => {
+      ftsResults.forEach((row: any) => {
         const existing = candidates.get(row.job_id);
         if (existing) {
           existing.score = Math.min(1.0, existing.score + 0.3);
@@ -118,18 +108,13 @@ export async function hybridSearch(
       console.warn('[hybridSearch] Standard FTS search failed:', err);
     }
 
-    // Trigram FTS
+    // Layer B: Trigram FTS (Substring/Fuzzy matching)
     if (candidates.size < limit) {
       const trigramQuery = `"${sanitizedQuery}"`;
       console.log(`[hybridSearch] Attempting Trigram fuzzy search with: ${trigramQuery}`);
       
       try {
-        const triResults = await expoDb.getAllAsync<{
-          job_id: string;
-          ocr_text: string;
-          keywords: string;
-          uri: string;
-        }>(`
+        const triResults = await db.execute(sql`
           SELECT 
             idx.job_id,
             idx.ocr_text,
@@ -137,12 +122,12 @@ export async function hybridSearch(
             j.image_uri as uri
           FROM screenshot_search_trigram idx
           JOIN job_journal_jobs j ON j.id = idx.job_id
-          WHERE screenshot_search_trigram MATCH ?
+          WHERE screenshot_search_trigram MATCH ${trigramQuery}
           ORDER BY rank
-          LIMIT ?
-        `, [trigramQuery, limit]);
+          LIMIT ${limit}
+        `);
 
-        triResults.forEach((row) => {
+        triResults.forEach((row: any) => {
           const existing = candidates.get(row.job_id);
           if (existing) {
             existing.score = Math.min(1.0, existing.score + 0.1);
@@ -169,8 +154,8 @@ export async function hybridSearch(
     .slice(0, limit);
     
   if (finalResults.length === 0) {
-    const count = await expoDb.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM screenshot_search_index');
-    console.log(`[hybridSearch] No results found for query: "${sanitizedQuery}". Index contains ${count?.count ?? 0} total documents.`);
+    const [countResult] = await db.select({ count: sql`count(*)` }).from(sql`screenshot_search_index`);
+    console.log(`[hybridSearch] No results found for query: "${sanitizedQuery}". Index contains ${countResult?.count ?? 0} total documents.`);
   }
 
   return finalResults;

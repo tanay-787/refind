@@ -1,5 +1,5 @@
-import { eq, and, inArray, sql, count, asc, desc, notInArray } from 'drizzle-orm';
-import { getJobJournalDatabase, getDrizzleDb, getJobJournalVecStatus } from './storage/database';
+import { eq, and, inArray, sql, count, asc, notInArray } from 'drizzle-orm';
+import { getJobJournalDatabase, getDrizzleDb } from './storage/database';
 import { 
   jobJournalJobs, 
   stageExecutions, 
@@ -8,7 +8,6 @@ import {
   ocrStageResults,
   ocrPostprocessStageResults,
   embeddingStageResults,
-  keywordStageResults
 } from './storage/drizzle-schema';
 import type { JobJournalStage, JobJournalStageExecution } from './types';
 
@@ -38,6 +37,10 @@ const STAGE_CHILDREN: Record<JobJournalStage, JobJournalStage[]> = {
 
 function getExecutionId(jobId: string, stage: JobJournalStage) {
   return `${jobId}_${stage}`;
+}
+
+function placeholders(count: number) {
+  return new Array(count).fill('?').join(', ');
 }
 
 /**
@@ -149,6 +152,9 @@ async function markJobCompletedIfTerminal(jobId: string, now: Date) {
   }
 }
 
+/**
+ * Claim Next Stage Execution using a prioritized weighted query.
+ */
 export async function claimNextStageExecution(options?: { allowHeavy?: boolean }): Promise<JobJournalStageExecution | null> {
   const db = await getDrizzleDb();
   const allowHeavy = options?.allowHeavy ?? true;
@@ -157,14 +163,18 @@ export async function claimNextStageExecution(options?: { allowHeavy?: boolean }
   while (attempts < 5) {
     const now = new Date();
     
-    // Prioritize cheap stages: metadata, ocr, ocr_postprocess, keywords, index_fts, index
+    // We categorize stages to prioritize "Cheap" path (metadata -> ocr -> fts) 
+    // to minimize "Time to First Searchable Screenshot".
     const pendingExecution = await db.query.stageExecutions.findFirst({
       where: and(
         eq(stageExecutions.status, 'pending'),
         !allowHeavy ? notInArray(stageExecutions.stage, ['embedding', 'index_vec']) : undefined
       ),
       orderBy: [
-        asc(sql`(CASE WHEN ${stageExecutions.stage} IN ('metadata', 'ocr', 'ocr_postprocess', 'keywords', 'index_fts', 'index') THEN 0 ELSE 1 END)`),
+        asc(sql`(CASE 
+          WHEN ${stageExecutions.stage} IN ('metadata', 'ocr', 'ocr_postprocess', 'keywords', 'index_fts', 'index') THEN 0 
+          ELSE 1 
+        END)`),
         asc(stageExecutions.createdAt)
       ]
     });
@@ -175,7 +185,7 @@ export async function claimNextStageExecution(options?: { allowHeavy?: boolean }
 
     const leaseUntil = new Date(now.getTime() + LEASE_DURATION_MS);
     
-    // Atomic claim update
+    // Atomic update using changes check to handle race conditions between workers
     const result = await db.update(stageExecutions)
       .set({ status: 'running', leaseUntil, updatedAt: now })
       .where(and(
@@ -226,21 +236,25 @@ export async function renewExecutionLease(
   return result.changes > 0;
 }
 
+/**
+ * Completes a stage execution with transaction safety and a write mutex.
+ */
 export async function completeStageExecution(
   executionId: string,
   jobId: string,
   stage: JobJournalStage,
   outputPath?: string,
 ): Promise<void> {
+  // Use a global mutex to prevent transaction collisions in concurrent execution
   const unlock = await writeMutex.lock();
   
   try {
     console.log(`[executor] Completing stage ${stage} for job ${jobId}`);
     const db = await getDrizzleDb();
-    const expoDb = await getJobJournalDatabase(); // For raw FTS checks
+    const expoDb = await getJobJournalDatabase(); 
     const now = new Date();
 
-    // Verify stage output exists
+    // Verify stage results before marking completed
     if (stage === 'metadata') {
       const res = await db.query.metadataStageResults.findFirst({ where: eq(metadataStageResults.jobId, jobId) });
       if (!res) throw new Error(`Metadata missing for job ${jobId}`);
@@ -281,7 +295,7 @@ export async function completeStageExecution(
         set: { outputPath: outputPath ?? null, updatedAt: now }
       });
 
-      // 3. DAG & Job status
+      // 3. Chain next stages
       await enqueueReadyChildren(jobId, stage, now);
       await markJobCompletedIfTerminal(jobId, now);
     });

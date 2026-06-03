@@ -45,91 +45,84 @@ function getStageExecutionId(jobId: string, stage: JobJournalStage) {
   return `${jobId}_${stage}`;
 }
 
-async function seedJobForAsset(asset: MediaLibrary.Asset, vectorRequired: boolean = false): Promise<{
-  createdJob: boolean;
-  createdExecution: boolean;
-}> {
+export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] = [], options?: { vectorRequired?: boolean }) {
+  const nextAssets = assets.length > 0 ? assets : await loadJobJournalScreenshotSource();
   const db = await getDrizzleDb();
   const now = new Date();
-  const jobId = getJobId(asset);
-  const hashResult = await getImageHash(asset);
-  const imageHash = hashResult.hash;
-  const imageUri = asset.uri;
+  const vectorRequired = options?.vectorRequired ?? false;
 
-  // 1. Try to find existing job
-  const existingJob = await db.query.jobJournalJobs.findFirst({
-    where: hashResult.isReliable 
-      ? eq(jobJournalJobs.imageHash, imageHash)
-      : eq(jobJournalJobs.id, jobId)
-  });
+  let createdJobs = 0;
+  let existingJobs = 0;
+  let createdExecutions = 0;
 
-  if (existingJob) {
-    // Update vector requirement if needed
-    if (vectorRequired && !existingJob.vectorRequired) {
-      await db.update(jobJournalJobs)
-        .set({ vectorRequired: true, updatedAt: now })
-        .where(eq(jobJournalJobs.id, existingJob.id));
-    }
+  // Use a single transaction for high-efficiency batch intake
+  await db.transaction(async (tx) => {
+    for (const asset of nextAssets) {
+      const jobId = getJobId(asset);
+      const hashResult = await getImageHash(asset);
+      const imageHash = hashResult.hash;
+      
+      // 1. Check for existing job
+      const existingJob = await tx.query.jobJournalJobs.findFirst({
+        where: hashResult.isReliable 
+          ? eq(jobJournalJobs.imageHash, imageHash)
+          : eq(jobJournalJobs.id, jobId)
+      });
 
-    const stageExecutionId = getStageExecutionId(existingJob.id, INITIAL_STAGE);
-    const existingExecution = await db.query.stageExecutions.findFirst({
-      where: eq(stageExecutions.id, stageExecutionId)
-    });
+      if (existingJob) {
+        existingJobs += 1;
+        
+        // Update vector requirement if it's a new requirement
+        if (vectorRequired && !existingJob.vectorRequired) {
+          await tx.update(jobJournalJobs)
+            .set({ vectorRequired: true, updatedAt: now })
+            .where(eq(jobJournalJobs.id, existingJob.id));
+        }
 
-    if (!existingExecution) {
-      await db.insert(stageExecutions).values({
+        const stageExecutionId = getStageExecutionId(existingJob.id, INITIAL_STAGE);
+        const existingExecution = await tx.query.stageExecutions.findFirst({
+          where: eq(stageExecutions.id, stageExecutionId),
+          columns: { id: true }
+        });
+
+        if (!existingExecution) {
+          await tx.insert(stageExecutions).values({
+            id: stageExecutionId,
+            jobId: existingJob.id,
+            stage: INITIAL_STAGE,
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now,
+          });
+          createdExecutions += 1;
+        }
+        continue;
+      }
+
+      // 2. New Job
+      await tx.insert(jobJournalJobs).values({
+        id: jobId,
+        imageUri: asset.uri,
+        imageHash,
+        status: 'pending',
+        vectorRequired,
+        createdAt: now,
+        updatedAt: now,
+      });
+      createdJobs += 1;
+
+      const stageExecutionId = getStageExecutionId(jobId, INITIAL_STAGE);
+      await tx.insert(stageExecutions).values({
         id: stageExecutionId,
-        jobId: existingJob.id,
+        jobId,
         stage: INITIAL_STAGE,
-        attempt: 0,
         status: 'pending',
         createdAt: now,
         updatedAt: now,
       });
-      return { createdJob: false, createdExecution: true };
+      createdExecutions += 1;
     }
-
-    return { createdJob: false, createdExecution: false };
-  }
-
-  // 2. Create new job
-  await db.insert(jobJournalJobs).values({
-    id: jobId,
-    imageUri,
-    imageHash,
-    status: 'pending',
-    vectorRequired,
-    createdAt: now,
-    updatedAt: now,
   });
-
-  const stageExecutionId = getStageExecutionId(jobId, INITIAL_STAGE);
-  await db.insert(stageExecutions).values({
-    id: stageExecutionId,
-    jobId,
-    stage: INITIAL_STAGE,
-    attempt: 0,
-    status: 'pending',
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  return { createdJob: true, createdExecution: true };
-}
-
-export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] = [], options?: { vectorRequired?: boolean }) {
-  const nextAssets = assets.length > 0 ? assets : await loadJobJournalScreenshotSource();
-  let createdJobs = 0;
-  let existingJobs = 0;
-  let createdExecutions = 0;
-  const vectorRequired = options?.vectorRequired ?? false;
-
-  for (const asset of nextAssets) {
-    const result = await seedJobForAsset(asset, vectorRequired);
-    if (result.createdJob) createdJobs += 1;
-    else existingJobs += 1;
-    if (result.createdExecution) createdExecutions += 1;
-  }
 
   return {
     totalAssets: nextAssets.length,
