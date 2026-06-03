@@ -1,4 +1,15 @@
-import { getJobJournalDatabase } from './storage/database';
+import { eq, and, inArray, sql, count, asc, desc, notInArray } from 'drizzle-orm';
+import { getJobJournalDatabase, getDrizzleDb, getJobJournalVecStatus } from './storage/database';
+import { 
+  jobJournalJobs, 
+  stageExecutions, 
+  stageCheckpoints, 
+  metadataStageResults,
+  ocrStageResults,
+  ocrPostprocessStageResults,
+  embeddingStageResults,
+  keywordStageResults
+} from './storage/drizzle-schema';
 import type { JobJournalStage, JobJournalStageExecution } from './types';
 
 const LEASE_DURATION_MS = 5 * 60 * 1000;
@@ -29,10 +40,6 @@ function getExecutionId(jobId: string, stage: JobJournalStage) {
   return `${jobId}_${stage}`;
 }
 
-function placeholders(count: number) {
-  return new Array(count).fill('?').join(', ');
-}
-
 /**
  * Simple Mutex for serializing database write transactions.
  */
@@ -51,8 +58,8 @@ class Mutex {
 
 const writeMutex = new Mutex();
 
-async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: number) {
-  const db = await getJobJournalDatabase();
+async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: Date) {
+  const db = await getDrizzleDb();
   const children = STAGE_CHILDREN[stage];
 
   if (!children || children.length === 0) {
@@ -60,11 +67,11 @@ async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: 
   }
 
   // Fetch job to check vector_required
-  const job = await db.getFirstAsync<{ vector_required: number }>(
-    'SELECT vector_required FROM job_journal_jobs WHERE id = ?',
-    [jobId],
-  );
-  const vectorRequired = !!job?.vector_required;
+  const job = await db.query.jobJournalJobs.findFirst({
+    where: eq(jobJournalJobs.id, jobId),
+    columns: { vectorRequired: true }
+  });
+  const vectorRequired = !!job?.vectorRequired;
 
   console.log(`[executor] Checking children for ${stage} (Job: ${jobId}): [${children.join(', ')}]`);
 
@@ -75,122 +82,126 @@ async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: 
     }
 
     const dependencies = STAGE_DEPENDENCIES[child];
+    if (dependencies.length === 0) {
+      const executionId = getExecutionId(jobId, child);
+      await db.insert(stageExecutions).values({
+        id: executionId,
+        jobId,
+        stage: child,
+        status: 'pending',
+        attempt: 0,
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoNothing();
+      continue;
+    }
 
     // Check if ALL dependencies for this child are 'completed'
-    // This maintains the DAG integrity.
-    const rows = await db.getAllAsync<{ stage: string }>(
-      `SELECT stage
-       FROM stage_executions
-       WHERE job_id = ? AND status = 'completed' AND stage IN (${placeholders(dependencies.length)})`,
-      [jobId, ...dependencies],
-    );
+    const completedDeps = await db.select({ stage: stageExecutions.stage })
+      .from(stageExecutions)
+      .where(and(
+        eq(stageExecutions.jobId, jobId),
+        eq(stageExecutions.status, 'completed'),
+        inArray(stageExecutions.stage, dependencies)
+      ));
 
-    if (rows.length === dependencies.length) {
-      // All dependencies met, enqueue child if not already there
+    if (completedDeps.length === dependencies.length) {
       const executionId = getExecutionId(jobId, child);
-
-      const result = await db.runAsync(
-        `INSERT OR IGNORE INTO stage_executions (id, job_id, stage, status, attempt, created_at, updated_at)
-         VALUES (?, ?, ?, 'pending', 0, ?, ?)`,
-        [executionId, jobId, child, now, now],
-      );
-
-      if ((result.changes ?? 0) > 0) {
-        console.log(`[executor] Enqueued child stage ${child} for job ${jobId}`);
-      }
+      await db.insert(stageExecutions).values({
+        id: executionId,
+        jobId,
+        stage: child,
+        status: 'pending',
+        attempt: 0,
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoNothing();
+      
+      console.log(`[executor] Enqueued child stage ${child} for job ${jobId}`);
     } else {
-      console.log(
-        `[executor] Child stage ${child} for job ${jobId} waiting for more dependencies. Got ${rows.length}/${dependencies.length}`,
-      );
+      const missing = dependencies.filter(d => !completedDeps.some(cd => cd.stage === d));
+      console.log(`[executor] Child ${child} for ${jobId} waiting for: [${missing.join(', ')}]`);
     }
   }
 }
-    
 
-async function markJobCompletedIfTerminal(jobId: string, now: number) {
-  const db = await getJobJournalDatabase();
-  const nonTerminal = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count
-     FROM stage_executions
-     WHERE job_id = ? AND status IN ('pending', 'running', 'waiting_for_model')`,
-    [jobId],
-  );
-  const failed = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count
-     FROM stage_executions
-     WHERE job_id = ? AND status = 'failed'`,
-    [jobId],
-  );
+async function markJobCompletedIfTerminal(jobId: string, now: Date) {
+  const db = await getDrizzleDb();
+  
+  const [nonTerminalResult] = await db.select({ count: count() })
+    .from(stageExecutions)
+    .where(and(
+      eq(stageExecutions.jobId, jobId),
+      inArray(stageExecutions.status, ['pending', 'running', 'waiting_for_model'])
+    ));
 
-  if ((nonTerminal?.count ?? 0) === 0 && (failed?.count ?? 0) === 0) {
-    await db.runAsync(`UPDATE job_journal_jobs SET status = 'completed', updated_at = ? WHERE id = ?`, [
-      now,
-      jobId,
-    ]);
+  const [failedResult] = await db.select({ count: count() })
+    .from(stageExecutions)
+    .where(and(
+      eq(stageExecutions.jobId, jobId),
+      eq(stageExecutions.status, 'failed')
+    ));
+
+  if (nonTerminalResult.count === 0 && failedResult.count === 0) {
+    await db.update(jobJournalJobs)
+      .set({ status: 'completed', updatedAt: now })
+      .where(eq(jobJournalJobs.id, jobId));
   }
 }
 
 export async function claimNextStageExecution(options?: { allowHeavy?: boolean }): Promise<JobJournalStageExecution | null> {
-  const db = await getJobJournalDatabase();
+  const db = await getDrizzleDb();
   const allowHeavy = options?.allowHeavy ?? true;
   let attempts = 0;
 
   while (attempts < 5) {
-    const now = Date.now();
+    const now = new Date();
     
-    const pendingExecution = await db.getFirstAsync<{
-      id: string;
-      job_id: string;
-      stage: string;
-      attempt: number;
-      created_at: number;
-      updated_at: number;
-    }>(
-      `SELECT id, job_id, stage, attempt, created_at, updated_at
-       FROM stage_executions
-       WHERE status = 'pending'
-       ${!allowHeavy ? "AND stage NOT IN ('embedding', 'index_vec')" : ""}
-       ORDER BY 
-         (CASE 
-            WHEN stage IN ('metadata', 'ocr', 'ocr_postprocess', 'keywords', 'index_fts', 'index') THEN 0 
-            ELSE 1 
-          END) ASC,
-         created_at ASC
-       LIMIT 1`,
-    );
+    // Prioritize cheap stages: metadata, ocr, ocr_postprocess, keywords, index_fts, index
+    const pendingExecution = await db.query.stageExecutions.findFirst({
+      where: and(
+        eq(stageExecutions.status, 'pending'),
+        !allowHeavy ? notInArray(stageExecutions.stage, ['embedding', 'index_vec']) : undefined
+      ),
+      orderBy: [
+        asc(sql`(CASE WHEN ${stageExecutions.stage} IN ('metadata', 'ocr', 'ocr_postprocess', 'keywords', 'index_fts', 'index') THEN 0 ELSE 1 END)`),
+        asc(stageExecutions.createdAt)
+      ]
+    });
 
     if (!pendingExecution) {
       return null;
     }
 
-    const leaseUntil = now + LEASE_DURATION_MS;
-    const claimResult = await db.runAsync(
-      `UPDATE stage_executions
-       SET status = 'running', lease_until = ?, updated_at = ?
-       WHERE id = ? AND status = 'pending'`,
-      [leaseUntil, now, pendingExecution.id],
-    );
+    const leaseUntil = new Date(now.getTime() + LEASE_DURATION_MS);
+    
+    // Atomic claim update
+    const result = await db.update(stageExecutions)
+      .set({ status: 'running', leaseUntil, updatedAt: now })
+      .where(and(
+        eq(stageExecutions.id, pendingExecution.id),
+        eq(stageExecutions.status, 'pending')
+      ));
 
-    if ((claimResult.changes ?? 0) === 0) {
+    if (result.changes === 0) {
       attempts += 1;
       continue;
     }
 
-    await db.runAsync(`UPDATE job_journal_jobs SET status = 'running', updated_at = ? WHERE id = ?`, [
-      now,
-      pendingExecution.job_id,
-    ]);
+    await db.update(jobJournalJobs)
+      .set({ status: 'running', updatedAt: now })
+      .where(eq(jobJournalJobs.id, pendingExecution.jobId));
 
     return {
       id: pendingExecution.id,
-      jobId: pendingExecution.job_id,
+      jobId: pendingExecution.jobId,
       stage: pendingExecution.stage as JobJournalStage,
       attempt: pendingExecution.attempt,
       status: 'running',
-      leaseUntil,
-      createdAt: pendingExecution.created_at,
-      updatedAt: now,
-      lastError: null,
+      leaseUntil: leaseUntil.getTime(),
+      createdAt: pendingExecution.createdAt.getTime(),
+      updatedAt: now.getTime(),
+      lastError: pendingExecution.lastError,
     };
   }
 
@@ -201,16 +212,18 @@ export async function renewExecutionLease(
   executionId: string,
   leaseDurationMs: number = LEASE_DURATION_MS,
 ): Promise<boolean> {
-  const db = await getJobJournalDatabase();
-  const now = Date.now();
-  const leaseUntil = now + leaseDurationMs;
-  const result = await db.runAsync(
-    `UPDATE stage_executions
-     SET lease_until = ?, updated_at = ?
-     WHERE id = ? AND status = 'running'`,
-    [leaseUntil, now, executionId],
-  );
-  return (result.changes ?? 0) > 0;
+  const db = await getDrizzleDb();
+  const now = new Date();
+  const leaseUntil = new Date(now.getTime() + leaseDurationMs);
+  
+  const result = await db.update(stageExecutions)
+    .set({ leaseUntil, updatedAt: now })
+    .where(and(
+      eq(stageExecutions.id, executionId),
+      eq(stageExecutions.status, 'running')
+    ));
+    
+  return result.changes > 0;
 }
 
 export async function completeStageExecution(
@@ -223,65 +236,56 @@ export async function completeStageExecution(
   
   try {
     console.log(`[executor] Completing stage ${stage} for job ${jobId}`);
-    const db = await getJobJournalDatabase();
-    const now = Date.now();
+    const db = await getDrizzleDb();
+    const expoDb = await getJobJournalDatabase(); // For raw FTS checks
+    const now = new Date();
 
-    await db.execAsync('BEGIN IMMEDIATE');
-    try {
-      if (stage === 'metadata') {
-        const row = await db.getFirstAsync<{ job_id: string }>(
-          `SELECT job_id FROM metadata_stage_results WHERE job_id = ?`,
-          [jobId],
-        );
-        if (!row) throw new Error(`Metadata result missing for job ${jobId}`);
-      } else if (stage === 'ocr') {
-        const row = await db.getFirstAsync<{ job_id: string }>(`SELECT job_id FROM ocr_stage_results WHERE job_id = ?`, [jobId]);
-        if (!row) throw new Error(`OCR result missing for job ${jobId}`);
-      } else if (stage === 'ocr_postprocess') {
-        const row = await db.getFirstAsync<{ job_id: string }>(
-          `SELECT job_id FROM ocr_postprocess_stage_results WHERE job_id = ?`,
-          [jobId],
-        );
-        if (!row) throw new Error(`OCR postprocess result missing for job ${jobId}`);
-      } else if (stage === 'embedding') {
-        const row = await db.getFirstAsync<{ id: string }>(
-          `SELECT id FROM embedding_stage_results WHERE job_id = ? LIMIT 1`,
-          [jobId],
-        );
-        if (!row) throw new Error(`Embedding result missing for job ${jobId}`);
-      } else if (stage === 'index_fts') {
-        const row = await db.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM screenshot_search_index WHERE job_id = ?`, [jobId]);
-        if (!row) throw new Error(`Index FTS entries missing for job ${jobId}`);
-      } else if (stage === 'index_vec') {
-        const row = await db.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM image_embedding_index WHERE job_id = ?`, [jobId]);
-        if (!row) throw new Error(`Index Vec entries missing for job ${jobId}`);
-      }
+    // Verify stage output exists
+    if (stage === 'metadata') {
+      const res = await db.query.metadataStageResults.findFirst({ where: eq(metadataStageResults.jobId, jobId) });
+      if (!res) throw new Error(`Metadata missing for job ${jobId}`);
+    } else if (stage === 'ocr') {
+      const res = await db.query.ocrStageResults.findFirst({ where: eq(ocrStageResults.jobId, jobId) });
+      if (!res) throw new Error(`OCR missing for job ${jobId}`);
+    } else if (stage === 'ocr_postprocess') {
+      const res = await db.query.ocrPostprocessStageResults.findFirst({ where: eq(ocrPostprocessStageResults.jobId, jobId) });
+      if (!res) throw new Error(`OCR postprocess missing for job ${jobId}`);
+    } else if (stage === 'embedding') {
+      const res = await db.query.embeddingStageResults.findFirst({ where: eq(embeddingStageResults.jobId, jobId) });
+      if (!res) throw new Error(`Embedding missing for job ${jobId}`);
+    } else if (stage === 'index_fts') {
+      const row = await expoDb.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM screenshot_search_index WHERE job_id = ?`, [jobId]);
+      if (!row) throw new Error(`FTS index missing for job ${jobId}`);
+    } else if (stage === 'index_vec') {
+      const row = await expoDb.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM image_embedding_index WHERE job_id = ?`, [jobId]);
+      if (!row) throw new Error(`Vector index missing for job ${jobId}`);
+    }
 
-      const completion = await db.runAsync(
-        `UPDATE stage_executions
-         SET status = 'completed', lease_until = NULL, updated_at = ?, last_error = NULL
-         WHERE id = ? AND status = 'running'`,
-        [now, executionId],
-      );
-      if ((completion.changes ?? 0) === 0) {
-        throw new Error(`Execution ${executionId} is not claimable for completion`);
-      }
+    await db.transaction(async (tx) => {
+      // 1. Mark completed
+      const completion = await tx.update(stageExecutions)
+        .set({ status: 'completed', leaseUntil: null, updatedAt: now, lastError: null })
+        .where(and(eq(stageExecutions.id, executionId), eq(stageExecutions.status, 'running')));
 
-      await db.runAsync(
-        `INSERT OR REPLACE INTO stage_checkpoints
-         (job_id, stage, output_path, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [jobId, stage, outputPath ?? null, now, now],
-      );
+      if (completion.changes === 0) throw new Error(`Execution ${executionId} not claimable`);
 
+      // 2. Checkpoint
+      await tx.insert(stageCheckpoints).values({
+        jobId,
+        stage,
+        outputPath: outputPath ?? null,
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoUpdate({
+        target: [stageCheckpoints.jobId, stageCheckpoints.stage],
+        set: { outputPath: outputPath ?? null, updatedAt: now }
+      });
+
+      // 3. DAG & Job status
       await enqueueReadyChildren(jobId, stage, now);
       await markJobCompletedIfTerminal(jobId, now);
+    });
 
-      await db.execAsync('COMMIT');
-    } catch (error) {
-      await db.execAsync('ROLLBACK');
-      throw error;
-    }
   } finally {
     unlock();
   }
@@ -293,47 +297,35 @@ export async function failStageExecution(
   errorCode?: string,
   maxRetries: number = 3,
 ): Promise<void> {
-  const db = await getJobJournalDatabase();
-  const now = Date.now();
+  const db = await getDrizzleDb();
+  const now = new Date();
 
-  const execution = await db.getFirstAsync<{ attempt: number }>(
-    `SELECT attempt FROM stage_executions WHERE id = ?`,
-    [executionId],
-  );
-  if (!execution) {
-    return;
-  }
+  const execution = await db.query.stageExecutions.findFirst({
+    where: eq(stageExecutions.id, executionId),
+    columns: { attempt: true, jobId: true }
+  });
+  
+  if (!execution) return;
 
   const nextAttempt = execution.attempt + 1;
-  const code = errorCode ?? 'ERROR';
+  const status = nextAttempt >= maxRetries ? 'failed' : 'pending';
 
-  if (nextAttempt >= maxRetries) {
-    await db.runAsync(
-      `UPDATE stage_executions
-       SET status = 'failed', lease_until = NULL, updated_at = ?, last_error_code = ?, last_error_message = ?
-       WHERE id = ?`,
-      [now, code, errorMessage, executionId],
-    );
+  await db.update(stageExecutions)
+    .set({ 
+      status, 
+      attempt: nextAttempt, 
+      leaseUntil: null, 
+      updatedAt: now, 
+      lastErrorCode: errorCode ?? 'ERROR', 
+      lastErrorMessage: errorMessage 
+    })
+    .where(eq(stageExecutions.id, executionId));
 
-    const jobId = await db.getFirstAsync<{ job_id: string }>(
-      `SELECT job_id FROM stage_executions WHERE id = ?`,
-      [executionId],
-    );
-    if (jobId) {
-      await db.runAsync(`UPDATE job_journal_jobs SET status = 'failed', updated_at = ? WHERE id = ?`, [
-        now,
-        jobId.job_id,
-      ]);
-    }
-    return;
+  if (status === 'failed') {
+    await db.update(jobJournalJobs)
+      .set({ status: 'failed', updatedAt: now })
+      .where(eq(jobJournalJobs.id, execution.jobId));
   }
-
-  await db.runAsync(
-    `UPDATE stage_executions
-     SET status = 'pending', attempt = ?, lease_until = NULL, updated_at = ?, last_error_code = ?, last_error_message = ?
-     WHERE id = ?`,
-    [nextAttempt, now, code, errorMessage, executionId],
-  );
 }
 
 export async function markExecutionWaitingForModel(
@@ -341,69 +333,63 @@ export async function markExecutionWaitingForModel(
   errorMessage: string,
   errorCode?: string,
 ): Promise<void> {
-  const db = await getJobJournalDatabase();
-  const now = Date.now();
-  const code = errorCode ?? 'WAIT_MODEL';
-  await db.runAsync(
-    `UPDATE stage_executions
-     SET status = 'waiting_for_model', lease_until = NULL, updated_at = ?, last_error_code = ?, last_error_message = ?
-     WHERE id = ?`,
-    [now, code, errorMessage, executionId],
-  );
+  const db = await getDrizzleDb();
+  const now = new Date();
+  await db.update(stageExecutions)
+    .set({ 
+      status: 'waiting_for_model', 
+      leaseUntil: null, 
+      updatedAt: now, 
+      lastErrorCode: errorCode ?? 'WAIT_MODEL', 
+      lastErrorMessage: errorMessage 
+    })
+    .where(eq(stageExecutions.id, executionId));
 }
 
 export async function retryWaitingForModelExecutions(): Promise<number> {
-  const db = await getJobJournalDatabase();
-  const now = Date.now();
-  const result = await db.runAsync(
-    `UPDATE stage_executions
-     SET status = 'pending', attempt = 0, lease_until = NULL, updated_at = ?
-     WHERE status = 'waiting_for_model'`,
-    [now],
-  );
-  return result.changes ?? 0;
+  const db = await getDrizzleDb();
+  const now = new Date();
+  const result = await db.update(stageExecutions)
+    .set({ status: 'pending', attempt: 0, leaseUntil: null, updatedAt: now })
+    .where(eq(stageExecutions.status, 'waiting_for_model'));
+  return result.changes;
 }
 
 export async function recoveryExpiredLeases(): Promise<number> {
-  const db = await getJobJournalDatabase();
-  const now = Date.now();
-  const result = await db.runAsync(
-    `UPDATE stage_executions
-     SET status = 'pending', lease_until = NULL, updated_at = ?
-     WHERE status = 'running' AND lease_until IS NOT NULL AND lease_until < ?`,
-    [now, now],
-  );
-  return result.changes ?? 0;
+  const db = await getDrizzleDb();
+  const now = new Date();
+  const result = await db.update(stageExecutions)
+    .set({ status: 'pending', leaseUntil: null, updatedAt: now })
+    .where(and(
+      eq(stageExecutions.status, 'running'),
+      sql`${stageExecutions.leaseUntil} IS NOT NULL`,
+      sql`${stageExecutions.leaseUntil} < ${now.getTime()}`
+    ));
+  return result.changes;
 }
 
-export async function getStageExecutionStats(): Promise<{
-  pending: number;
-  running: number;
-  completed: number;
-  failed: number;
-}> {
-  const db = await getJobJournalDatabase();
-  const stats = await db.getAllAsync<{ status: string; count: number }>(
-    `SELECT status, COUNT(*) as count FROM stage_executions GROUP BY status`,
-  );
-  const result = { pending: 0, running: 0, completed: 0, failed: 0 };
-  for (const row of stats) {
+export async function getStageExecutionStats() {
+  const db = await getDrizzleDb();
+  const rows = await db.select({ status: stageExecutions.status, count: count() })
+    .from(stageExecutions)
+    .groupBy(stageExecutions.status);
+    
+  const result = { pending: 0, running: 0, completed: 0, failed: 0, waitingForModel: 0 };
+  for (const row of rows) {
     if (row.status === 'pending') result.pending = row.count;
     else if (row.status === 'running') result.running = row.count;
     else if (row.status === 'completed') result.completed = row.count;
     else if (row.status === 'failed') result.failed = row.count;
+    else if (row.status === 'waiting_for_model') result.waitingForModel = row.count;
   }
   return result;
 }
 
 export async function revokeExecutionLease(executionId: string): Promise<boolean> {
-  const db = await getJobJournalDatabase();
-  const now = Date.now();
-  const result = await db.runAsync(
-    `UPDATE stage_executions
-     SET status = 'pending', lease_until = NULL, updated_at = ?
-     WHERE id = ? AND status = 'running'`,
-    [now, executionId],
-  );
-  return (result.changes ?? 0) > 0;
+  const db = await getDrizzleDb();
+  const now = new Date();
+  const result = await db.update(stageExecutions)
+    .set({ status: 'pending', leaseUntil: null, updatedAt: now })
+    .where(and(eq(stageExecutions.id, executionId), eq(stageExecutions.status, 'running')));
+  return result.changes > 0;
 }

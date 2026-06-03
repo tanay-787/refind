@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
+import { eq, desc, sql } from 'drizzle-orm';
 
 import { useJobJournalOperations } from './useJobJournalOperations';
-import { getJobJournalDatabase } from '@/features/jobjournal';
+import { getDrizzleDb } from '@/features/jobjournal/storage/database';
+import { jobJournalJobs, stageExecutions, metadataStageResults } from '@/features/jobjournal/storage/drizzle-schema';
 
 export type JobJournalLibraryItem = {
   id: string;
@@ -28,7 +30,7 @@ function normalizeJobStage(
   if (stage === 'metadata') return 'metadata';
   if (stage === 'ocr' || stage === 'ocr_postprocess') return 'ocr';
   if (stage === 'embedding') return 'embedding';
-  if (stage === 'keywords' || stage === 'index') return 'enrichment';
+  if (stage === 'keywords' || stage === 'index' || stage === 'index_fts') return 'enrichment';
   
   return 'new';
 }
@@ -53,21 +55,12 @@ export function useJobJournalLibrary() {
   const { sync, process } = useJobJournalOperations();
 
   const loadFromJournal = useCallback(async () => {
-    const db = await getJobJournalDatabase();
+    const db = await getDrizzleDb();
     
-    const rows = await db.getAllAsync<{
-      id: string;
-      uri: string;
-      image_hash: string;
-      created_at: number;
-      width: number | null;
-      height: number | null;
-      job_status: string;
-      current_stage: string | null;
-      attempt: number | null;
-      last_error_message: string | null;
-    }>(
-      `SELECT
+    // Complex join to get latest execution per job
+    // We'll use a subquery/SQL for the ROW_NUMBER logic as Drizzle doesn't have a direct DSL for it yet
+    const rows = await db.execute(sql`
+      SELECT
          j.id,
          j.image_uri as uri,
          j.image_hash,
@@ -86,13 +79,10 @@ export function useJobJournalLibrary() {
          FROM stage_executions
        ) e ON e.job_id = j.id AND e.rn = 1
        ORDER BY j.created_at DESC
-       LIMIT 500`,
-    );
+       LIMIT 500
+    `);
 
-    // Note: The above join might be slightly off if e.id is not job_id.
-    // Fixed join condition: e.job_id = j.id
-    
-    return rows.map((row) => {
+    return rows.map((row: any) => {
       const createdAt = row.created_at ?? Date.now();
       const creationTime = createdAt > 1000000000000 ? Math.floor(createdAt / 1000) : createdAt;
       return {
@@ -127,10 +117,7 @@ export function useJobJournalLibrary() {
       }
     };
 
-    // Initial load
     tick();
-
-    // Poll for data updates
     const interval = setInterval(tick, 5000);
 
     return () => {
@@ -145,7 +132,6 @@ export function useJobJournalLibrary() {
 
     try {
       await sync();
-      // Only run a few iterations if requested by user refresh
       await process(8);
       const data = await loadFromJournal();
       setItems(data);

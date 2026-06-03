@@ -2,10 +2,8 @@
  * - runNextStageExecution() claims the next pending stage execution, runs the
  *   appropriate stage function, and records completed / failed / waiting_for_model
  *   outcomes via executor helpers.
- * - Designed to be used by short-lived background tasks (expo-background-task)
- *   or a foreground loop for debugging. It is lease-aware and safe for concurrent
- *   workers up to the lease semantics implemented by the executor.
  */
+import { eq, and } from 'drizzle-orm';
 import {
   claimNextStageExecution,
   completeStageExecution,
@@ -18,7 +16,15 @@ import {
 import {
   runEmbeddingStage,
 } from './stages/04-embedding.stage';
-import { getJobJournalDatabase } from './storage/database';
+import { getDrizzleDb, getJobJournalDatabase } from './storage/database';
+import { 
+  jobJournalJobs, 
+  metadataStageResults, 
+  ocrStageResults, 
+  ocrPostprocessStageResults,
+  embeddingStageResults,
+  stageExecutions
+} from './storage/drizzle-schema';
 import { isReady as isModelReady } from './modelManager';
 import type { JobJournalJob, JobJournalStage, JobJournalStageExecution } from './types';
 
@@ -32,14 +38,14 @@ import { runIndexFtsStage } from './stages/06-index_fts.stage';
 import { runIndexVecStage } from './stages/07-index_vec.stage';
 
 const STAGE_TIMEOUTS: Record<JobJournalStage, number> = {
-  metadata: 30_000, // 30s
-  ocr: 120_000, // 2m
-  ocr_postprocess: 30_000, // 30s
-  embedding: 10 * 60_000, // 10m
-  keywords: 60_000, // 1m
-  index: 120_000, // 2m
-  index_fts: 120_000, // 2m
-  index_vec: 120_000, // 2m
+  metadata: 30_000,
+  ocr: 120_000,
+  ocr_postprocess: 30_000,
+  embedding: 10 * 60_000,
+  keywords: 60_000,
+  index: 120_000,
+  index_fts: 120_000,
+  index_vec: 120_000,
 };
 
 async function promiseWithTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -60,19 +66,10 @@ let currentExecutionId: string | null = null;
 let shutdownHandlerInstalled = false;
 
 async function getJob(jobId: string): Promise<JobJournalJob | null> {
-  const db = await getJobJournalDatabase();
-  const row = await db.getFirstAsync<{
-    id: string;
-    imageUri: string;
-    imageHash: string;
-    status: string;
-    vector_required: number | null;
-    createdAt: number;
-    updatedAt: number;
-  }>(
-    `SELECT id, image_uri as imageUri, image_hash as imageHash, status, vector_required, created_at as createdAt, updated_at as updatedAt FROM job_journal_jobs WHERE id = ?`,
-    [jobId],
-  );
+  const db = await getDrizzleDb();
+  const row = await db.query.jobJournalJobs.findFirst({
+    where: eq(jobJournalJobs.id, jobId)
+  });
 
   if (!row) return null;
 
@@ -81,9 +78,9 @@ async function getJob(jobId: string): Promise<JobJournalJob | null> {
     imageUri: row.imageUri,
     imageHash: row.imageHash,
     status: row.status as any,
-    vectorRequired: Boolean(row.vector_required),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    vectorRequired: row.vectorRequired,
+    createdAt: row.createdAt.getTime(),
+    updatedAt: row.updatedAt.getTime(),
   };
 }
 
@@ -98,51 +95,51 @@ function getCheckpointPointer(jobId: string, stage: JobJournalStage) {
 }
 
 async function validateStageInput(jobId: string, stage: JobJournalStage): Promise<string | null> {
-  const db = await getJobJournalDatabase();
+  const db = await getDrizzleDb();
 
   if (stage === 'ocr') {
-    const metadata = await db.getFirstAsync<{ file_exists: number }>(
-      `SELECT file_exists FROM metadata_stage_results WHERE job_id = ?`,
-      [jobId],
-    );
-    if (!metadata) return 'Metadata result missing';
-    if (metadata.file_exists !== 1) return 'Image file does not exist';
+    const res = await db.query.metadataStageResults.findFirst({
+      where: eq(metadataStageResults.jobId, jobId),
+      columns: { fileExists: true }
+    });
+    if (!res) return 'Metadata result missing';
+    if (!res.fileExists) return 'Image file does not exist';
     return null;
   }
 
   if (stage === 'ocr_postprocess') {
-    const ocr = await db.getFirstAsync<{ text: string | null }>(
-      `SELECT text FROM ocr_stage_results WHERE job_id = ?`,
-      [jobId],
-    );
-    if (!ocr) return 'OCR result missing';
+    const res = await db.query.ocrStageResults.findFirst({
+      where: eq(ocrStageResults.jobId, jobId),
+      columns: { text: true }
+    });
+    if (!res) return 'OCR result missing';
     return null;
   }
 
   if (stage === 'embedding' || stage === 'keywords' || stage === 'index') {
-    const post = await db.getFirstAsync<{ text: string | null }>(
-      `SELECT text FROM ocr_postprocess_stage_results WHERE job_id = ?`,
-      [jobId],
-    );
-    if (!post) return 'OCR postprocess result missing';
+    const res = await db.query.ocrPostprocessStageResults.findFirst({
+      where: eq(ocrPostprocessStageResults.jobId, jobId),
+      columns: { text: true }
+    });
+    if (!res) return 'OCR postprocess result missing';
     return null;
   }
 
   if (stage === 'index_fts') {
-    const post = await db.getFirstAsync<{ text: string | null }>(
-      `SELECT text FROM ocr_postprocess_stage_results WHERE job_id = ?`,
-      [jobId],
-    );
-    if (!post) return 'OCR postprocess result missing';
+    const res = await db.query.ocrPostprocessStageResults.findFirst({
+      where: eq(ocrPostprocessStageResults.jobId, jobId),
+      columns: { text: true }
+    });
+    if (!res) return 'OCR postprocess result missing';
     return null;
   }
 
   if (stage === 'index_vec') {
-    const embedding = await db.getFirstAsync<{ id: string }>(
-      `SELECT id FROM embedding_stage_results WHERE job_id = ? AND modality = 'image'`,
-      [jobId],
-    );
-    if (!embedding) return 'Embedding result missing';
+    const res = await db.query.embeddingStageResults.findFirst({
+      where: and(eq(embeddingStageResults.jobId, jobId), eq(embeddingStageResults.modality, 'image')),
+      columns: { id: true }
+    });
+    if (!res) return 'Embedding result missing';
     return null;
   }
 
@@ -208,7 +205,6 @@ async function runStageExecution(execution: JobJournalStageExecution): Promise<b
         break;
       }
       case 'embedding': {
-        // Create an AbortController to allow cooperative cancellation of embedding work.
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
@@ -290,35 +286,26 @@ async function runStageExecution(execution: JobJournalStageExecution): Promise<b
 export async function runNextStageExecution(): Promise<boolean> {
   await recoveryExpiredLeases();
   
-  // Model-aware claiming: only allow heavy tasks if model is ready
   const execution = await claimNextStageExecution({ allowHeavy: isModelReady() });
   if (!execution) return false;
 
   console.log(`[runner] Claimed: ${execution.stage} (Job: ${execution.jobId})`);
 
-  // Track current claimed execution so that graceful shutdown can revoke the lease
   currentExecutionId = execution.id;
   if (!shutdownHandlerInstalled) {
-    // Install handlers if environment supports process signals
     if (typeof process !== 'undefined' && typeof (process as any).on === 'function') {
       const handleSignal = async (sig: string) => {
         try {
           if (currentExecutionId) {
-            // best-effort revoke; ignore errors
             await revokeExecutionLease(currentExecutionId);
-             
             console.log(`revoked execution lease for ${currentExecutionId} due to signal ${sig}`);
           }
         } catch (err) {
-           
           console.error('Error revoking execution lease during shutdown', err);
         } finally {
-          // exit after attempting revoke
           try {
             process.exit(0);
-          } catch {
-            // ignore
-          }
+          } catch {}
         }
       };
       (process as any).on('SIGINT', () => void handleSignal('SIGINT'));
@@ -330,14 +317,10 @@ export async function runNextStageExecution(): Promise<boolean> {
   try {
     return await runStageExecution(execution);
   } finally {
-    // clear current execution marker so shutdown handler won't try to revoke it
     currentExecutionId = null;
   }
 }
 
-/**
- * Advanced concurrent execution: scheduler can claim and run multiple tasks.
- */
 export async function claimAndRunNextExecution(options: { allowHeavy: boolean }): Promise<boolean> {
   const execution = await claimNextStageExecution(options);
   if (!execution) return false;
@@ -347,22 +330,15 @@ export async function claimAndRunNextExecution(options: { allowHeavy: boolean })
     return true;
   } catch (err) {
     console.error(`[runner] Concurrent execution failed for ${execution.stage}:`, err);
-    return true; // continue processing other tasks
+    return true;
   }
 }
 
-export async function getExecutorStats(): Promise<{
-  pending: number;
-  running: number;
-  completed: number;
-  failed: number;
-  waitingForModel: number;
-}> {
-  const db = await getJobJournalDatabase();
-
-  const stats = await db.getAllAsync<{ status: string; count: number }>(
-    `SELECT status, COUNT(*) as count FROM stage_executions GROUP BY status`,
-  );
+export async function getExecutorStats() {
+  const db = await getDrizzleDb();
+  const rows = await db.select({ status: stageExecutions.status, count: count() })
+    .from(stageExecutions)
+    .groupBy(stageExecutions.status);
 
   const result = {
     pending: 0,
@@ -372,12 +348,12 @@ export async function getExecutorStats(): Promise<{
     waitingForModel: 0,
   };
 
-  for (const stat of stats) {
-    if (stat.status === 'pending') result.pending = stat.count;
-    else if (stat.status === 'running') result.running = stat.count;
-    else if (stat.status === 'completed') result.completed = stat.count;
-    else if (stat.status === 'failed') result.failed = stat.count;
-    else if (stat.status === 'waiting_for_model') result.waitingForModel = stat.count;
+  for (const row of rows) {
+    if (row.status === 'pending') result.pending = row.count;
+    else if (row.status === 'running') result.running = row.count;
+    else if (row.status === 'completed') result.completed = row.count;
+    else if (row.status === 'failed') result.failed = row.count;
+    else if (row.status === 'waiting_for_model') result.waitingForModel = row.count;
   }
 
   return result;

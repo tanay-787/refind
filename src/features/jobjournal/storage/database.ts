@@ -1,7 +1,11 @@
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
+import { drizzle, ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
+import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
+import { sql } from 'drizzle-orm';
 
-import { JOB_JOURNAL_SCHEMA, JOB_JOURNAL_VEC_SCHEMA } from './schema';
+import * as schema from './drizzle-schema';
+import migrations from '../../../../drizzle/migrations';
 
 type VecStatus = {
   available: boolean;
@@ -9,6 +13,7 @@ type VecStatus = {
 };
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
+let drizzlePromise: Promise<ExpoSQLiteDatabase<typeof schema>> | null = null;
 let initializationPromise: Promise<void> | null = null;
 let vecStatus: VecStatus = { available: false, error: null };
 
@@ -39,16 +44,36 @@ async function loadVecExtension(db: SQLite.SQLiteDatabase) {
   }
 }
 
-async function initializeDatabase(db: SQLite.SQLiteDatabase) {
+async function initializeDatabase(expoDb: SQLite.SQLiteDatabase) {
   if (initializationPromise) {
     return initializationPromise;
   }
 
   initializationPromise = (async () => {
-    await db.execAsync(JOB_JOURNAL_SCHEMA);
+    // 1. Load Vector Extension
+    await loadVecExtension(expoDb);
 
-    // Ensure trigram table exists (migration for existing users)
-    await db.execAsync(`
+    // 2. Initialize Drizzle
+    const db = drizzle(expoDb, { schema });
+
+    // 3. Run Drizzle Migrations
+    try {
+      await migrate(db, migrations);
+      console.log('[database] Drizzle migrations applied successfully');
+    } catch (err) {
+      console.error('[database] Drizzle migration failed:', err);
+      throw err;
+    }
+
+    // 4. Create Virtual Tables (FTS5 & sqlite-vec)
+    // These are not handled by Drizzle Kit
+    await expoDb.execAsync(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_index USING fts5(
+        job_id UNINDEXED,
+        ocr_text,
+        keywords
+      );
+
       CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_trigram USING fts5(
         job_id UNINDEXED,
         ocr_text,
@@ -57,27 +82,27 @@ async function initializeDatabase(db: SQLite.SQLiteDatabase) {
       );
     `);
 
-    // Run one-time migration for last_error column split
-    await migrateLastErrorColumn(db);
+    if (vecStatus.available) {
+      await expoDb.execAsync(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS image_embedding_index USING vec0(
+          embedding float[768],
+          job_id text
+        );
+      `);
+    }
 
-    // Ensure system_health table exists for storing periodic integrity checks
-    await db.execAsync(`CREATE TABLE IF NOT EXISTS system_health (
+    // 5. System Health Table
+    await expoDb.execAsync(`CREATE TABLE IF NOT EXISTS system_health (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       check_time INTEGER NOT NULL,
       check_type TEXT NOT NULL,
       result TEXT NOT NULL
     );`);
 
-    await loadVecExtension(db);
-    if (vecStatus.available) {
-      await db.execAsync(JOB_JOURNAL_VEC_SCHEMA);
-    }
-
-    // Perform an immediate integrity check at startup and persist the result
+    // 6. Initial Integrity Check
     try {
-      await performIntegrityCheck(db);
+      await performIntegrityCheck(expoDb);
     } catch (err) {
-      // best-effort: don't block initialization on health check failures
       console.warn('Database integrity check at startup failed:', err);
     }
   })();
@@ -85,56 +110,11 @@ async function initializeDatabase(db: SQLite.SQLiteDatabase) {
   return initializationPromise;
 }
 
-async function migrateLastErrorColumn(db: SQLite.SQLiteDatabase) {
-  try {
-    const columns = await db.getAllAsync<{ name: string }>(
-      `PRAGMA table_info(stage_executions);`,
-    );
-    const columnNames = new Set(columns.map((column) => column.name));
-
-    if (!columnNames.has('last_error_code')) {
-      await db.runAsync(`ALTER TABLE stage_executions ADD COLUMN last_error_code TEXT;`);
-    }
-    if (!columnNames.has('last_error_message')) {
-      await db.runAsync(`ALTER TABLE stage_executions ADD COLUMN last_error_message TEXT;`);
-    }
-
-    if (!columnNames.has('last_error')) {
-      return;
-    }
-
-    const rows = await db.getAllAsync<{ id: string; last_error: string | null }>(
-      `SELECT id, last_error FROM stage_executions WHERE last_error IS NOT NULL`,
-    );
-
-    for (const row of rows) {
-      let code: string | null = null;
-      let message: string | null = null;
-
-      if (row.last_error) {
-        const parts = row.last_error.split('|');
-        code = parts[0] || null;
-        message = parts.slice(1).join('|') || null;
-      }
-
-      await db.runAsync(
-        `UPDATE stage_executions SET last_error_code = ?, last_error_message = ? WHERE id = ?`,
-        [code, message, row.id],
-      );
-    }
-  } catch (err) {
-    // Migration is best-effort; if columns already exist or update fails, continue
-    console.warn('Failed to migrate last_error column:', err);
-  }
-}
-
 async function performIntegrityCheck(db: SQLite.SQLiteDatabase) {
-  // PRAGMA integrity_check returns one-row, one-column result (usually column named 'integrity_check')
   try {
     const row = await (db as any).getFirstAsync?.(`PRAGMA integrity_check;`);
     let result = '';
     if (row) {
-      // get the first column value regardless of column name
       const vals = Object.values(row) as string[];
       result = vals.length > 0 ? String(vals[0]) : '';
     }
@@ -154,9 +134,7 @@ async function performIntegrityCheck(db: SQLite.SQLiteDatabase) {
         `INSERT INTO system_health (check_time, check_type, result) VALUES (?, ?, ?)`,
         [now, 'integrity_check', msg],
       );
-    } catch {
-      // ignore failures while trying to persist health result
-    }
+    } catch { /* ignore */ }
     return { ok: false, result: msg };
   }
 }
@@ -167,18 +145,29 @@ export async function runDatabaseHealthCheck() {
 }
 
 export async function initializeJobJournalDatabase() {
-  const db = await getJobJournalDatabase();
-  await initializeDatabase(db);
+  await getDrizzleDb();
 }
 
 export async function getJobJournalDatabase() {
   if (!databasePromise) {
     databasePromise = (async () => {
-      const db = await SQLite.openDatabaseAsync('ss-search.db');
+      const db = await SQLite.openDatabaseAsync('ss-search.db', {
+        enableChangeListener: true
+      });
       await initializeDatabase(db);
       return db;
     })();
   }
 
   return databasePromise;
+}
+
+export async function getDrizzleDb() {
+  if (!drizzlePromise) {
+    drizzlePromise = (async () => {
+      const expoDb = await getJobJournalDatabase();
+      return drizzle(expoDb, { schema });
+    })();
+  }
+  return drizzlePromise;
 }
