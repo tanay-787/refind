@@ -59,7 +59,7 @@ export function useJobJournalLibrary() {
     
     // Complex join to get latest execution per job
     // We'll use a subquery/SQL for the ROW_NUMBER logic as Drizzle doesn't have a direct DSL for it yet
-    const rows = await db.execute(sql`
+    const rows = await db.all(sql`
       SELECT
          j.id,
          j.image_uri as uri,

@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { 
   getExecutorStats, 
   getJobJournalDatabase,
   initModelMonitor,
   ingestJobJournalScreenshots,
-  type JobJournalStatus,
-  type SiglipModelState,
-  type JobJournalIntakeResult,
+  JobJournalIntakeResult,
 } from '@/features/jobjournal';
 import { 
   getStatus as getModelStatus,
@@ -15,8 +14,8 @@ import {
   ensureTextReady as ensureModelTextReady,
   unload as unloadModel,
    } from '@/features/jobjournal/modelManager';
-import { processJobJournalNow } from '@/features/jobjournal/06-backgroundTasks';
-import { JobJournalErrorCode } from '@/features/jobjournal/types';
+import { processUntilEmpty } from '@/features/jobjournal/06-backgroundTasks';
+import { JobJournalErrorCode, SiglipModelState } from '@/features/jobjournal/types';
 
 interface JobJournalStats {
   pending: number;
@@ -69,7 +68,8 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
 
   const isMounted = useRef(true);
   const syncLock = useRef(false);
-  const processLock = useRef(false);
+  const engineLock = useRef(false);
+  const appState = useRef(AppState.currentState);
 
   const refreshStats = useCallback(async () => {
     try {
@@ -94,6 +94,34 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
+  /**
+   * Autonomous Workflow Engine
+   * Watches for pending work and triggers high-speed processing in foreground.
+   */
+  const runEngine = useCallback(async () => {
+    if (engineLock.current || appState.current !== 'active') return;
+    
+    // Only wake up if there is actually pending work
+    const stats = await getExecutorStats();
+    if (stats.pending === 0) return;
+
+    engineLock.current = true;
+    setState(prev => ({ ...prev, isProcessing: true }));
+    
+    try {
+      console.log(`[JobJournalEngine] Waking up. Found ${stats.pending} pending tasks.`);
+      await processUntilEmpty(1000, 10); 
+      await refreshStats();
+    } catch (err) {
+      console.error('[JobJournalEngine] Loop error:', err);
+    } finally {
+      engineLock.current = false;
+      if (isMounted.current) {
+        setState(prev => ({ ...prev, isProcessing: false }));
+      }
+    }
+  }, [refreshStats]);
+
   const sync = useCallback(async (options?: { vectorRequired?: boolean }) => {
     if (syncLock.current) return null;
     
@@ -103,6 +131,8 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     try {
       const result = await ingestJobJournalScreenshots(undefined, options);
       await refreshStats();
+      // Inform the engine that new work might be available
+      void runEngine();
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sync failed';
@@ -115,25 +145,19 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
         setState(prev => ({ ...prev, isSyncing: false }));
       }
     }
-  }, [refreshStats]);
+  }, [refreshStats, runEngine]);
 
-  const process = useCallback(async (iterations = 8) => {
-    if (processLock.current) return 0;
-
-    processLock.current = true;
-    setState(prev => ({ ...prev, isProcessing: true, lastError: null, lastErrorCode: null }));
-    
+  const processManually = useCallback(async (iterations = 8) => {
+    // Standard process call for manual UI triggers
+    if (engineLock.current) return 0;
+    engineLock.current = true;
+    setState(prev => ({ ...prev, isProcessing: true }));
     try {
-      const processed = await processJobJournalNow(iterations);
+      const processed = await processUntilEmpty(iterations, 10);
       await refreshStats();
       return processed;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Processing failed';
-      setState(prev => ({ ...prev, lastError: message, lastErrorCode: 'UNKNOWN' }));
-      console.error('[JobJournalProvider] Processing error:', error);
-      return 0;
     } finally {
-      processLock.current = false;
+      engineLock.current = false;
       if (isMounted.current) {
         setState(prev => ({ ...prev, isProcessing: false }));
       }
@@ -143,20 +167,34 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     isMounted.current = true;
     
-    // Initial load
-    refreshStats();
+    // 1. Initial Load & Engine Start
+    refreshStats().then(() => {
+      void runEngine();
+    });
 
-    // Poll stats
+    // 2. Poll stats for eventual consistency
     const statsInterval = setInterval(refreshStats, 5000);
 
-    // Subscribe to model state
-    const unsubscribeModel = subscribeModel((modelState: SiglipModelState) => {
+    // 3. Subscribe to Model State
+    const unsubscribeModel = subscribeModel((modelState) => {
       if (isMounted.current) {
         setState(prev => ({ ...prev, model: modelState }));
+        // If model becomes ready, wake up engine to finish embeddings
+        if (modelState.status === 'ready' && modelState.isLoaded) {
+          void runEngine();
+        }
       }
     });
 
-    // Initialize model monitor (handles retries when model becomes ready)
+    // 4. AppState Awareness: Stop/Start engine on foreground/background
+    const appStateSub = AppState.addEventListener('change', (nextStatus) => {
+      appState.current = nextStatus;
+      if (nextStatus === 'active') {
+        void runEngine();
+      }
+    });
+
+    // 5. Model Monitor (unstick waiting jobs)
     const unsubscribeMonitor = initModelMonitor();
 
     return () => {
@@ -164,17 +202,18 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
       clearInterval(statsInterval);
       unsubscribeModel();
       unsubscribeMonitor();
+      appStateSub.remove();
     };
-  }, [refreshStats]);
+  }, [refreshStats, runEngine]);
 
   const value = React.useMemo<JobJournalContextValue>(() => ({
     ...state,
     sync,
-    process,
+    process: processManually,
     ensureModelReady,
     ensureModelTextReady,
     unloadModel,
-  }), [state, sync, process]);
+  }), [state, sync, processManually]);
 
   return (
     <JobJournalContext.Provider value={value}>

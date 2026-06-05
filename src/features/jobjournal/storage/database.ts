@@ -147,19 +147,21 @@ export async function runDatabaseHealthCheck() {
 export async function initializeJobJournalDatabase() {
   await getDrizzleDb();
 }
-
 export async function getJobJournalDatabase() {
   if (!databasePromise) {
     databasePromise = (async () => {
-      const db = await SQLite.openDatabaseAsync('ss-search.db', {
+      // V2: Migrated to Drizzle ORM. Changing filename to ensure a clean Drizzle-owned schema.
+      const db = await SQLite.openDatabaseAsync('ss-search-v2.db', {
         enableChangeListener: true
       });
+      await initializeDatabase(db);
       return db;
     })();
   }
 
   return databasePromise;
 }
+
 
 export async function getDrizzleDb() {
   if (!drizzlePromise) {

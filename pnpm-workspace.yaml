@@ -1,6 +1,7 @@
 allowBuilds:
   dtrace-provider: true
   esbuild: true
+  react-native-litert-lm: true
   react-native-siglip: true
   unrs-resolver: true
 patchedDependencies:

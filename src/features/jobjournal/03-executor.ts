@@ -13,24 +13,22 @@ import type { JobJournalStage, JobJournalStageExecution } from './types';
 
 const LEASE_DURATION_MS = 5 * 60 * 1000;
 
-const STAGE_DEPENDENCIES: Record<JobJournalStage, JobJournalStage[]> = {
+const STAGE_DEPENDENCIES: Record<Exclude<JobJournalStage, 'index'>, JobJournalStage[]> = {
   metadata: [],
   ocr: ['metadata'],
   ocr_postprocess: ['ocr'],
   embedding: ['ocr_postprocess'],
   keywords: ['ocr_postprocess'],
-  index: ['ocr_postprocess', 'keywords'],
   index_fts: ['ocr_postprocess', 'keywords'],
   index_vec: ['embedding'],
 };
 
-const STAGE_CHILDREN: Record<JobJournalStage, JobJournalStage[]> = {
+const STAGE_CHILDREN: Record<Exclude<JobJournalStage, 'index'>, JobJournalStage[]> = {
   metadata: ['ocr'],
   ocr: ['ocr_postprocess'],
-  ocr_postprocess: ['embedding', 'keywords', 'index_fts', 'index'],
+  ocr_postprocess: ['embedding', 'keywords', 'index_fts'],
   embedding: ['index_vec'],
-  keywords: ['index_fts', 'index'],
-  index: [],
+  keywords: ['index_fts'],
   index_fts: [],
   index_vec: [],
 };

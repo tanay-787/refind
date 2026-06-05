@@ -3,7 +3,7 @@
  *   appropriate stage function, and records completed / failed / waiting_for_model
  *   outcomes via executor helpers.
  */
-import { eq, and } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 import {
   claimNextStageExecution,
   completeStageExecution,

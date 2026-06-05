@@ -34,8 +34,7 @@ export async function hybridSearch(
       const queryEmbedding = await generateTextEmbedding(sanitizedQuery);
       const embeddingJson = JSON.stringify(Array.from(queryEmbedding));
 
-      // Drizzle handles the parameter binding safely
-      const vectorResults = await db.execute(sql`
+      const vectorResults = await db.all(sql`
         SELECT 
           v.job_id,
           vec_distance(v.embedding, ${embeddingJson}) as distance,
@@ -74,7 +73,7 @@ export async function hybridSearch(
     console.log(`[hybridSearch] Attempting standard FTS search with: "${ftsQuery}"`);
     
     try {
-      const ftsResults = await db.execute(sql`
+      const ftsResults = await db.all(sql`
         SELECT 
           idx.job_id,
           idx.ocr_text,
@@ -114,7 +113,7 @@ export async function hybridSearch(
       console.log(`[hybridSearch] Attempting Trigram fuzzy search with: ${trigramQuery}`);
       
       try {
-        const triResults = await db.execute(sql`
+        const triResults = await db.all(sql`
           SELECT 
             idx.job_id,
             idx.ocr_text,
@@ -154,8 +153,8 @@ export async function hybridSearch(
     .slice(0, limit);
     
   if (finalResults.length === 0) {
-    const [countResult] = await db.select({ count: sql`count(*)` }).from(sql`screenshot_search_index`);
-    console.log(`[hybridSearch] No results found for query: "${sanitizedQuery}". Index contains ${countResult?.count ?? 0} total documents.`);
+    const countResult = await db.all(sql`SELECT count(*) as count FROM screenshot_search_index`);
+    console.log(`[hybridSearch] No results found for query: "${sanitizedQuery}". Index contains ${countResult[0]?.count ?? 0} total documents.`);
   }
 
   return finalResults;
