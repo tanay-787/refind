@@ -70,13 +70,13 @@ async function initializeDatabase(expoDb: SQLite.SQLiteDatabase): Promise<ExpoSQ
     // 4. Virtual Tables (Manual FTS5 & sqlite-vec setup)
     await expoDb.execAsync(`
       CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_index USING fts5(
-        job_id UNINDEXED,
+        job_id,
         ocr_text,
         keywords
       );
 
       CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_trigram USING fts5(
-        job_id UNINDEXED,
+        job_id,
         ocr_text,
         keywords,
         tokenize='trigram'

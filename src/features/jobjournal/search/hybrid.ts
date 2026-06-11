@@ -1,11 +1,7 @@
-import { eq, sql, and, asc, desc } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { generateTextEmbedding } from '../embeddings';
 import { getDrizzleDb } from '../storage/database';
-import { 
-  jobJournalJobs, 
-  ocrPostprocessStageResults,
-  keywordStageResults 
-} from '../storage/drizzle-schema';
+import { canonicalize } from '../stages/03-ocr_postprocess.stage';
 
 export interface SearchResult {
   jobId: string;
@@ -14,6 +10,37 @@ export interface SearchResult {
   keywords: string[];
   score: number;
   searchMethod: 'fts' | 'embedding' | 'hybrid';
+}
+
+/**
+ * Query-Conditioned Scorer
+ * Calculates how well a result "explains" the query tokens relative to the query context.
+ * Importance is dynamic: a word is important ONLY if it matches the query.
+ */
+function calculateQueryScore(queryTokens: string[], docText: string, docKeywords: string[]): number {
+  if (queryTokens.length === 0) return 0;
+  
+  let matches = 0;
+  const canonDoc = canonicalize(docText);
+  // Keywords already contains expanded and canonicalized tokens from Stage 5
+  const canonKeywords = docKeywords.map(k => canonicalize(k));
+
+  for (const token of queryTokens) {
+    const canonToken = canonicalize(token);
+    
+    // Priority 1: Exact or Expanded Keyword Match (High Signal Identity)
+    // This catches "Infy" in "ARGxInfyy" because Stage 5 expanded it.
+    if (canonKeywords.includes(canonToken)) {
+      matches += 1.0;
+    } 
+    // Priority 2: Substring Match in Raw Text (Lower Signal)
+    else if (canonDoc.includes(canonToken)) {
+      matches += 0.5;
+    }
+  }
+
+  // Score is the ratio of query tokens "explained" by the document
+  return matches / queryTokens.length;
 }
 
 export async function hybridSearch(
@@ -26,6 +53,9 @@ export async function hybridSearch(
 
   const sanitizedQuery = query.trim();
   if (!sanitizedQuery) return [];
+
+  const queryTokens = sanitizedQuery.split(/\s+/).filter(Boolean);
+  const canonQuery = canonicalize(sanitizedQuery);
 
   // 1. Semantic Search (Vector)
   if (useEmbeddings) {
@@ -58,93 +88,67 @@ export async function hybridSearch(
           searchMethod: 'embedding',
         });
       });
-      console.log(`[hybridSearch] Vector search returned ${vectorResults.length} candidates`);
     } catch (err) {
       console.warn('[hybridSearch] Vector search failed:', err instanceof Error ? err.message : String(err));
     }
   }
 
-  // 2. Keyword/Text Search (FTS5)
-  const tokens = sanitizedQuery.replace(/[^\w\s]/g, ' ').trim().split(/\s+/).filter(Boolean);
-  
-  if (tokens.length > 0) {
-    // Layer A: Standard Word-based Prefix Matching
-    const ftsQuery = tokens.map(t => `${t}*`).join(' AND ');
-    console.log(`[hybridSearch] Attempting standard FTS search with: "${ftsQuery}"`);
-    
+  // 2. Keyword/Text Search (FTS5) - BROAD RETRIEVAL + DYNAMIC RERANKING
+  if (queryTokens.length > 0) {
+    // Permissive broad retrieval: OR logic to get anything potentially related
+    const ftsQuery = queryTokens.map(t => `${t}*`).join(' OR '); 
+    const trigramQuery = canonQuery.replace(/[^\w]/g, ' ').trim();
+
     try {
-      const ftsResults = await db.all(sql`
+      console.log(`[hybridSearch] Broad retrieval with FTS ("${ftsQuery}") and Trigram ("${trigramQuery}")`);
+      
+      const rawMatches = await db.all(sql`
         SELECT 
           idx.job_id,
-          idx.ocr_text,
+          o.text as cleaned_ocr_text,
           idx.keywords,
           j.image_uri as uri
         FROM screenshot_search_index idx
         JOIN job_journal_jobs j ON j.id = idx.job_id
+        LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = idx.job_id
         WHERE screenshot_search_index MATCH ${ftsQuery}
-        ORDER BY rank
-        LIMIT ${limit}
+        UNION
+        SELECT 
+          tri.job_id,
+          o.text as cleaned_ocr_text,
+          tri.keywords,
+          j.image_uri as uri
+        FROM screenshot_search_trigram tri
+        JOIN job_journal_jobs j ON j.id = tri.job_id
+        LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = tri.job_id
+        WHERE screenshot_search_trigram MATCH ${trigramQuery}
+        LIMIT 100
       `);
 
-      ftsResults.forEach((row: any) => {
+      console.log(`[hybridSearch] Broad retrieval found ${rawMatches.length} raw candidates. Reranking...`);
+
+      rawMatches.forEach((row: any) => {
+        const docKeywords = row.keywords ? row.keywords.split(' ') : [];
+        const relevanceScore = calculateQueryScore(queryTokens, row.cleaned_ocr_text || '', docKeywords);
+        
         const existing = candidates.get(row.job_id);
         if (existing) {
-          existing.score = Math.min(1.0, existing.score + 0.3);
+          // If already found by vector, we boost it if FTS also confirms relevance
+          existing.score = Math.max(existing.score, relevanceScore);
           existing.searchMethod = 'hybrid';
-        } else {
+        } else if (relevanceScore > 0) {
           candidates.set(row.job_id, {
             jobId: row.job_id,
             uri: row.uri,
-            ocrText: row.ocr_text || '',
-            keywords: row.keywords ? row.keywords.split(' ') : [],
-            score: 0.9,
+            ocrText: row.cleaned_ocr_text || '',
+            keywords: docKeywords,
+            score: relevanceScore,
             searchMethod: 'fts',
           });
         }
       });
-      console.log(`[hybridSearch] Standard FTS returned ${ftsResults.length} matches`);
     } catch (err) {
-      console.warn('[hybridSearch] Standard FTS search failed:', err);
-    }
-
-    // Layer B: Trigram FTS (Substring/Fuzzy matching)
-    if (candidates.size < limit) {
-      const trigramQuery = `"${sanitizedQuery}"`;
-      console.log(`[hybridSearch] Attempting Trigram fuzzy search with: ${trigramQuery}`);
-      
-      try {
-        const triResults = await db.all(sql`
-          SELECT 
-            idx.job_id,
-            idx.ocr_text,
-            idx.keywords,
-            j.image_uri as uri
-          FROM screenshot_search_trigram idx
-          JOIN job_journal_jobs j ON j.id = idx.job_id
-          WHERE screenshot_search_trigram MATCH ${trigramQuery}
-          ORDER BY rank
-          LIMIT ${limit}
-        `);
-
-        triResults.forEach((row: any) => {
-          const existing = candidates.get(row.job_id);
-          if (existing) {
-            existing.score = Math.min(1.0, existing.score + 0.1);
-          } else {
-            candidates.set(row.job_id, {
-              jobId: row.job_id,
-              uri: row.uri,
-              ocrText: row.ocr_text || '',
-              keywords: row.keywords ? row.keywords.split(' ') : [],
-              score: 0.7,
-              searchMethod: 'fts',
-            });
-          }
-        });
-        console.log(`[hybridSearch] Trigram search returned ${triResults.length} matches`);
-      } catch (err) {
-        console.warn('[hybridSearch] Trigram search failed:', err);
-      }
+      console.warn('[hybridSearch] FTS broad retrieval/reranking failed:', err);
     }
   }
 
@@ -153,7 +157,7 @@ export async function hybridSearch(
     .slice(0, limit);
     
   if (finalResults.length === 0) {
-    const countResult = await db.all(sql`SELECT count(*) as count FROM screenshot_search_index`);
+    const countResult = await db.all(sql`SELECT count(*) as count FROM screenshot_search_index`) as { count: number }[];
     console.log(`[hybridSearch] No results found for query: "${sanitizedQuery}". Index contains ${countResult[0]?.count ?? 0} total documents.`);
   }
 

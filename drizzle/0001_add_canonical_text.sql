@@ -1,0 +1,1 @@
+ALTER TABLE `ocr_postprocess_stage_results` ADD `canonical_text` text;

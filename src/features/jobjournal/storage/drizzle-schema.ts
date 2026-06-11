@@ -62,6 +62,7 @@ export const ocrStageResults = sqliteTable('ocr_stage_results', {
 export const ocrPostprocessStageResults = sqliteTable('ocr_postprocess_stage_results', {
   jobId: text('job_id').primaryKey().references(() => jobJournalJobs.id, { onDelete: 'cascade' }),
   text: text('text'),
+  canonicalText: text('canonical_text'),
   blocksJson: text('blocks_json'),
   language: text('language'),
   blockCount: integer('block_count'),

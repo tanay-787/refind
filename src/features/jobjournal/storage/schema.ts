@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS ocr_stage_results (
 CREATE TABLE IF NOT EXISTS ocr_postprocess_stage_results (
   job_id TEXT PRIMARY KEY REFERENCES job_journal_jobs(id) ON DELETE CASCADE,
   text TEXT,
+  canonical_text TEXT,
   blocks_json TEXT,
   language TEXT,
   block_count INTEGER,
@@ -110,13 +111,13 @@ CREATE TABLE IF NOT EXISTS search_readiness (
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_index USING fts5(
-  job_id UNINDEXED,
+  job_id,
   ocr_text,
   keywords
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_trigram USING fts5(
-  job_id UNINDEXED,
+  job_id,
   ocr_text,
   keywords,
   tokenize='trigram'
