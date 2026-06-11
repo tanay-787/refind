@@ -51,13 +51,20 @@ build_android_native_library() {
   cmake --build "${cmake_out}" -j "$(nproc)" --target install --config "${build_type}"
 }
 
+# Copy shared libraries to a central location
 mkdir -p cmake-out-android-so
 build_android_native_library arm64-v8a
 build_android_native_library x86_64
 
-mkdir -p "cmake-out-android-so/arm64-v8a" "cmake-out-android-so/x86_64"
-cp "cmake-out-android-arm64-v8a"/extension/android/*.so "cmake-out-android-so/arm64-v8a/libexecutorch.so"
-cp "cmake-out-android-x86_64"/extension/android/*.so "cmake-out-android-so/x86_64/libexecutorch.so"
+# Populate vendor dist folder with static libraries for NitroSigLIP to link against
+DIST_LIBS_DIR="/devspace/projects/ss-search/vendor/react-native-siglip/dist/android/libs"
+mkdir -p "${DIST_LIBS_DIR}/arm64-v8a" "${DIST_LIBS_DIR}/x86_64"
+ 
+echo "Copying static libraries to vendor dist..."
+cp "cmake-out-android-arm64-v8a"/lib/*.a "${DIST_LIBS_DIR}/arm64-v8a/"
+cp "cmake-out-android-x86_64"/lib/*.a "${DIST_LIBS_DIR}/x86_64/"
 
 cd /devspace/projects/ss-search
 node scripts/prepare-siglip-binaries.js
+
+# if fails, try checking permissions on build files that are required

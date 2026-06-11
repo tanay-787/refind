@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "run:dev": "./run-dev.sh",
     "build:local": "./android-build.sh",
     "android:dev": "expo run:android",
     "android:setup": "node scripts/fix-android-generated-files.js",
@@ -29,6 +30,7 @@
     "expo-font": "~55.0.7",
     "expo-glass-effect": "~55.0.11",
     "expo-image": "~55.0.10",
+    "expo-image-manipulator": "~55.0.17",
     "expo-linking": "~55.0.15",
     "expo-media-library": "~55.0.17",
     "expo-router": "~55.0.14",
