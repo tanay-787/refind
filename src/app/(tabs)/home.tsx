@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSearch, useJobJournalStats, useJobJournalOperations } from '@/lib/hooks';
+import { useSearch, useJobJournalStats, useJobJournalOperations } from '@/hooks';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;

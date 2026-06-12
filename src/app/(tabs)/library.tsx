@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useJobJournalLibrary, useJobJournalOperations } from '@/lib/hooks';
+import { useJobJournalLibrary, useJobJournalOperations } from '@/hooks';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;

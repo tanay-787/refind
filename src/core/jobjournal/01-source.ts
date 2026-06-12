@@ -1,6 +1,6 @@
 import * as MediaLibrary from 'expo-media-library';
 
-import { loadScreenshotAssets, watchScreenshotAssets } from '@/features/screenshots/utils';
+import { loadScreenshotAssets, watchScreenshotAssets } from '@/core/screenshots/utils';
 
 export type JobJournalScreenshotSource = MediaLibrary.Asset;
 

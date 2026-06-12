@@ -6,16 +6,16 @@ import {
   initModelMonitor,
   ingestJobJournalScreenshots,
   JobJournalIntakeResult,
-} from '@/features/jobjournal';
+} from '@/core/jobjournal';
 import { 
   getStatus as getModelStatus,
   subscribe as subscribeModel,
   ensureReady as ensureModelReady,
   ensureTextReady as ensureModelTextReady,
   unload as unloadModel,
-   } from '@/features/jobjournal/modelManager';
-import { processUntilEmpty } from '@/features/jobjournal/06-backgroundTasks';
-import { JobJournalErrorCode, SiglipModelState } from '@/features/jobjournal/types';
+   } from '@/core/jobjournal/modelManager';
+import { processUntilEmpty } from '@/core/jobjournal/06-backgroundTasks';
+import { JobJournalErrorCode, SiglipModelState } from '@/core/jobjournal/types';
 
 interface JobJournalStats {
   pending: number;

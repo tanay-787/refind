@@ -10,7 +10,7 @@ import {
   initializeJobJournalDatabase, 
   registerJobJournalBackgroundTask, 
   scheduleJobJournalBackgroundTask 
-} from '@/features/jobjournal';
+} from '@/core/jobjournal';
 
 export default function IndexScreen() {
   const router = useRouter();

@@ -26,9 +26,30 @@ if (!fs.existsSync(packageDir)) {
   );
 }
 
+console.log('Requirements met, Initiating ...')
+
+console.log('Executing 1st')
 fs.rmSync(targetDir, { recursive: true, force: true });
+console.log('Done')
+
+console.log('Executing 2nd')
 fs.rmSync(targetBuildDir, { recursive: true, force: true });
+console.log('Done')
+
+console.log('Executing 3rd')
 fs.mkdirSync(path.dirname(targetDir), { recursive: true });
+console.log('Done')
+
+console.log('Executing 4th')
 fs.mkdirSync(path.dirname(targetBuildDir), { recursive: true });
+console.log('Done')
+
+console.log('Executing 5th')
 fs.cpSync(sourceDir, targetDir, { recursive: true });
+console.log('Done')
+
+console.log('Executing 6th')
 fs.cpSync(sourceBuildDir, targetBuildDir, { recursive: true });
+
+
+console.log('Finished Execution successfully');

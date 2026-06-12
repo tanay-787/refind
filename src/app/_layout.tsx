@@ -6,7 +6,7 @@ import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { JobJournalProvider } from '@/lib/hooks';
+import { JobJournalProvider } from '@/hooks';
 import './global.css';
 
 export default function RootLayout() {

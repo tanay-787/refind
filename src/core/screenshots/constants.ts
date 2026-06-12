@@ -1,4 +1,4 @@
-import type { ScreenshotStatusFilterKey } from './types';
+import type { ScreenshotStatusFilterKey } from './types.js';
 
 export const SCREENSHOT_NAME_RE = /screenshot|screen shot|capture/i;
 

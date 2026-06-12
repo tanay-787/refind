@@ -4,8 +4,8 @@ import * as MediaLibrary from 'expo-media-library';
 import { eq, desc, sql } from 'drizzle-orm';
 
 import { useJobJournalOperations } from './useJobJournalOperations';
-import { getDrizzleDb } from '@/features/jobjournal/storage/database';
-import { jobJournalJobs, stageExecutions, metadataStageResults } from '@/features/jobjournal/storage/drizzle-schema';
+import { getDrizzleDb } from '@/core/jobjournal/storage/database';
+import { jobJournalJobs, stageExecutions, metadataStageResults } from '@/core/jobjournal/storage/drizzle-schema';
 
 export type JobJournalLibraryItem = {
   id: string;

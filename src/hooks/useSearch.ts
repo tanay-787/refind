@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { hybridSearch, type SearchResult } from '@/features/jobjournal/search/hybrid';
+import { hybridSearch, type SearchResult } from '@/core/jobjournal/search/hybrid';
 import { useJobJournalModel } from './useJobJournalModel';
 
 interface SearchState {
