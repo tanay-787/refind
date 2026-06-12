@@ -65,9 +65,9 @@ export async function runIndexFtsStage(job: JobJournalJob): Promise<{ status: 'c
       );
     } else {
       await db.runAsync(
-        `INSERT INTO search_readiness (job_id, fts_ready, vector_ready, keywords_ready, indexed_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [job.id, ftsReady ? 1 : 0, 0, keywordsReady ? 1 : 0, now, now]
+        `INSERT INTO search_readiness (job_id, fts_ready, keywords_ready, indexed_at, updated_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [job.id, ftsReady ? 1 : 0, keywordsReady ? 1 : 0, now, now]
       );
     }
 

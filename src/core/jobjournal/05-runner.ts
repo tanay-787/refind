@@ -3,29 +3,22 @@
  *   appropriate stage function, and records completed / failed / waiting_for_model
  *   outcomes via executor helpers.
  */
-import { eq, and, count } from 'drizzle-orm';
 import {
   claimNextStageExecution,
   completeStageExecution,
   failStageExecution,
-  markExecutionWaitingForModel,
   recoveryExpiredLeases,
   renewExecutionLease,
   revokeExecutionLease,
 } from './03-executor';
-import {
-  runEmbeddingStage,
-} from './stages/04-embedding.stage';
 import { getDrizzleDb, getJobJournalDatabase } from './storage/database';
 import { 
   jobJournalJobs, 
   metadataStageResults, 
   ocrStageResults, 
   ocrPostprocessStageResults,
-  embeddingStageResults,
   stageExecutions
 } from './storage/drizzle-schema';
-import { isReady as isModelReady } from './modelManager';
 import type { JobJournalJob, JobJournalStage, JobJournalStageExecution } from './types';
 
 import {
@@ -35,16 +28,13 @@ import { runOcrStage } from './stages/02-ocr.stage';
 import { runOcrPostprocessStage } from './stages/03-ocr_postprocess.stage';
 import { runKeywordsStage } from './stages/05-keywords.stage';
 import { runIndexFtsStage } from './stages/06-index_fts.stage';
-import { runIndexVecStage } from './stages/07-index_vec.stage';
 
 const STAGE_TIMEOUTS: Record<JobJournalStage, number> = {
   metadata: 30_000,
   ocr: 120_000,
   ocr_postprocess: 30_000,
-  embedding: 10 * 60_000,
   keywords: 60_000,
   index_fts: 120_000,
-  index_vec: 120_000,
 };
 
 async function promiseWithTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -77,7 +67,6 @@ async function getJob(jobId: string): Promise<JobJournalJob | null> {
     imageUri: row.imageUri,
     imageHash: row.imageHash,
     status: row.status as any,
-    vectorRequired: row.vectorRequired,
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
   };
@@ -85,8 +74,6 @@ async function getJob(jobId: string): Promise<JobJournalJob | null> {
 
 function getCheckpointPointer(jobId: string, stage: JobJournalStage) {
   if (stage === 'index_fts') return `screenshot_search_index:${jobId}`;
-  if (stage === 'index_vec') return `image_embedding_index:${jobId}`;
-  if (stage === 'embedding') return `embedding_stage_results:${jobId}`;
   if (stage === 'keywords') return `keyword_stage_results:${jobId}`;
   if (stage === 'ocr_postprocess') return `ocr_postprocess_stage_results:${jobId}`;
   if (stage === 'ocr') return `ocr_stage_results:${jobId}`;
@@ -115,7 +102,7 @@ async function validateStageInput(jobId: string, stage: JobJournalStage): Promis
     return null;
   }
 
-  if (stage === 'embedding' || stage === 'keywords') {
+  if (stage === 'keywords') {
     const res = await db.query.ocrPostprocessStageResults.findFirst({
       where: eq(ocrPostprocessStageResults.jobId, jobId),
       columns: { text: true }
@@ -130,15 +117,6 @@ async function validateStageInput(jobId: string, stage: JobJournalStage): Promis
       columns: { text: true }
     });
     if (!res) return 'OCR postprocess result missing';
-    return null;
-  }
-
-  if (stage === 'index_vec') {
-    const res = await db.query.embeddingStageResults.findFirst({
-      where: and(eq(embeddingStageResults.jobId, jobId), eq(embeddingStageResults.modality, 'image')),
-      columns: { id: true }
-    });
-    if (!res) return 'Embedding result missing';
     return null;
   }
 
@@ -203,18 +181,6 @@ async function runStageExecution(execution: JobJournalStageExecution): Promise<b
         }
         break;
       }
-      case 'embedding': {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          result = await runEmbeddingStage(job, execution, controller.signal);
-        } catch (err) {
-          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out', errorCode: (err instanceof Error && err.message === 'Aborted') ? 'TIMEOUT' : 'UNKNOWN' };
-        } finally {
-          clearTimeout(timer);
-        }
-        break;
-      }
       case 'keywords': {
         try {
           result = await promiseWithTimeout(runKeywordsStage(job), timeoutMs);
@@ -226,14 +192,6 @@ async function runStageExecution(execution: JobJournalStageExecution): Promise<b
       case 'index_fts': {
         try {
           result = await promiseWithTimeout(runIndexFtsStage(job), timeoutMs);
-        } catch (err) {
-          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
-        }
-        break;
-      }
-      case 'index_vec': {
-        try {
-          result = await promiseWithTimeout(runIndexVecStage(job), timeoutMs);
         } catch (err) {
           result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
         }
@@ -284,7 +242,7 @@ async function runStageExecution(execution: JobJournalStageExecution): Promise<b
 export async function runNextStageExecution(): Promise<boolean> {
   await recoveryExpiredLeases();
   
-  const execution = await claimNextStageExecution({ allowHeavy: isModelReady() });
+  const execution = await claimNextStageExecution();
   if (!execution) return false;
 
   console.log(`[runner] Claimed: ${execution.stage} (Job: ${execution.jobId})`);
@@ -319,8 +277,8 @@ export async function runNextStageExecution(): Promise<boolean> {
   }
 }
 
-export async function claimAndRunNextExecution(options: { allowHeavy: boolean }): Promise<boolean> {
-  const execution = await claimNextStageExecution(options);
+export async function claimAndRunNextExecution(): Promise<boolean> {
+  const execution = await claimNextStageExecution();
   if (!execution) return false;
   
   try {

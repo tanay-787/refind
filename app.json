@@ -80,14 +80,6 @@
           ],
           "ocrUseBundled": true
         }
-      ],
-      [
-        "react-native-siglip",
-        {
-          "enableCoreML": true,
-          "enableQNN": false,
-          "modelsDirectory": "siglip_models"
-        }
       ]
     ],
     "experiments": {

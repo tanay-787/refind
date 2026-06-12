@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS job_journal_jobs (
   image_uri TEXT NOT NULL,
   image_hash TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL,
-  vector_required INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -75,36 +74,9 @@ CREATE TABLE IF NOT EXISTS ocr_postprocess_stage_results (
   updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS embedding_stage_results (
-  id TEXT PRIMARY KEY,
-  job_id TEXT NOT NULL REFERENCES job_journal_jobs(id) ON DELETE CASCADE,
-  modality TEXT NOT NULL,
-  vector BLOB NOT NULL,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS embedding_stage_results_job_modality_idx
-  ON embedding_stage_results(job_id, modality);
-
-CREATE TABLE IF NOT EXISTS keyword_stage_results (
-  id TEXT PRIMARY KEY,
-  job_id TEXT NOT NULL REFERENCES job_journal_jobs(id) ON DELETE CASCADE,
-  keyword TEXT NOT NULL,
-  type TEXT NOT NULL,
-  score REAL NOT NULL,
-  positions_json TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS keyword_stage_results_job_keyword_idx
-  ON keyword_stage_results(job_id, keyword);
-
 CREATE TABLE IF NOT EXISTS search_readiness (
   job_id TEXT PRIMARY KEY REFERENCES job_journal_jobs(id) ON DELETE CASCADE,
   fts_ready INTEGER NOT NULL DEFAULT 0,
-  vector_ready INTEGER NOT NULL DEFAULT 0,
   keywords_ready INTEGER NOT NULL DEFAULT 0,
   indexed_at INTEGER,
   updated_at INTEGER NOT NULL
@@ -124,9 +96,4 @@ CREATE VIRTUAL TABLE IF NOT EXISTS screenshot_search_trigram USING fts5(
 );
 `;
 
-export const JOB_JOURNAL_VEC_SCHEMA = `
-CREATE VIRTUAL TABLE IF NOT EXISTS image_embedding_index USING vec0(
-  embedding float[768],
-  job_id text
-);
-`;
+export const JOB_JOURNAL_VEC_SCHEMA = ``;

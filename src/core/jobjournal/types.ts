@@ -4,17 +4,14 @@ export type JobJournalStage =
   | 'metadata'
   | 'ocr'
   | 'ocr_postprocess'
-  | 'embedding'
   | 'keywords'
-  | 'index_fts'
-  | 'index_vec';
+  | 'index_fts';
 
 export type JobJournalJob = {
   id: string;
   imageUri: string;
   imageHash: string;
   status: JobJournalStatus;
-  vectorRequired?: boolean;
   createdAt: number;
   updatedAt: number;
 };
@@ -31,39 +28,11 @@ export type JobJournalStageExecution = {
   lastError: string | null;
 };
 
-export type JobJournalCheckpoint = {
-  jobId: string;
-  stage: JobJournalStage;
-  outputPath: string | null;
-  createdAt: number;
-  updatedAt: number;
-};
-
-export type SiglipModelConfig = {
-  visionUrl: string | null;
-  textUrl: string | null;
-  tokenizerUrl: string | null;
-};
-
-export type SiglipModelState = {
-  config: SiglipModelConfig;
-  status: 'idle' | 'downloading' | 'ready' | 'error';
-  isLoaded: boolean;
-  isTextLoaded: boolean;
-  progress: number;
-  error: string | null;
-  visionPath: string | null;
-  textPath: string | null;
-  tokenizerPath: string | null;
-};
-
 export type JobJournalErrorCode =
   | 'PRECONDITION_FAILED'
   | 'MODEL_UNAVAILABLE'
   | 'TIMEOUT'
   | 'IO_ERROR'
-  | 'VECTOR_MISSING'
-  | 'VECTOR_UNAVAILABLE'
   | 'NOT_FOUND'
   | 'UNKNOWN';
 

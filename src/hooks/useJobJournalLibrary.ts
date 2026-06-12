@@ -15,7 +15,7 @@ export type JobJournalLibraryItem = {
   width: number;
   height: number;
   status: 'queued' | 'working' | 'indexed' | 'error';
-  stage: 'metadata' | 'ocr' | 'embedding' | 'enrichment' | 'done' | 'new';
+  stage: 'metadata' | 'ocr' | 'enrichment' | 'done' | 'new';
   retryCount: number;
   lastError: string | null;
 };
@@ -29,7 +29,6 @@ function normalizeJobStage(
   
   if (stage === 'metadata') return 'metadata';
   if (stage === 'ocr' || stage === 'ocr_postprocess') return 'ocr';
-  if (stage === 'embedding') return 'embedding';
   if (stage === 'keywords' || stage === 'index_fts') return 'enrichment';
   
   return 'new';

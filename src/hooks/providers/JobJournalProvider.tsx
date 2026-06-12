@@ -1,34 +1,23 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
 import { 
   getExecutorStats, 
   getJobJournalDatabase,
-  initModelMonitor,
   ingestJobJournalScreenshots,
-  JobJournalIntakeResult,
 } from '@/core/jobjournal';
-import { 
-  getStatus as getModelStatus,
-  subscribe as subscribeModel,
-  ensureReady as ensureModelReady,
-  ensureTextReady as ensureModelTextReady,
-  unload as unloadModel,
-   } from '@/core/jobjournal/modelManager';
 import { processUntilEmpty } from '@/core/jobjournal/06-backgroundTasks';
-import { JobJournalErrorCode, SiglipModelState } from '@/core/jobjournal/types';
+import { JobJournalErrorCode } from '@/core/jobjournal/types';
 
 interface JobJournalStats {
   pending: number;
   running: number;
   completed: number;
   failed: number;
-  waitingForModel: number;
   totalJobs: number;
 }
 
 interface JobJournalState {
   stats: JobJournalStats;
-  model: SiglipModelState;
   isSyncing: boolean;
   isProcessing: boolean;
   loading: boolean;
@@ -37,11 +26,8 @@ interface JobJournalState {
 }
 
 interface JobJournalContextValue extends JobJournalState {
-  sync: (options?: { vectorRequired?: boolean }) => Promise<JobJournalIntakeResult | null>;
+  sync: () => Promise<any | null>;
   process: (iterations?: number) => Promise<number>;
-  ensureModelReady: () => Promise<void>;
-  ensureModelTextReady: () => Promise<void>;
-  unloadModel: () => void;
 }
 
 const JobJournalContext = createContext<JobJournalContextValue | null>(null);
@@ -51,14 +37,12 @@ const DEFAULT_STATS: JobJournalStats = {
   running: 0,
   completed: 0,
   failed: 0,
-  waitingForModel: 0,
   totalJobs: 0,
 };
 
 export function JobJournalProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<JobJournalState>({
     stats: DEFAULT_STATS,
-    model: getModelStatus(),
     isSyncing: false,
     isProcessing: false,
     loading: true,
@@ -84,7 +68,10 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
       setState(prev => ({
         ...prev,
         stats: {
-          ...executorStats,
+          pending: executorStats.pending,
+          running: executorStats.running,
+          completed: executorStats.completed,
+          failed: executorStats.failed,
           totalJobs: jobsCount?.count ?? 0,
         },
         loading: false,
@@ -122,14 +109,14 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     }
   }, [refreshStats]);
 
-  const sync = useCallback(async (options?: { vectorRequired?: boolean }) => {
+  const sync = useCallback(async () => {
     if (syncLock.current) return null;
     
     syncLock.current = true;
     setState(prev => ({ ...prev, isSyncing: true, lastError: null, lastErrorCode: null }));
     
     try {
-      const result = await ingestJobJournalScreenshots(undefined, options);
+      const result = await ingestJobJournalScreenshots();
       await refreshStats();
       // Inform the engine that new work might be available
       void runEngine();
@@ -175,18 +162,7 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     // 2. Poll stats for eventual consistency
     const statsInterval = setInterval(refreshStats, 5000);
 
-    // 3. Subscribe to Model State
-    const unsubscribeModel = subscribeModel((modelState) => {
-      if (isMounted.current) {
-        setState(prev => ({ ...prev, model: modelState }));
-        // If model becomes ready, wake up engine to finish embeddings
-        if (modelState.status === 'ready' && modelState.isLoaded) {
-          void runEngine();
-        }
-      }
-    });
-
-    // 4. AppState Awareness: Stop/Start engine on foreground/background
+    // 3. AppState Awareness: Stop/Start engine on foreground/background
     const appStateSub = AppState.addEventListener('change', (nextStatus) => {
       appState.current = nextStatus;
       if (nextStatus === 'active') {
@@ -194,14 +170,9 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
       }
     });
 
-    // 5. Model Monitor (unstick waiting jobs)
-    const unsubscribeMonitor = initModelMonitor();
-
     return () => {
       isMounted.current = false;
       clearInterval(statsInterval);
-      unsubscribeModel();
-      unsubscribeMonitor();
       appStateSub.remove();
     };
   }, [refreshStats, runEngine]);
@@ -210,9 +181,6 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     ...state,
     sync,
     process: processManually,
-    ensureModelReady,
-    ensureModelTextReady,
-    unloadModel,
   }), [state, sync, processManually]);
 
   return (

@@ -15,13 +15,6 @@ export {
   scheduleJobJournalBackgroundTask,
   unregisterJobJournalBackgroundTask
 } from './06-backgroundTasks';
-export {
-  configureModelUrls,
-  ensureReady as ensureModelReady,
-  getStatus as getModelStatus,
-  isReady as isModelReady,
-} from './modelManager';
-export { initModelMonitor } from './modelMonitor';
 export { runKeywordsStage } from './stages/05-keywords.stage';
 export { getJobJournalDatabase, getJobJournalVecStatus, initializeJobJournalDatabase } from './storage/database';
 export { JOB_JOURNAL_SCHEMA, JOB_JOURNAL_VEC_SCHEMA } from './storage/schema';
@@ -32,7 +25,6 @@ export type {
   JobJournalStage,
   JobJournalStageExecution,
   JobJournalStatus,
-  SiglipModelState
 } from './types';
 
 export { parseStageLastError } from './utils/error';

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { hybridSearch, type SearchResult } from '@/core/jobjournal/search/hybrid';
-import { useJobJournalModel } from './useJobJournalModel';
 
 interface SearchState {
   results: SearchResult[];
@@ -17,8 +16,6 @@ export function useSearch() {
     lastQuery: '',
   });
 
-  const { isReady: isModelReady } = useJobJournalModel();
-
   const search = useCallback(async (query: string, limit: number = 20) => {
     if (!query.trim()) {
       setState(prev => ({ ...prev, results: [], lastQuery: '' }));
@@ -28,8 +25,7 @@ export function useSearch() {
     setState(prev => ({ ...prev, loading: true, error: null, lastQuery: query }));
 
     try {
-      // Use embeddings only if the model is ready
-      const results = await hybridSearch(query, limit, isModelReady);
+      const results = await hybridSearch(query, limit);
       
       setState(prev => ({
         ...prev,
@@ -44,7 +40,7 @@ export function useSearch() {
         error: message,
       }));
     }
-  }, [isModelReady]);
+  }, []);
 
   const clear = useCallback(() => {
     setState({
@@ -59,6 +55,5 @@ export function useSearch() {
     ...state,
     search,
     clear,
-    isModelReady,
   };
 }

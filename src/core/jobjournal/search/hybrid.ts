@@ -1,5 +1,4 @@
 import { sql } from 'drizzle-orm';
-import { generateTextEmbedding } from '../embeddings';
 import { getDrizzleDb } from '../storage/database';
 import { canonicalize } from '../stages/03-ocr_postprocess.stage';
 
@@ -9,7 +8,7 @@ export interface SearchResult {
   ocrText: string;
   keywords: string[];
   score: number;
-  searchMethod: 'fts' | 'embedding' | 'hybrid';
+  searchMethod: 'fts' | 'hybrid';
 }
 
 /**
@@ -46,7 +45,6 @@ function calculateQueryScore(queryTokens: string[], docText: string, docKeywords
 export async function hybridSearch(
   query: string,
   limit: number = 20,
-  useEmbeddings: boolean = true,
 ): Promise<SearchResult[]> {
   const db = await getDrizzleDb();
   const candidates = new Map<string, SearchResult>();
@@ -57,43 +55,7 @@ export async function hybridSearch(
   const queryTokens = sanitizedQuery.split(/\s+/).filter(Boolean);
   const canonQuery = canonicalize(sanitizedQuery);
 
-  // 1. Semantic Search (Vector)
-  if (useEmbeddings) {
-    try {
-      console.log(`[hybridSearch] Attempting vector search for: "${sanitizedQuery}"`);
-      const queryEmbedding = await generateTextEmbedding(sanitizedQuery);
-      const embeddingJson = JSON.stringify(Array.from(queryEmbedding));
-
-      const vectorResults = await db.all(sql`
-        SELECT 
-          v.job_id,
-          vec_distance(v.embedding, ${embeddingJson}) as distance,
-          j.image_uri as uri,
-          o.text as ocrText
-        FROM image_embedding_index v
-        JOIN job_journal_jobs j ON j.id = v.job_id
-        LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = v.job_id
-        WHERE vec_distance(v.embedding, ${embeddingJson}) < 0.7
-        ORDER BY distance ASC
-        LIMIT ${limit}
-      `);
-
-      vectorResults.forEach((row: any) => {
-        candidates.set(row.job_id, {
-          jobId: row.job_id,
-          uri: row.uri,
-          ocrText: row.ocrText || '',
-          keywords: [], 
-          score: 1 - row.distance,
-          searchMethod: 'embedding',
-        });
-      });
-    } catch (err) {
-      console.warn('[hybridSearch] Vector search failed:', err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  // 2. Keyword/Text Search (FTS5) - BROAD RETRIEVAL + DYNAMIC RERANKING
+  // 1. Keyword/Text Search (FTS5) - BROAD RETRIEVAL + DYNAMIC RERANKING
   if (queryTokens.length > 0) {
     // Permissive broad retrieval: OR logic to get anything potentially related
     const ftsQuery = queryTokens.map(t => `${t}*`).join(' OR '); 
@@ -131,12 +93,7 @@ export async function hybridSearch(
         const docKeywords = row.keywords ? row.keywords.split(' ') : [];
         const relevanceScore = calculateQueryScore(queryTokens, row.cleaned_ocr_text || '', docKeywords);
         
-        const existing = candidates.get(row.job_id);
-        if (existing) {
-          // If already found by vector, we boost it if FTS also confirms relevance
-          existing.score = Math.max(existing.score, relevanceScore);
-          existing.searchMethod = 'hybrid';
-        } else if (relevanceScore > 0) {
+        if (relevanceScore > 0) {
           candidates.set(row.job_id, {
             jobId: row.job_id,
             uri: row.uri,

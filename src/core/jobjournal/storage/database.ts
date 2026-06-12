@@ -21,26 +21,7 @@ export function getJobJournalVecStatus() {
 }
 
 async function loadVecExtension(db: SQLite.SQLiteDatabase) {
-  if (Platform.OS === 'web') {
-    vecStatus = { available: false, error: 'sqlite-vec is not supported on web.' };
-    return;
-  }
-
-  const extension = SQLite.bundledExtensions?.['sqlite-vec'];
-  if (!extension) {
-    vecStatus = { available: false, error: 'sqlite-vec extension is not bundled.' };
-    return;
-  }
-
-  try {
-    await db.loadExtensionAsync(extension.libPath, extension.entryPoint);
-    vecStatus = { available: true, error: null };
-  } catch (cause) {
-    vecStatus = {
-      available: false,
-      error: cause instanceof Error ? cause.message : 'Failed to load sqlite-vec extension.',
-    };
-  }
+  vecStatus = { available: false, error: 'sqlite-vec is disabled for this release.' };
 }
 
 /**
@@ -82,15 +63,6 @@ async function initializeDatabase(expoDb: SQLite.SQLiteDatabase): Promise<ExpoSQ
         tokenize='trigram'
       );
     `);
-
-    if (vecStatus.available) {
-      await expoDb.execAsync(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS image_embedding_index USING vec0(
-          embedding float[768],
-          job_id text
-        );
-      `);
-    }
 
     // 5. Shared Health check logic
     await expoDb.execAsync(`CREATE TABLE IF NOT EXISTS system_health (

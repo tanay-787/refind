@@ -7,7 +7,6 @@ import {
   metadataStageResults,
   ocrStageResults,
   ocrPostprocessStageResults,
-  embeddingStageResults,
 } from './storage/drizzle-schema';
 import type { JobJournalStage, JobJournalStageExecution } from './types';
 
@@ -17,20 +16,16 @@ const STAGE_DEPENDENCIES: Record<JobJournalStage, JobJournalStage[]> = {
   metadata: [],
   ocr: ['metadata'],
   ocr_postprocess: ['ocr'],
-  embedding: ['ocr_postprocess'],
   keywords: ['ocr_postprocess'],
   index_fts: ['ocr_postprocess', 'keywords'],
-  index_vec: ['embedding'],
 };
 
 const STAGE_CHILDREN: Record<JobJournalStage, JobJournalStage[]> = {
   metadata: ['ocr'],
   ocr: ['ocr_postprocess'],
-  ocr_postprocess: ['embedding', 'keywords', 'index_fts'],
-  embedding: ['index_vec'],
+  ocr_postprocess: ['keywords', 'index_fts'],
   keywords: ['index_fts'],
   index_fts: [],
-  index_vec: [],
 };
 
 function getExecutionId(jobId: string, stage: JobJournalStage) {
@@ -67,21 +62,9 @@ async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: 
     return;
   }
 
-  // Fetch job to check vector_required
-  const job = await db.query.jobJournalJobs.findFirst({
-    where: eq(jobJournalJobs.id, jobId),
-    columns: { vectorRequired: true }
-  });
-  const vectorRequired = !!job?.vectorRequired;
-
   console.log(`[executor] Checking children for ${stage} (Job: ${jobId}): [${children.join(', ')}]`);
 
   for (const child of children) {
-    // Skip vector-related stages if not required for this job
-    if ((child === 'embedding' || child === 'index_vec') && !vectorRequired) {
-      continue;
-    }
-
     const dependencies = STAGE_DEPENDENCIES[child];
     if (dependencies.length === 0) {
       const executionId = getExecutionId(jobId, child);
@@ -151,30 +134,19 @@ async function markJobCompletedIfTerminal(jobId: string, now: Date) {
 }
 
 /**
- * Claim Next Stage Execution using a prioritized weighted query.
+ * Claim Next Stage Execution.
  */
-export async function claimNextStageExecution(options?: { allowHeavy?: boolean }): Promise<JobJournalStageExecution | null> {
+export async function claimNextStageExecution(): Promise<JobJournalStageExecution | null> {
   const db = await getDrizzleDb();
-  const allowHeavy = options?.allowHeavy ?? true;
   let attempts = 0;
 
   while (attempts < 5) {
     const now = new Date();
     
-    // We categorize stages to prioritize "Cheap" path (metadata -> ocr -> fts) 
-    // to minimize "Time to First Searchable Screenshot".
+    // Prioritize by creation time for steady throughput
     const pendingExecution = await db.query.stageExecutions.findFirst({
-      where: and(
-        eq(stageExecutions.status, 'pending'),
-        !allowHeavy ? notInArray(stageExecutions.stage, ['embedding', 'index_vec']) : undefined
-      ),
-      orderBy: [
-        asc(sql`(CASE 
-          WHEN ${stageExecutions.stage} IN ('metadata', 'ocr', 'ocr_postprocess', 'keywords', 'index_fts') THEN 0 
-          ELSE 1 
-        END)`),
-        asc(stageExecutions.createdAt)
-      ]
+      where: eq(stageExecutions.status, 'pending'),
+      orderBy: [asc(stageExecutions.createdAt)]
     });
 
     if (!pendingExecution) {
@@ -262,15 +234,9 @@ export async function completeStageExecution(
     } else if (stage === 'ocr_postprocess') {
       const res = await db.query.ocrPostprocessStageResults.findFirst({ where: eq(ocrPostprocessStageResults.jobId, jobId) });
       if (!res) throw new Error(`OCR postprocess missing for job ${jobId}`);
-    } else if (stage === 'embedding') {
-      const res = await db.query.embeddingStageResults.findFirst({ where: eq(embeddingStageResults.jobId, jobId) });
-      if (!res) throw new Error(`Embedding missing for job ${jobId}`);
     } else if (stage === 'index_fts') {
       const row = await expoDb.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM screenshot_search_index WHERE job_id = ?`, [jobId]);
       if (!row) throw new Error(`FTS index missing for job ${jobId}`);
-    } else if (stage === 'index_vec') {
-      const row = await expoDb.getFirstAsync<{ rowid: number }>(`SELECT rowid FROM image_embedding_index WHERE job_id = ?`, [jobId]);
-      if (!row) throw new Error(`Vector index missing for job ${jobId}`);
     }
 
     await db.transaction(async (tx) => {

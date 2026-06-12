@@ -6,7 +6,6 @@ export const jobJournalJobs = sqliteTable('job_journal_jobs', {
   imageUri: text('image_uri').notNull(),
   imageHash: text('image_hash').notNull().unique(),
   status: text('status').notNull(), // pending, running, completed, failed
-  vectorRequired: integer('vector_required', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -70,17 +69,6 @@ export const ocrPostprocessStageResults = sqliteTable('ocr_postprocess_stage_res
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
-export const embeddingStageResults = sqliteTable('embedding_stage_results', {
-  id: text('id').primaryKey(),
-  jobId: text('job_id').notNull().references(() => jobJournalJobs.id, { onDelete: 'cascade' }),
-  modality: text('modality').notNull(), // image, text
-  vector: blob('vector').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-}, (table) => ({
-  jobModalityIdx: uniqueIndex('embedding_stage_results_job_modality_idx').on(table.jobId, table.modality),
-}));
-
 export const keywordStageResults = sqliteTable('keyword_stage_results', {
   id: text('id').primaryKey(),
   jobId: text('job_id').notNull().references(() => jobJournalJobs.id, { onDelete: 'cascade' }),
@@ -97,7 +85,6 @@ export const keywordStageResults = sqliteTable('keyword_stage_results', {
 export const searchReadiness = sqliteTable('search_readiness', {
   jobId: text('job_id').primaryKey().references(() => jobJournalJobs.id, { onDelete: 'cascade' }),
   ftsReady: integer('fts_ready', { mode: 'boolean' }).notNull().default(false),
-  vectorReady: integer('vector_ready', { mode: 'boolean' }).notNull().default(false),
   keywordsReady: integer('keywords_ready', { mode: 'boolean' }).notNull().default(false),
   indexedAt: integer('indexed_at', { mode: 'timestamp' }),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -119,7 +106,6 @@ export const jobsRelations = relations(jobJournalJobs, ({ many, one }) => ({
     fields: [jobJournalJobs.id],
     references: [ocrPostprocessStageResults.jobId],
   }),
-  embeddings: many(embeddingStageResults),
   keywords: many(keywordStageResults),
   readiness: one(searchReadiness, {
     fields: [jobJournalJobs.id],

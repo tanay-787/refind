@@ -33,8 +33,6 @@ function validateErrorCode(codePart: string): JobJournalErrorCode | null {
     'MODEL_UNAVAILABLE',
     'TIMEOUT',
     'IO_ERROR',
-    'VECTOR_MISSING',
-    'VECTOR_UNAVAILABLE',
     'NOT_FOUND',
     'UNKNOWN',
   ]);

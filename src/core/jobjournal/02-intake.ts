@@ -45,11 +45,10 @@ function getStageExecutionId(jobId: string, stage: JobJournalStage) {
   return `${jobId}_${stage}`;
 }
 
-export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] = [], options?: { vectorRequired?: boolean }) {
+export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] = []) {
   const nextAssets = assets.length > 0 ? assets : await loadJobJournalScreenshotSource();
   const db = await getDrizzleDb();
   const now = new Date();
-  const vectorRequired = options?.vectorRequired ?? false;
 
   let createdJobs = 0;
   let existingJobs = 0;
@@ -72,13 +71,6 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
       if (existingJob) {
         existingJobs += 1;
         
-        // Update vector requirement if it's a new requirement
-        if (vectorRequired && !existingJob.vectorRequired) {
-          await tx.update(jobJournalJobs)
-            .set({ vectorRequired: true, updatedAt: now })
-            .where(eq(jobJournalJobs.id, existingJob.id));
-        }
-
         const stageExecutionId = getStageExecutionId(existingJob.id, INITIAL_STAGE);
         const existingExecution = await tx.query.stageExecutions.findFirst({
           where: eq(stageExecutions.id, stageExecutionId),
@@ -105,7 +97,6 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
         imageUri: asset.uri,
         imageHash,
         status: 'pending',
-        vectorRequired,
         createdAt: now,
         updatedAt: now,
       });

@@ -5,7 +5,7 @@ export type ScreenshotAsset = {
   creationTime: number;
   width: number;
   height: number;
-  pipelineStage: 'ocr' | 'embedding' | 'enrichment' | 'done' | 'new';
+  pipelineStage: 'ocr' | 'enrichment' | 'done' | 'new';
   pipelineState: 'queued' | 'working' | 'indexed' | 'error';
   retryCount: number;
   lastError: string | null;
