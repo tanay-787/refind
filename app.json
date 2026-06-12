@@ -42,7 +42,6 @@
           }
         }
       ],
-      "react-native-litert-lm",
       [
         "expo-sqlite",
         {
@@ -55,9 +54,6 @@
         {
           "android": {
             "minSdkVersion": 26
-          },
-          "ios": {
-            "deploymentTarget": "15.5"
           }
         }
       ],
@@ -80,10 +76,7 @@
         {
           "ocrModels": [
             "latin",
-            "chinese",
-            "devanagari",
-            "japanese",
-            "korean"
+            "devanagari"
           ],
           "ocrUseBundled": true
         }
