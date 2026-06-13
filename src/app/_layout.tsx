@@ -1,33 +1,32 @@
-import { md3DarkTheme, md3LightTheme } from '@/theme/paper';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { HeroUINativeProvider } from 'heroui-native/provider';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Host } from '@expo/ui'; // Added Host
 import { JobJournalProvider } from '@/hooks';
-import './global.css';
+import { ThemeProvider } from '@/theme';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? md3DarkTheme : md3LightTheme;
+  const isDark = colorScheme === 'dark';
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <HeroUINativeProvider>
+        <Host style={{ flex: 1}} colorScheme={colorScheme}>
           <JobJournalProvider>
-            <PaperProvider theme={theme}>
-              <StatusBar style={theme.dark ? 'light' : 'dark'} backgroundColor={theme.colors.background} />
+            <ThemeProvider>
+              <StatusBar style={isDark ? 'light' : 'dark'} />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="(tabs)" />
               </Stack>
-            </PaperProvider>
+            </ThemeProvider>
           </JobJournalProvider>
-        </HeroUINativeProvider>
+        </Host>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
+

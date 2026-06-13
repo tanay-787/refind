@@ -7,4 +7,4 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 cd /devspace/projects/ss-search
 
-pnpm exec eas build --local --platform android --profile development
+pnpm exec eas build --local --platform android --profile preview

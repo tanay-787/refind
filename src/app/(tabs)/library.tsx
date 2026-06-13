@@ -1,6 +1,3 @@
-import { Card } from 'heroui-native/card';
-import { Spinner } from 'heroui-native/spinner';
-import { Text } from 'heroui-native/text';
 import React, { useState, useCallback } from 'react';
 import { 
   View, 
@@ -8,11 +5,14 @@ import {
   FlatList, 
   Pressable, 
   Dimensions,
-  RefreshControl
+  RefreshControl,
+  Text,
+  ActivityIndicator
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useJobJournalLibrary, useJobJournalOperations } from '@/hooks';
+import { useTheme } from '@/theme';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
@@ -21,20 +21,21 @@ const ITEM_SIZE = width / COLUMN_COUNT;
 export default function LibraryScreen() {
   const { items, loading, refresh } = useJobJournalLibrary();
   const { process, isProcessing } = useJobJournalOperations();
+  const theme = useTheme();
 
   const onRefresh = useCallback(async () => {
     await refresh();
   }, [refresh]);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Library</Text>
-            <Text style={styles.subtitle}>{items.length} items</Text>
+            <Text style={[styles.title, { color: theme.text }]}>Library</Text>
+            <Text style={[styles.subtitle, { color: theme.outline }]}>{items.length} items</Text>
           </View>
-          {isProcessing && <Spinner size="sm" />}
+          {isProcessing && <ActivityIndicator size="small" color={theme.primary} />}
         </View>
 
         <FlatList
@@ -60,13 +61,13 @@ export default function LibraryScreen() {
             <RefreshControl
               refreshing={loading}
               onRefresh={onRefresh}
-              tintColor="#fff"
+              tintColor={theme.text}
             />
           }
           ListEmptyComponent={
             !loading ? (
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>No screenshots found.</Text>
+                <Text style={[styles.emptyText, { color: theme.outline }]}>No screenshots found.</Text>
               </View>
             ) : null
           }
@@ -88,7 +89,6 @@ function getStatusColor(status: string) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#000',
   },
   safeArea: {
     flex: 1,
@@ -102,11 +102,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
   },
   list: {
     padding: 1,
@@ -118,7 +116,6 @@ const styles = StyleSheet.create({
   },
   image: {
     flex: 1,
-    backgroundColor: '#111',
   },
   statusIndicator: {
     position: 'absolute',
@@ -136,6 +133,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#666',
+    fontSize: 16,
   },
 });
