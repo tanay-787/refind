@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-import { tokens } from './tokens';
+import { tokens, ColorTokens } from './tokens';
 
 // Define the shape of our theme
-type Theme = typeof tokens.light & {
+export type Theme = ColorTokens & {
   isDark: boolean;
 };
 
