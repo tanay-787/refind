@@ -52,7 +52,7 @@ export default function PermissionPrimer({ visible, onDismiss, onGranted }: Perm
           <View style={styles.iconContainer}>
              <Host matchContents={true}>
                 <Icon 
-                  source={require('@expo/material-symbols/photo_library.xml')} 
+                  source={require('@/assets/photo_library.xml')} 
                   size={32} 
                   tint={theme.primary} 
                 />
