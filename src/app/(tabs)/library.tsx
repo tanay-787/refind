@@ -9,7 +9,7 @@ import {
 } from '@expo/ui/jetpack-compose/modifiers';
 import { useJobJournalLibrary, useJobJournalOperations } from '@/hooks';
 import { useTheme } from '@/theme';
-import { Header, LibraryGrid } from '@/ui-components/library';
+import { Header, LibraryGrid } from '@/ui/library';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;

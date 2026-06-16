@@ -16,7 +16,7 @@ import {
   ResultsList, 
   EmptyState, 
   NoResultsState 
-} from '@/ui-components/home';
+} from '@/ui/home';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLUMN_COUNT = 2; 
