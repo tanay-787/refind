@@ -1,56 +1,35 @@
-# Welcome to your Expo app 👋
+# SS Search
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+SS Search is a high-precision OCR and FTS search engine for screenshots.
 
-## Get started
+## Development
 
-1. Install dependencies
+### Commit Convention
 
-   ```bash
-   npm install
-   ```
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification. This is enforced locally via `husky` and `commitlint`.
 
-2. Start the app
+**Common Types:**
+- `feat`: A new feature (triggers a **minor** version bump)
+- `fix`: A bug fix (triggers a **patch** version bump)
+- `docs`: Documentation changes
+- `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc)
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `perf`: A code change that improves performance
+- `test`: Adding missing tests or correcting existing tests
+- `chore`: Changes to the build process or auxiliary tools and libraries
 
-   ```bash
-   npx expo start
-   ```
+**Format:**
+```text
+<type>(<scope>): <description>
 
-In the output, you'll find options to open the app in a
+[optional body]
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+[optional footer(s)]
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Releases
 
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Releases are managed automatically by [Release Please](https://github.com/googleapis/release-please). 
+1. When you push `feat` or `fix` commits to the `master` branch, a Release PR will be automatically created or updated.
+2. The Release PR will bump the version in `package.json` and `app.json`, and update the `CHANGELOG.md`.
+3. Merging the Release PR will create a GitHub Release and tag the commit.

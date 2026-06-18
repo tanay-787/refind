@@ -6,6 +6,9 @@
       "@/*": [
         "./src/*"
       ],
+      "jobjournal": [
+        "./src/core/jobjournal/index.ts"
+      ],
       "@/assets/*": [
         "./assets/*"
       ]

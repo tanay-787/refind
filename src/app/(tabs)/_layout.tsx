@@ -1,58 +1,26 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useThemeColor } from 'heroui-native/hooks';
-
-const TAB_ITEMS = [
-  {
-    name: 'home',
-    label: 'Search',
-    icon: {
-      sf: 'magnifyingglass',
-      md: 'search',
-    },
-  },
-  {
-    name: 'library',
-    label: 'Library',
-    icon: {
-      sf: 'books.vertical',
-      md: 'book',
-    },
-  },
-] as const;
+import { useTheme } from '@/theme';
+import { Host } from '@expo/ui';
+import { Icon } from '@expo/ui/jetpack-compose';
 
 export default function TabsLayout() {
-  const [background, foreground, muted, accent, accentForeground, border] = useThemeColor([
-    'background',
-    'foreground',
-    'default-foreground',
-    'accent',
-    'accent-foreground',
-    'border-secondary',
-  ] as const);
+  const theme = useTheme();
 
   return (
     <NativeTabs
-      badgeBackgroundColor={accent}
-      badgeTextColor={accentForeground}
-      disableTransparentOnScrollEdge
-      iconColor={{ default: muted, selected: accentForeground }}
-      indicatorColor={accent}
-      labelStyle={{
-        default: {
-          color: foreground,
-        },
-        selected: {
-          color: accent,
-        },
-      }}
-      shadowColor={border}
+      backgroundColor={theme.surface}
+      tintColor={theme.primary}
     >
-      {TAB_ITEMS.map((tab) => (
-        <NativeTabs.Trigger key={tab.name} name={tab.name}>
-          <NativeTabs.Trigger.Icon md={tab.icon.md} sf={tab.icon.sf} />
-          <NativeTabs.Trigger.Label>{tab.label}</NativeTabs.Trigger.Label>
-        </NativeTabs.Trigger>
-      ))}
+      <NativeTabs.Trigger name="home">
+        <NativeTabs.Trigger.Icon md={'search'}/>
+        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="library">
+        <NativeTabs.Trigger.Icon md={'photo_library'}/>
+        <NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
+

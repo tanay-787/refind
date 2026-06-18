@@ -6,7 +6,6 @@
     "fallbackPolling": "dynamicPriorityPolling",
     "synchronousWatchDirectory": true
   },
-  
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
@@ -17,38 +16,5 @@
     "**/.next/**": true,
     "**/.idx/**": true,
     "**/.vscode/**": true
-  },
-  "tailwindCSS.classAttributes": [
-    "class",
-    "className",
-    "headerClassName",
-    "contentContainerClassName",
-    "columnWrapperClassName",
-    "endFillColorClassName",
-    "imageClassName",
-    "tintColorClassName",
-    "ios_backgroundColorClassName",
-    "thumbColorClassName",
-    "trackColorOnClassName",
-    "trackColorOffClassName",
-    "selectionColorClassName",
-    "cursorColorClassName",
-    "underlineColorAndroidClassName",
-    "placeholderTextColorClassName",
-    "selectionHandleColorClassName",
-    "colorsClassName",
-    "progressBackgroundColorClassName",
-    "titleColorClassName",
-    "underlayColorClassName",
-    "colorClassName",
-    "drawerBackgroundColorClassName",
-    "statusBarBackgroundColorClassName",
-    "backdropColorClassName",
-    "backgroundColorClassName",
-    "ListFooterComponentClassName",
-    "ListHeaderComponentClassName"
-  ],
-  "tailwindCSS.classFunctions": [
-    "useResolveClassNames"
-  ]
+  }
 }
