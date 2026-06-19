@@ -31,14 +31,26 @@ export async function loadScreenshotAssets() {
 
   const albumAssets = await Promise.all(
     screenshotAlbums.map(async (album) => {
-      const page = await MediaLibrary.getAssetsAsync({
-        album,
-        first: __DEV__ ? DEV_SCREENSHOT_LIMIT : 100,
-        mediaType: [MediaLibrary.MediaType.photo],
-        sortBy: [MediaLibrary.SortBy.creationTime],
-      });
+      const allAssets: MediaLibrary.Asset[] = [];
+      let hasNextPage = true;
+      let after: string | undefined = undefined;
+      const pageSize = 500; // Optimized page size for SQLite / React Native IPC bounds
 
-      return page.assets;
+      while (hasNextPage) {
+        const page = await MediaLibrary.getAssetsAsync({
+          album,
+          first: __DEV__ ? Math.min(DEV_SCREENSHOT_LIMIT, pageSize) : pageSize,
+          mediaType: [MediaLibrary.MediaType.photo],
+          sortBy: [MediaLibrary.SortBy.creationTime],
+          after,
+        });
+
+        allAssets.push(...page.assets);
+        after = page.endCursor;
+        hasNextPage = page.hasNextPage && !(__DEV__ && allAssets.length >= DEV_SCREENSHOT_LIMIT);
+      }
+
+      return allAssets;
     }),
   );
 
