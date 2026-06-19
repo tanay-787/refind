@@ -8,6 +8,9 @@ export {
 } from './02-intake';
 
 export {
+  resetFailedExecutions
+} from './03-executor';
+export {
   getExecutorStats, runNextStageExecution
 } from './05-runner';
 export {

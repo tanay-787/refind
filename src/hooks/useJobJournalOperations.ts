@@ -5,6 +5,7 @@ export function useJobJournalOperations() {
   const { 
     sync, 
     process, 
+    retryFailed,
     isSyncing, 
     isProcessing, 
     lastError,
@@ -14,9 +15,10 @@ export function useJobJournalOperations() {
   return useMemo(() => ({
     sync,
     process,
+    retryFailed,
     isSyncing,
     isProcessing,
     lastError,
     lastErrorCode
-  }), [sync, process, isSyncing, isProcessing, lastError, lastErrorCode]);
+  }), [sync, process, retryFailed, isSyncing, isProcessing, lastError, lastErrorCode]);
 }

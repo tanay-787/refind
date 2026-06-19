@@ -319,6 +319,23 @@ export async function recoveryExpiredLeases(): Promise<number> {
   return result.changes;
 }
 
+export async function resetFailedExecutions(): Promise<number> {
+  const db = await getDrizzleDb();
+  const now = new Date();
+  
+  // 1. Reset failed jobs to pending
+  await db.update(jobJournalJobs)
+    .set({ status: 'pending', updatedAt: now })
+    .where(eq(jobJournalJobs.status, 'failed'));
+
+  // 2. Reset failed executions to pending and 0 attempts
+  const result = await db.update(stageExecutions)
+    .set({ status: 'pending', attempt: 0, leaseUntil: null, updatedAt: now, lastError: null, lastErrorMessage: null })
+    .where(eq(stageExecutions.status, 'failed'));
+    
+  return result.changes;
+}
+
 export async function getStageExecutionStats() {
   const db = await getDrizzleDb();
   const rows = await db.select({ status: stageExecutions.status, count: count() })

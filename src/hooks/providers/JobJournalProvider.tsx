@@ -4,6 +4,7 @@ import {
   getExecutorStats, 
   getJobJournalDatabase,
   ingestJobJournalScreenshots,
+  resetFailedExecutions,
 } from '@/core/jobjournal';
 import { processUntilEmpty } from '@/core/jobjournal/06-backgroundTasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
@@ -28,6 +29,7 @@ interface JobJournalState {
 interface JobJournalContextValue extends JobJournalState {
   sync: () => Promise<any | null>;
   process: (iterations?: number) => Promise<number>;
+  retryFailed: () => Promise<number>;
 }
 
 const JobJournalContext = createContext<JobJournalContextValue | null>(null);
@@ -151,6 +153,22 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     }
   }, [refreshStats]);
 
+  const retryFailed = useCallback(async () => {
+    setState(prev => ({ ...prev, lastError: null, lastErrorCode: null }));
+    try {
+      const resetCount = await resetFailedExecutions();
+      await refreshStats();
+      // Inform the engine that new work might be available
+      void runEngine();
+      return resetCount;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Retry failed';
+      setState(prev => ({ ...prev, lastError: message, lastErrorCode: 'IO_ERROR' }));
+      console.error('[JobJournalProvider] Retry error:', error);
+      return 0;
+    }
+  }, [refreshStats, runEngine]);
+
   useEffect(() => {
     isMounted.current = true;
     
@@ -181,7 +199,8 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     ...state,
     sync,
     process: processManually,
-  }), [state, sync, processManually]);
+    retryFailed,
+  }), [state, sync, processManually, retryFailed]);
 
   return (
     <JobJournalContext.Provider value={value}>
