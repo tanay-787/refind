@@ -68,28 +68,33 @@ export async function runKeywordsStage(job: JobJournalJob): Promise<{ status: 'c
     await db.runAsync(`DELETE FROM keyword_stage_results WHERE job_id = ?`, [job.id]);
 
     // Index EVERY unit. FTS5 handles this efficiently.
-    let counter = 0;
-    for (const unit of uniqueSearchableUnits) {
-      // Use a deterministic but unique ID for each unit within this job
-      // We use a counter to avoid collisions if multiple units sanitize to the same ID string
-      const safeKw = unit.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
-      const id = `${job.id}_k${counter}_${safeKw}`;
-      counter++;
-      
-      await db.runAsync(
-        `INSERT INTO keyword_stage_results (id, job_id, keyword, type, score, positions_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id, 
-          job.id, 
-          unit,
-          'expanded', 
-          100, 
-          JSON.stringify([]), 
-          now, 
-          now
-        ],
-      );
+    const keywordsList = Array.from(uniqueSearchableUnits);
+    if (keywordsList.length > 0) {
+      const CHUNK_SIZE = 100;
+      for (let i = 0; i < keywordsList.length; i += CHUNK_SIZE) {
+        const chunk = keywordsList.slice(i, i + CHUNK_SIZE);
+        const placeholdersList = chunk.map(() => `(?, ?, ?, ?, ?, ?, ?, ?)`).join(', ');
+        const sql = `INSERT INTO keyword_stage_results (id, job_id, keyword, type, score, positions_json, created_at, updated_at) VALUES ${placeholdersList}`;
+        
+        const params: any[] = [];
+        chunk.forEach((unit, idx) => {
+          const counter = i + idx;
+          const safeKw = unit.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
+          const id = `${job.id}_k${counter}_${safeKw}`;
+          params.push(
+            id,
+            job.id,
+            unit,
+            'expanded',
+            100,
+            '[]',
+            now,
+            now
+          );
+        });
+
+        await db.runAsync(sql, params);
+      }
     }
 
     return { status: 'completed' };
