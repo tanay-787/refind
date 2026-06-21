@@ -8,7 +8,7 @@ import { Column, Box } from '@expo/ui/jetpack-compose';
 import { 
   fillMaxSize, 
 } from '@expo/ui/jetpack-compose/modifiers';
-import { useSearch, useJobJournalStats, useJobJournalOperations } from '@/hooks';
+import { useSearch, useJobJournalOperations } from '@/hooks';
 import { useTheme } from '@/theme';
 import { 
   Header, 
@@ -43,7 +43,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     sync();
-  }, []);
+  }, [sync]);
 
   return (
     <Host style={{ flex: 1, backgroundColor: theme.background }}>

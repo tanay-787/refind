@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Host, Text } from '@expo/ui';
 import { Column } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, fillMaxWidth, paddingAll, background, border, clip, Shapes, padding } from '@expo/ui/jetpack-compose/modifiers';
+import { fillMaxSize, fillMaxWidth, paddingAll, padding } from '@expo/ui/jetpack-compose/modifiers';
 import { useTheme } from '@/theme';
 
 import { 
@@ -22,7 +22,7 @@ export default function IndexScreen() {
         await initializeJobJournalDatabase();
         await registerJobJournalBackgroundTask();
         await scheduleJobJournalBackgroundTask();
-        router.replace('/(tabs)/home');
+        router.replace('/home');
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Failed to initialize app');
       }
