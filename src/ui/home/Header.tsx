@@ -18,7 +18,7 @@ export const Header = React.memo(({ theme }: HeaderProps) => (
         letterSpacing: -0.5
       }}
     >
-      Stitch
+      Refind
     </Text>
     <Text 
       textStyle={{ 

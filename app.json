@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "ss-search",
-    "slug": "ss-search",
+    "name": "Refind",
+    "slug": "refind",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "sssearch",
+    "scheme": "refind",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
@@ -21,7 +21,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.tanay22.sssearch",
+      "package": "com.tanay22.refind",
       "permissions": [
         "ACCESS_MEDIA_LOCATION"
       ]
@@ -56,8 +56,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow SS Search to access your screenshots.",
-          "savePhotosPermission": "Allow SS Search to save screenshots.",
+          "photosPermission": "Allow Refind to access your screenshots.",
+          "savePhotosPermission": "Allow Refind to save screenshots.",
           "granularPermissions": [
             "photo"
           ]

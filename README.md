@@ -1,6 +1,6 @@
-# SS Search
+# Refind
 
-SS Search is a high-precision OCR and FTS search engine for screenshots.
+Refind is a high-precision OCR and FTS search engine for screenshots.
 
 ## Development
 

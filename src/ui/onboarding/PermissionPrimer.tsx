@@ -64,7 +64,7 @@ export default function PermissionPrimer({ visible, onDismiss, onGranted }: Perm
           </Text>
           
           <Text style={[styles.content, { color: theme.onSurfaceVariant }]}>
-            Stitch creates a private index of your screenshots so you can search them later, even offline.
+            Refind creates a private index of your screenshots so you can search them later, even offline.
           </Text>
           
           <Text style={[styles.secondaryContent, { color: theme.outline }]}>

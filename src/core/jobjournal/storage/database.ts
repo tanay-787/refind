@@ -123,7 +123,7 @@ export async function getJobJournalDatabase() {
   if (!databasePromise) {
     databasePromise = (async () => {
       // V2: Migrated to Drizzle ORM. Changing filename to ensure a clean Drizzle-owned schema.
-      const db = await SQLite.openDatabaseAsync('ss-search.db', {
+      const db = await SQLite.openDatabaseAsync('refind.db', {
         enableChangeListener: true
       });
       await initializeDatabase(db);
