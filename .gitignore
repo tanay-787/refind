@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+#tmp scripts
+run-dc.sh
+
 # Expo
 .expo/
 dist/
