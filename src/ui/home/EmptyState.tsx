@@ -12,22 +12,23 @@ interface EmptyStateProps {
 export const EmptyState = React.memo(({ theme }: EmptyStateProps) => (
   <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }} modifiers={[paddingModifier(0, 32, 0, 32)]}>
     <Box modifiers={[size(120, 120), background(theme.secondaryContainer), clip(Shapes.RoundedCorner(28))]}>
-       <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-          <RNHostView matchContents={true}>
-            <SymbolView
-              name={{ android: 'stars' }}  
-              size={40} 
-              tintColor={theme.onSecondaryContainer} 
-            />
-          </RNHostView>
-       </Column>
+      <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
+        <RNHostView matchContents={true}>
+          <SymbolView
+            name={{ android: 'stars', ios: 'sparkles' } as any}
+            size={40}
+            tintColor={theme.onSecondaryContainer}
+          />
+        </RNHostView>
+      </Column>
     </Box>
+
     <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
       <Text textStyle={{ color: theme.onSurface, fontSize: 20, fontWeight: '600', textAlign: 'center' }}>
-          Your visual memory, searchable
+        Your visual memory, searchable
       </Text>
       <Text textStyle={{ color: theme.onSurfaceVariant, textAlign: 'center', fontSize: 14 }}>
-          Search for "receipts", "travel", or text inside any screenshot.
+        Search for "receipts", "travel", or text inside any screenshot.
       </Text>
     </Column>
   </Column>

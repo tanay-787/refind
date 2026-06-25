@@ -3,19 +3,22 @@ import {
   Keyboard,
   Dimensions,
 } from 'react-native';
-import { Host } from '@expo/ui'; 
+import { Host } from '@expo/ui/jetpack-compose'; 
 import { Column, Box } from '@expo/ui/jetpack-compose';
-import { 
-  fillMaxSize, 
-} from '@expo/ui/jetpack-compose/modifiers';
-import { useSearch, useJobJournalOperations } from '@/hooks';
+import { fillMaxSize } from '@expo/ui/jetpack-compose/modifiers';
+import { useSearch, useJobJournalOperations, usePermissionContext } from '@/hooks';
 import { useTheme } from '@/theme';
+import { 
+  registerJobJournalBackgroundTask, 
+  scheduleJobJournalBackgroundTask 
+} from '@/core/jobjournal';
 import { 
   Header, 
   SearchBar, 
   ResultsList, 
   EmptyState, 
-  NoResultsState 
+  NoResultsState,
+  GrantPermissionScreen,
 } from '@/ui/home';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -28,6 +31,7 @@ export default function HomeScreen() {
   const { results, search, loading } = useSearch();
   const theme = useTheme();
   const { sync } = useJobJournalOperations();
+  const { hasPermission, requestPermission } = usePermissionContext();
 
   // Trigger search on query change with debounce
   useEffect(() => {
@@ -41,9 +45,35 @@ export default function HomeScreen() {
     return () => clearTimeout(handler);
   }, [query, search]);
 
+  // Sync screenshots on mount (only when permission is granted)
   useEffect(() => {
-    sync();
-  }, [sync]);
+    if (hasPermission) {
+      sync();
+    }
+  }, [sync, hasPermission]);
+
+  const handleGrantPermission = async () => {
+    const granted = await requestPermission();
+    if (granted) {
+      await registerJobJournalBackgroundTask();
+      await scheduleJobJournalBackgroundTask();
+      sync();
+    }
+  };
+
+  // Permission gate: render nothing else until the user grants full access.
+  // Must wrap in its own <Host> — Expo's Stack navigator inserts native Views between
+  // the layout-level Host and screen content, breaking the Compose boundary.
+  if (!hasPermission) {
+    return (
+      <Host seedColor={theme.primary} style={{ flex: 1, backgroundColor: theme.background }}>
+        <GrantPermissionScreen
+          theme={theme}
+          onGrantPermission={handleGrantPermission}
+        />
+      </Host>
+    );
+  }
 
   return (
     <Host style={{ flex: 1, backgroundColor: theme.background }}>
@@ -67,7 +97,7 @@ export default function HomeScreen() {
           ) : (
             <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
               {query && !loading ? (
-                 <NoResultsState theme={theme} />
+                <NoResultsState theme={theme} />
               ) : (
                 <EmptyState theme={theme} />
               )}
@@ -78,4 +108,3 @@ export default function HomeScreen() {
     </Host>
   );
 }
-
