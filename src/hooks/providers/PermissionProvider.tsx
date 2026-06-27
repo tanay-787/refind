@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Linking, Platform } from 'react-native';
+import { Linking, Platform, AppState } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 
 interface PermissionContextValue {
@@ -35,6 +35,20 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
       setHasPermission(checkIsFullyGranted(permissionResponse));
     }
   }, [permissionResponse]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'active') {
+        console.log('[PermissionProvider] App became active, re-checking permissions');
+        const currentRes = await MediaLibrary.getPermissionsAsync();
+        setHasPermission(checkIsFullyGranted(currentRes));
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const requestPermission = async () => {
     // If the OS won't let us prompt again (because they previously denied or selected limited),
