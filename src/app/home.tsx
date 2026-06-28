@@ -4,10 +4,11 @@ import {
   Dimensions,
 } from 'react-native';
 
-import { Column, Box, Surface } from '@expo/ui/jetpack-compose';
-import { fillMaxSize } from '@expo/ui/jetpack-compose/modifiers';
+import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { fillMaxSize, align, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
 import { useSearch, useJobJournalOperations, usePermissionContext } from '@/hooks';
 import { Host } from '@expo/ui/jetpack-compose';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { 
   registerJobJournalBackgroundTask, 
@@ -33,6 +34,8 @@ export default function HomeScreen() {
 
   const { sync } = useJobJournalOperations();
   const { hasPermission, requestPermission } = usePermissionContext();
+  const snackbarRef = React.useRef<SnackbarHostRef>(null);
+  const insets = useSafeAreaInsets();
 
   // Trigger search on query change with debounce
   useEffect(() => {
@@ -59,6 +62,11 @@ export default function HomeScreen() {
       await registerJobJournalBackgroundTask();
       await scheduleJobJournalBackgroundTask();
       sync();
+    } else {
+      snackbarRef.current?.showSnackbar({
+        message: 'Refind requires "Allow All" access to search your library',
+        duration: 'short',
+      });
     }
   };
 
@@ -68,10 +76,15 @@ export default function HomeScreen() {
   if (!hasPermission) {
     return (
       <Host style={{ flex: 1 }} seedColor="#0057FF">
-        <GrantPermissionScreen
-
-          onGrantPermission={handleGrantPermission}
-        />
+        <Box modifiers={[fillMaxSize()]}>
+          <GrantPermissionScreen
+            onGrantPermission={handleGrantPermission}
+          />
+          <SnackbarHost 
+            ref={snackbarRef} 
+            modifiers={[align('topCenter'), paddingModifier(16, 0, 16, Math.max(insets.bottom, 16) + 16)]} 
+          />
+        </Box>
       </Host>
     );
   }
