@@ -7,7 +7,7 @@ import { useMaterialColors } from '@expo/ui/jetpack-compose';
 export const Header = React.memo(() => {
   const colors = useMaterialColors();
   return (
-    <Column modifiers={[fillMaxWidth(), paddingModifier(16, 32, 8, 16)]}>
+    <Column modifiers={[fillMaxWidth(), paddingModifier(16, 32, 16, 16)]}>
       <Text 
         textStyle={{ 
           fontSize: 32, 

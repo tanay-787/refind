@@ -6,6 +6,8 @@ node_modules/
 #tmp scripts
 run-dc.sh
 
+.tmp-img
+
 # Expo
 .expo/
 dist/

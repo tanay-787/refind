@@ -4,23 +4,16 @@ import { Column, Box, RNHostView } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, size, background, clip, Shapes, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import EmptySearch from '../illustrations/EmptySearchIllustration';
 
 export const EmptyState = React.memo(() => {
   const colors = useMaterialColors();
   
   return (
-    <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }} modifiers={[paddingModifier(0, 32, 0, 32)]}>
-      <Box modifiers={[size(120, 120), background(colors.secondaryContainer), clip(Shapes.RoundedCorner(28))]}>
-        <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-          <RNHostView matchContents={true}>
-            <SymbolView
-              name={{ android: 'stars', ios: 'sparkles' } as any}
-              size={40}
-              tintColor={colors.onSecondaryContainer}
-            />
-          </RNHostView>
-        </Column>
-      </Box>
+    <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[paddingModifier(0, 0, 0, 32)]}>
+      <RNHostView matchContents={true}>
+        <EmptySearch width={300} height={300} />
+      </RNHostView>
 
       <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
         <Text textStyle={{ fontSize: 20, fontWeight: '600', textAlign: 'center' }}>

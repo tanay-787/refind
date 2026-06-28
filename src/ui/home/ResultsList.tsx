@@ -27,7 +27,8 @@ export const ResultsList = React.memo(({ results, itemSize, spacing, columnCount
         data={results}
         keyExtractor={(item) => item.jobId}
         numColumns={columnCount}
-        contentContainerStyle={{ padding: spacing, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing, paddingBottom: 100, gap: spacing }}
+        columnWrapperStyle={{ gap: spacing }}
         renderItem={renderItem}
         getItemLayout={getItemLayout}
       />

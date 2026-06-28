@@ -27,7 +27,6 @@ export const ResultItem = memo(({ item, itemSize }: ResultItemProps) => {
 
 const styles = StyleSheet.create({
   itemContainer: {
-    padding: 4,
   },
   imageWrapper: {
     flex: 1,
