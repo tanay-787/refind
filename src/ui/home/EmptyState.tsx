@@ -16,10 +16,10 @@ export const EmptyState = React.memo(() => {
       </RNHostView>
 
       <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
-        <Text textStyle={{ fontSize: 20, fontWeight: '600', textAlign: 'center' }}>
+        <Text textStyle={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 20, textAlign: 'center' }}>
           Your visual memory, searchable
         </Text>
-        <Text textStyle={{ color: colors.onSurfaceVariant, textAlign: 'center', fontSize: 14 }}>
+        <Text textStyle={{ fontFamily: 'Inter_400Regular', color: colors.onSurfaceVariant, textAlign: 'center', fontSize: 14 }}>
           Search for "receipts", "travel", or text inside any screenshot.
         </Text>
       </Column>

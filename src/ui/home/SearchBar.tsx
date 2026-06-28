@@ -24,7 +24,7 @@ export const SearchBar = React.memo(({ onQueryChange }: SearchBarProps) => {
           </RNHostView>
         </DockedSearchBar.LeadingIcon>
         <DockedSearchBar.Placeholder>
-          <Text textStyle={{ color: colors.onSurfaceVariant }}>Search screenshots...</Text>
+          <Text textStyle={{ fontFamily: 'Inter_400Regular', color: colors.onSurfaceVariant }}>Search screenshots...</Text>
         </DockedSearchBar.Placeholder>
       </DockedSearchBar>
     </Box>

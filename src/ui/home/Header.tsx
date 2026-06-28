@@ -10,8 +10,8 @@ export const Header = React.memo(() => {
     <Column modifiers={[fillMaxWidth(), paddingModifier(16, 32, 16, 16)]}>
       <Text 
         textStyle={{ 
+          fontFamily: 'Newsreader_600SemiBold',
           fontSize: 32, 
-          fontWeight: 'bold',
           letterSpacing: -0.5
         }}
       >
@@ -19,6 +19,7 @@ export const Header = React.memo(() => {
       </Text>
       <Text 
         textStyle={{ 
+          fontFamily: 'Inter_400Regular',
           color: colors.onSurfaceVariant, 
           fontSize: 14 
         }}

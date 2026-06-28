@@ -44,10 +44,10 @@ export const GrantPermissionScreen = React.memo(({ onGrantPermission }: GrantPer
 
     {/* Title + body */}
     <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }}>
-      <Text textStyle={{ fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: -0.5 }}>
+      <Text textStyle={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 28, textAlign: 'center', letterSpacing: -0.5 }}>
         Accessing Your Library
       </Text>
-      <Text textStyle={{ fontSize: 16, lineHeight: 24, textAlign: 'center' }}>
+      <Text textStyle={{ fontFamily: 'Inter_400Regular', fontSize: 16, lineHeight: 24, textAlign: 'center' }}>
         To automatically find and index your screenshots, Refind needs access to your entire photo library.
       </Text>
     </Column>
@@ -62,13 +62,13 @@ export const GrantPermissionScreen = React.memo(({ onGrantPermission }: GrantPer
         modifiers={[fillMaxWidth()]}
         contentPadding={{ top: 18, bottom: 18 }}
         >
-        <Text textStyle={{ fontSize: 18, fontWeight: '700', letterSpacing: 0.3 }}>
+        <Text textStyle={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, letterSpacing: 0.3 }}>
           Grant Permissions
         </Text>
       </FilledTonalButton>
 
       {/* Disclaimer / Hint below CTA */}
-      <Text textStyle={{ color: colors.onSurfaceVariant, fontSize: 14, textAlign: 'center' }}>
+      <Text textStyle={{ fontFamily: 'Inter_400Regular', color: colors.onSurfaceVariant, fontSize: 14, textAlign: 'center' }}>
         Select "Allow All" to enable search
       </Text>
     </Column>

@@ -125,18 +125,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
+    fontFamily: 'Newsreader_600SemiBold',
     fontSize: 24,
-    fontWeight: '400',
     marginBottom: 16,
     textAlign: 'center',
   },
   content: {
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
     textAlign: 'center',
   },
   secondaryContent: {
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 24,
@@ -158,7 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   buttonText: {
+    fontFamily: 'Inter_500Medium',
     fontSize: 14,
-    fontWeight: '500',
   },
 });

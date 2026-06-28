@@ -16,8 +16,8 @@ export const NoResultsState = React.memo(() => {
           tintColor={colors.outline} 
         />
       </RNHostView>
-      <Text textStyle={{ fontSize: 18, fontWeight: '600' }}>No results</Text>
-      <Text textStyle={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>
+      <Text textStyle={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 18 }}>No results</Text>
+      <Text textStyle={{ fontFamily: 'Inter_400Regular', color: colors.onSurfaceVariant, textAlign: 'center' }}>
           Try searching for something else
       </Text>
     </Column>

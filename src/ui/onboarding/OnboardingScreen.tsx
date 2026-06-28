@@ -201,13 +201,14 @@ const styles = StyleSheet.create({
     }),
   },
   title: {
+    fontFamily: 'Newsreader_600SemiBold',
     fontSize: 32,
-    fontWeight: '800',
     marginBottom: 16,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   description: {
+    fontFamily: 'Inter_400Regular',
     fontSize: 17,
     lineHeight: 26,
     textAlign: 'center',
@@ -247,8 +248,8 @@ const styles = StyleSheet.create({
     }),
   },
   buttonText: {
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 17,
-    fontWeight: '700',
     letterSpacing: 0.3,
   },
 });
