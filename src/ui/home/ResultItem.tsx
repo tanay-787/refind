@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, forwardRef } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
@@ -6,13 +6,19 @@ import { useMaterialColors } from '@expo/ui/jetpack-compose';
 interface ResultItemProps {
   item: any;
   itemSize: number;
+  onPress?: () => void;
 }
 
-export const ResultItem = memo(({ item, itemSize }: ResultItemProps) => {
+export const ResultItem = memo(forwardRef<View, ResultItemProps>(({ item, itemSize, onPress }, ref) => {
   const colors = useMaterialColors();
   
   return (
-    <Pressable style={[styles.itemContainer, { width: itemSize, height: itemSize }]}>
+    <Pressable
+      ref={ref as any}
+      style={[styles.itemContainer, { width: itemSize, height: itemSize }]}
+      onPress={onPress}
+      android_ripple={{ color: 'rgba(255,255,255,0.12)', borderless: false }}
+    >
       <View style={[styles.imageWrapper, { backgroundColor: colors.surfaceVariant }]}>
         <Image
           source={{ uri: item.uri }}
@@ -23,7 +29,7 @@ export const ResultItem = memo(({ item, itemSize }: ResultItemProps) => {
       </View>
     </Pressable>
   );
-});
+}));
 
 const styles = StyleSheet.create({
   itemContainer: {

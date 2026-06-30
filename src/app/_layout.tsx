@@ -51,6 +51,13 @@ export default function RootLayout() {
                   <Stack.Screen name="index" />
                   <Stack.Screen name="onboarding" />
                   <Stack.Screen name="home" />
+                  <Stack.Screen 
+                    name="viewer" 
+                    options={{ 
+                      presentation: 'transparentModal',
+                      animation: 'fade' 
+                    }} 
+                  />
                 </Stack>
               </JobJournalProvider>
             </PermissionProvider>
