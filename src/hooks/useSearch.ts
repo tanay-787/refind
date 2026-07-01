@@ -16,7 +16,7 @@ export function useSearch() {
     lastQuery: '',
   });
 
-  const search = useCallback(async (query: string, limit: number = 20) => {
+  const search = useCallback(async (query: string, limit: number = 10) => {
     if (!query.trim()) {
       setState(prev => ({ ...prev, results: [], lastQuery: '' }));
       return;

@@ -48,7 +48,7 @@ function calculateQueryScore(queryTokens: string[], docText: string, docKeywords
 
 export async function hybridSearch(
   query: string,
-  limit: number = 20,
+  limit: number = 10,
 ): Promise<SearchResult[]> {
   const db = await getDrizzleDb();
   const candidates = new Map<string, SearchResult>();
