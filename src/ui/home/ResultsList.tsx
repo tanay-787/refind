@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { RNHostView } from '@expo/ui/jetpack-compose';
 import { ResultItem } from './ResultItem';
@@ -85,6 +85,22 @@ export const ResultsList = React.memo(({ results, spacing }: ResultsListProps) =
     }
   }, [spacing]);
 
+  const renderFooter = useCallback(() => {
+    if (results.length === 0) return null;
+    return (
+      <View style={{ paddingTop: 40, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ 
+          fontFamily: 'JetBrainsMono_400Regular', 
+          fontSize: 11, 
+          letterSpacing: 3, 
+          color: 'rgba(150, 150, 150, 0.5)',
+        }}>
+         --- END OF RESULTS ---
+        </Text>
+      </View>
+    );
+  }, [results.length]);
+
   return (
     <>
       <RNHostView matchContents={false}>
@@ -93,9 +109,9 @@ export const ResultsList = React.memo(({ results, spacing }: ResultsListProps) =
           keyExtractor={(row) => row.items.map(i => i.jobId).join('-')}
           numColumns={1}
           contentContainerStyle={{ padding: spacing, paddingBottom: 100 }}
-          estimatedItemSize={250}
           keyboardShouldPersistTaps="handled"
           renderItem={renderItem}
+          ListFooterComponent={renderFooter}
         />
       </RNHostView>
     </>
