@@ -5,8 +5,12 @@ import {
   TouchableOpacity,
   View,
   Text,
+  ScrollView,
 } from 'react-native';
 import { Image } from 'expo-image';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
+import { recognizeText } from 'rn-mlkit-ocr';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,6 +24,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { CropOverlay } from '@/ui/viewer/CropOverlay';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -29,11 +34,14 @@ const DISMISS_THRESHOLD = SCREEN_HEIGHT * 0.18;
 const DISMISS_VELOCITY = 1200;
 
 export default function ViewerScreen() {
-  const { uri, jobId } = useLocalSearchParams<{ uri: string; jobId: string }>();
+  const { uri, jobId, width: imgWStr, height: imgHStr } = useLocalSearchParams<{ uri: string; jobId: string; width?: string; height?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const [isStatusBarHidden, setStatusBarHidden] = useState(false);
+  const [isOcrMode, setIsOcrMode] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
 
   // ─── Shared values ────────────────────────────────────────────────────────
   const backdropOpacity = useSharedValue(0);
@@ -48,6 +56,12 @@ export default function ViewerScreen() {
   const baseScale = useSharedValue(1);
   const baseX = useSharedValue(0);
   const baseY = useSharedValue(0);
+
+  // Crop Box state
+  const boxX = useSharedValue((SCREEN_WIDTH - 280) / 2);
+  const boxY = useSharedValue((SCREEN_HEIGHT - 280) / 2);
+  const boxW = useSharedValue(280);
+  const boxH = useSharedValue(280);
 
   // ─── Reset & animate in when mounted ────────────────────────────────────
   useEffect(() => {
@@ -65,6 +79,107 @@ export default function ViewerScreen() {
       runOnJS(router.back)();
     });
   }, [router]);
+
+  const toggleOcrMode = useCallback(() => {
+    if (!isOcrMode) {
+      // Enter OCR mode: reset image transform
+      scale.value = withSpring(1, SPRING);
+      translateX.value = withSpring(0, SPRING);
+      translateY.value = withSpring(0, SPRING);
+      baseScale.value = 1;
+      baseX.value = 0;
+      baseY.value = 0;
+      
+      setIsOcrMode(true);
+      chromeVisible.value = withTiming(0, { duration: 200 });
+      setStatusBarHidden(true);
+    } else {
+      // Exit OCR mode
+      setIsOcrMode(false);
+      setExtractedText(null);
+      chromeVisible.value = withTiming(1, { duration: 200 });
+      setStatusBarHidden(false);
+    }
+  }, [isOcrMode]);
+
+  const handleScan = useCallback(async () => {
+    'worklet'
+    if (!uri || !imgWStr || !imgHStr) {
+      console.warn('[handleScan] Missing params:', { uri: !!uri, imgWStr, imgHStr });
+      return;
+    }
+    setIsScanning(true);
+
+    try {
+      // PROBE PHYSICAL DIMENSIONS: React Native's Image.getSize often returns logical pixels (points).
+      // ImageManipulator works on physical pixels. We must probe the file directly to get its true size.
+      const meta = await ImageManipulator.manipulateAsync(uri, []);
+      const physicalW = meta.width;
+      const physicalH = meta.height;
+
+      const imgAspect = physicalW / physicalH;
+      const screenAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+
+      let renderW: number, renderH: number, offsetX = 0, offsetY = 0;
+
+      if (imgAspect > screenAspect) {
+        // Landscape image: fills full width, letterboxed top/bottom
+        renderW = SCREEN_WIDTH;
+        renderH = SCREEN_WIDTH / imgAspect;
+        offsetY = (SCREEN_HEIGHT - renderH) / 2;
+      } else {
+        // Portrait image: fills full height, pillarboxed left/right
+        renderH = SCREEN_HEIGHT;
+        renderW = SCREEN_HEIGHT * imgAspect;
+        offsetX = (SCREEN_WIDTH - renderW) / 2;
+      }
+
+      // How many physical pixels per 1 screen pixel
+      const scaleRatio = physicalW / renderW;
+
+      // Ensure exact integers for ImageManipulator, and clamp to image bounds
+      const cropX = Math.round(Math.max(0, (boxX.value - offsetX) * scaleRatio));
+      const cropY = Math.round(Math.max(0, (boxY.value - offsetY) * scaleRatio));
+      let cropW = Math.round(Math.min(physicalW - cropX, boxW.value * scaleRatio));
+      let cropH = Math.round(Math.min(physicalH - cropY, boxH.value * scaleRatio));
+
+      // Failsafe if rounding pushes width/height slightly out of bounds
+      if (cropX + cropW > physicalW) cropW = physicalW - cropX;
+      if (cropY + cropH > physicalH) cropH = physicalH - cropY;
+
+      console.log('[handleScan] Physical dimensions:', { physicalW, physicalH });
+      console.log('[handleScan] Logical dims (from DB):', { imgWStr, imgHStr });
+      console.log('[handleScan] Screen dimensions:', { SCREEN_WIDTH, SCREEN_HEIGHT });
+      console.log('[handleScan] Rendered image rect:', { renderW, renderH, offsetX, offsetY });
+      console.log('[handleScan] Box (screen coords):', { x: boxX.value, y: boxY.value, w: boxW.value, h: boxH.value });
+      console.log('[handleScan] Crop (pixel coords):', { cropX, cropY, cropW, cropH, scaleRatio });
+
+      if (cropW <= 0 || cropH <= 0) {
+        setIsScanning(false);
+        return;
+      }
+
+      // Scale the cropped region by 2x to give MLKit higher DPI for small fonts
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [
+          { crop: { originX: cropX, originY: cropY, width: cropW, height: cropH } },
+          { resize: { width: cropW * 2 } }
+        ],
+        { format: ImageManipulator.SaveFormat.JPEG, compress: 1.0 }
+      );
+
+      const ocrResult = await recognizeText(manipResult.uri, 'latin');
+      setExtractedText(ocrResult?.text || 'No text found in selection.');
+      
+      await FileSystem.deleteAsync(manipResult.uri, { idempotent: true });
+    } catch (e) {
+      console.error('Crop/OCR failed:', e);
+      setExtractedText('Failed to extract text.');
+    } finally {
+      setIsScanning(false);
+    }
+  }, [uri, imgWStr, imgHStr]);
 
   // ─── Pinch ────────────────────────────────────────────────────────────────
   const pinch = Gesture.Pinch()
@@ -240,6 +355,14 @@ export default function ViewerScreen() {
         </Animated.View>
       </GestureDetector>
 
+      <CropOverlay 
+        isActive={isOcrMode} 
+        boxX={boxX} 
+        boxY={boxY} 
+        boxW={boxW} 
+        boxH={boxH} 
+      />
+
       {/* ─── Top Overlay Chrome ─── */}
       <Animated.View 
         style={[styles.topBar, chromeStyle, { paddingTop: Math.max(insets.top, 16) }]}
@@ -263,7 +386,7 @@ export default function ViewerScreen() {
         style={[styles.bottomBar, bottomChromeStyle, { paddingBottom: Math.max(insets.bottom, 24) }]}
         pointerEvents={isStatusBarHidden ? 'none' : 'box-none'}
       >
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={toggleOcrMode}>
           <SymbolView name={{ ios: 'text.viewfinder', android: 'text_fields' }} size={24} tintColor="#fff" />
         </TouchableOpacity>
         
@@ -279,6 +402,46 @@ export default function ViewerScreen() {
           <SymbolView name={{ ios: 'trash', android: 'delete' }} size={24} tintColor="#fff" />
         </TouchableOpacity>
       </Animated.View>
+
+      {/* ─── OCR Mode Chrome ─── */}
+      {isOcrMode && (
+        <>
+          <Animated.View style={[styles.topBar, { paddingTop: Math.max(insets.top, 16), zIndex: 200 }]}>
+            <TouchableOpacity onPress={toggleOcrMode} style={[styles.iconButton, { width: 80 }]}>
+              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>Adjust Crop</Text>
+            <View style={[styles.iconButton, { width: 80 }]} pointerEvents="none" />
+          </Animated.View>
+          
+          <Animated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24), justifyContent: 'center', zIndex: 200 }]}>
+             <TouchableOpacity 
+               onPress={handleScan}
+               disabled={isScanning}
+               style={{ backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24, opacity: isScanning ? 0.7 : 1 }}
+             >
+               <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 16 }}>
+                 {isScanning ? 'Scanning...' : 'Scan Text'}
+               </Text>
+             </TouchableOpacity>
+          </Animated.View>
+        </>
+      )}
+
+      {/* ─── OCR Extracted Text Panel ─── */}
+      {extractedText && (
+        <View style={[styles.textPanel, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+          <View style={styles.textPanelHeader}>
+            <Text style={styles.textPanelTitle}>Extracted Text</Text>
+            <TouchableOpacity onPress={() => setExtractedText(null)} style={styles.closeBtn}>
+              <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel' }} size={24} tintColor="#rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.textScrollView}>
+            <Text selectable style={styles.extractedText}>{extractedText}</Text>
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -339,5 +502,45 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#fff',
     letterSpacing: -0.3,
+  },
+  textPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: SCREEN_HEIGHT * 0.4,
+    backgroundColor: '#1E1E1E',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  textPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  textPanelTitle: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 20,
+    color: '#fff',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  textScrollView: {
+    flex: 1,
+  },
+  extractedText: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 14,
+    color: '#E0E0E0',
+    lineHeight: 22,
   },
 });

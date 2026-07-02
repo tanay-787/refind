@@ -50,7 +50,7 @@ export const ResultsList = React.memo(({ results, spacing }: ResultsListProps) =
     if (row.type === 'landscape') {
       return (
         <View style={{ width: '100%', paddingBottom: spacing }}>
-          <Link href={{ pathname: '/viewer', params: { uri: row.items[0].uri, jobId: row.items[0].jobId } }} asChild>
+          <Link href={{ pathname: '/viewer', params: { uri: row.items[0].uri, jobId: row.items[0].jobId, width: row.items[0].width, height: row.items[0].height } }} asChild>
             <ResultItem item={row.items[0]} />
           </Link>
         </View>
@@ -59,7 +59,7 @@ export const ResultsList = React.memo(({ results, spacing }: ResultsListProps) =
       return (
         <View style={{ flexDirection: 'row', width: '100%', paddingBottom: spacing }}>
           <View style={{ flex: 0.5, paddingRight: spacing / 2 }}>
-            <Link href={{ pathname: '/viewer', params: { uri: row.items[0].uri, jobId: row.items[0].jobId } }} asChild>
+            <Link href={{ pathname: '/viewer', params: { uri: row.items[0].uri, jobId: row.items[0].jobId, width: row.items[0].width, height: row.items[0].height } }} asChild>
               <ResultItem item={row.items[0]} />
             </Link>
           </View>
@@ -71,12 +71,12 @@ export const ResultsList = React.memo(({ results, spacing }: ResultsListProps) =
       return (
         <View style={{ flexDirection: 'row', width: '100%', paddingBottom: spacing }}>
           <View style={{ flex: 1, paddingRight: spacing / 2 }}>
-            <Link href={{ pathname: '/viewer', params: { uri: row.items[0].uri, jobId: row.items[0].jobId } }} asChild>
+            <Link href={{ pathname: '/viewer', params: { uri: row.items[0].uri, jobId: row.items[0].jobId, width: row.items[0].width, height: row.items[0].height } }} asChild>
               <ResultItem item={row.items[0]} />
             </Link>
           </View>
           <View style={{ flex: 1, paddingLeft: spacing / 2 }}>
-            <Link href={{ pathname: '/viewer', params: { uri: row.items[1].uri, jobId: row.items[1].jobId } }} asChild>
+            <Link href={{ pathname: '/viewer', params: { uri: row.items[1].uri, jobId: row.items[1].jobId, width: row.items[1].width, height: row.items[1].height } }} asChild>
               <ResultItem item={row.items[1]} />
             </Link>
           </View>
