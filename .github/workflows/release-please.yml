@@ -3,7 +3,7 @@ name: release-please
 on:
   push:
     branches:
-      - master # Adjust this to your main branch if it's different
+      - master
 
 permissions:
   contents: write
@@ -12,7 +12,68 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-android:
+    name: Build Android APK (EAS)
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android APK on EAS
+        # --wait   : block until EAS finishes the build (needed so we can download the artifact)
+        # --json   : emit structured JSON so we can parse the artifact download URL
+        # --profile preview : uses the "preview" profile which produces an APK (not AAB)
+        #            with credentialsSource: "remote" so EAS uses its managed keystore
+        run: |
+          eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait \
+            --json \
+            > eas-build-result.json
+
+      - name: Download APK from EAS
+        run: |
+          ARTIFACT_URL=$(jq -r '.[0].artifacts.buildUrl' eas-build-result.json)
+          echo "Artifact URL: $ARTIFACT_URL"
+          curl -L "$ARTIFACT_URL" -o "refind-${{ needs.release-please.outputs.tag_name }}.apk"
+
+      - name: Upload APK to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload \
+            "${{ needs.release-please.outputs.tag_name }}" \
+            "refind-${{ needs.release-please.outputs.tag_name }}.apk" \
+            --clobber
