@@ -3,9 +3,7 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  View,
-  Text,
-  ScrollView,
+  View
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -23,8 +21,11 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SymbolView } from 'expo-symbols';
 import { CropOverlay } from '@/ui/viewer/CropOverlay';
+import { ViewerTopBar } from '@/ui/viewer/TopBar';
+import { ViewerBottomBar } from '@/ui/viewer/BottomBar';
+import { ViewerOcrChrome } from '@/ui/viewer/OcrChrome';
+import { ViewerOcrResultPanel } from '@/ui/viewer/OcrResultPanel';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -363,85 +364,33 @@ export default function ViewerScreen() {
         boxH={boxH} 
       />
 
-      {/* ─── Top Overlay Chrome ─── */}
-      <Animated.View 
-        style={[styles.topBar, chromeStyle, { paddingTop: Math.max(insets.top, 16) }]}
-        pointerEvents={isStatusBarHidden ? 'none' : 'box-none'}
-      >
-        <TouchableOpacity
-          onPress={dismiss}
-          style={styles.iconButton}
-          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-        >
-          <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back' }} size={28} tintColor="#fff" />
-        </TouchableOpacity>
-        
-        <Text style={styles.title}>Refind</Text>
-        
-        {/* Invisible spacer to perfectly center the title */}
-        <View style={styles.iconButton} pointerEvents="none" />
-      </Animated.View>
+      {/* ─── Standard Chrome ─── */}
+      <ViewerTopBar 
+        onDismiss={dismiss} 
+        style={chromeStyle} 
+        pointerEvents={isStatusBarHidden ? 'none' : 'box-none'} 
+      />
 
-      <Animated.View 
-        style={[styles.bottomBar, bottomChromeStyle, { paddingBottom: Math.max(insets.bottom, 24) }]}
-        pointerEvents={isStatusBarHidden ? 'none' : 'box-none'}
-      >
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={toggleOcrMode}>
-          <SymbolView name={{ ios: 'text.viewfinder', android: 'text_fields' }} size={24} tintColor="#fff" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-          <SymbolView name={{ ios: 'square.and.arrow.up', android: 'share' }} size={24} tintColor="#fff" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-          <SymbolView name={{ ios: 'info.circle', android: 'info' }} size={24} tintColor="#fff" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-          <SymbolView name={{ ios: 'trash', android: 'delete' }} size={24} tintColor="#fff" />
-        </TouchableOpacity>
-      </Animated.View>
+      <ViewerBottomBar 
+        onOcrPress={toggleOcrMode} 
+        style={bottomChromeStyle} 
+        pointerEvents={isStatusBarHidden ? 'none' : 'box-none'} 
+      />
 
       {/* ─── OCR Mode Chrome ─── */}
       {isOcrMode && (
-        <>
-          <Animated.View style={[styles.topBar, { paddingTop: Math.max(insets.top, 16), zIndex: 200 }]}>
-            <TouchableOpacity onPress={toggleOcrMode} style={[styles.iconButton, { width: 80 }]}>
-              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>Adjust Crop</Text>
-            <View style={[styles.iconButton, { width: 80 }]} pointerEvents="none" />
-          </Animated.View>
-          
-          <Animated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24), justifyContent: 'center', zIndex: 200 }]}>
-             <TouchableOpacity 
-               onPress={handleScan}
-               disabled={isScanning}
-               style={{ backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 24, opacity: isScanning ? 0.7 : 1 }}
-             >
-               <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 16 }}>
-                 {isScanning ? 'Scanning...' : 'Scan Text'}
-               </Text>
-             </TouchableOpacity>
-          </Animated.View>
-        </>
+        <ViewerOcrChrome 
+          onCancel={toggleOcrMode} 
+          onScan={handleScan} 
+          isScanning={isScanning} 
+        />
       )}
 
       {/* ─── OCR Extracted Text Panel ─── */}
-      {extractedText && (
-        <View style={[styles.textPanel, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-          <View style={styles.textPanelHeader}>
-            <Text style={styles.textPanelTitle}>Extracted Text</Text>
-            <TouchableOpacity onPress={() => setExtractedText(null)} style={styles.closeBtn}>
-              <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel' }} size={24} tintColor="#rgba(255,255,255,0.6)" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.textScrollView}>
-            <Text selectable style={styles.extractedText}>{extractedText}</Text>
-          </ScrollView>
-        </View>
-      )}
+      <ViewerOcrResultPanel 
+        text={extractedText} 
+        onClose={() => setExtractedText(null)} 
+      />
     </View>
   );
 }
@@ -465,82 +414,5 @@ const styles = StyleSheet.create({
   image: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
-  },
-  
-  // ─── Chrome Styles ───
-  topBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingBottom: 16,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
-    paddingTop: 16,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: '#fff',
-    letterSpacing: -0.3,
-  },
-  textPanel: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: SCREEN_HEIGHT * 0.4,
-    backgroundColor: '#1E1E1E',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 16,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 20,
-  },
-  textPanelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  textPanelTitle: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: '#fff',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  textScrollView: {
-    flex: 1,
-  },
-  extractedText: {
-    fontFamily: 'JetBrainsMono_400Regular',
-    fontSize: 14,
-    color: '#E0E0E0',
-    lineHeight: 22,
   },
 });

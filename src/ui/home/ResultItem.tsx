@@ -17,8 +17,7 @@ export const ResultItem = memo(forwardRef<View, ResultItemProps>(({ item, onPres
       ref={ref as any}
       style={[styles.itemContainer, { aspectRatio: item.aspectRatio || 1 }]}
       onPress={onPress}
-      android_ripple={{ color: 'rgba(255,255,255,0.12)', borderless: false }}
-    >
+      >
       <View style={[styles.imageWrapper, { backgroundColor: colors.surfaceVariant }]}>
         <Image
           source={{ uri: item.uri }}
