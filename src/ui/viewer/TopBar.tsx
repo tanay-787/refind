@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Button } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SymbolView } from 'expo-symbols';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBrandColors } from '@/theme';
 
 interface ViewerTopBarProps {
   onDismiss: () => void;
@@ -12,6 +13,7 @@ interface ViewerTopBarProps {
 
 export function ViewerTopBar({ onDismiss, style, pointerEvents }: ViewerTopBarProps) {
   const insets = useSafeAreaInsets();
+  const colors = useBrandColors();
   
   return (
     <Animated.View 
@@ -23,14 +25,9 @@ export function ViewerTopBar({ onDismiss, style, pointerEvents }: ViewerTopBarPr
         style={styles.iconButton}
         hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
       >
-        <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back' }} size={28} tintColor="#fff" />
+        <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back' }} size={28} tintColor={colors.onSurface} />
       </TouchableOpacity>
-      
-      <Text style={styles.title}>Refind</Text>
-      
-      {/* Invisible spacer to perfectly center the title */}
-      <View style={styles.iconButton} pointerEvents="none" />
-    </Animated.View>
+      </Animated.View>
   );
 }
 
@@ -44,19 +41,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 8,
-    paddingBottom: 16,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingBottom: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
   iconButton: {
     width: 44,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  title: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: '#fff',
-    letterSpacing: -0.3,
   },
 });
