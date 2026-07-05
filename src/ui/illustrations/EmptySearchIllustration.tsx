@@ -1,8 +1,8 @@
 import Svg, { SvgProps, Path, Circle, Rect } from "react-native-svg";
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { useBrandColors } from '@/theme';
 
 const EmptySearch = (props: SvgProps) => {
-  const colors = useMaterialColors();
+  const colors = useBrandColors();
   return (
     <Svg
       viewBox="0 0 649.3779 727.77798"

@@ -118,7 +118,7 @@ export default function OnboardingScreen() {
           renderItem={({ item }) => (
             <View style={[styles.slide, { width }]}>
               <View style={[styles.iconContainer, { backgroundColor: 'transparent' }]}>
-                <item.Illustration theme={theme} size={140} />
+                <item.Illustration size={140} />
               </View>
               
               <Text style={[styles.title, { color: theme.onSurface }]}>

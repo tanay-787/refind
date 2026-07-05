@@ -1,12 +1,13 @@
 import React from 'react';
 import Svg, { Rect, Circle, Path } from 'react-native-svg';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { useBrandColors } from '@/theme';
+
 interface IllustrationProps {
   size?: number;
 }
 
 export const PhotoLibraryIllustration = React.memo(({ size = 64 }: IllustrationProps) => {
-  const colors = useMaterialColors();
+  const colors = useBrandColors();
   
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
