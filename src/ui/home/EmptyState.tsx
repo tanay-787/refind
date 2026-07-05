@@ -2,7 +2,6 @@ import React from 'react';
 import { Text } from '@expo/ui';
 import { Column, Box, RNHostView } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, size, background, clip, Shapes, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
-import { SymbolView } from 'expo-symbols';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import EmptySearch from '../illustrations/EmptySearchIllustration';
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import * as MediaLibrary from 'expo-media-library';
 import { View, Text, StyleSheet, Modal, Pressable, ActivityIndicator } from 'react-native';
-import { Icon } from '@expo/ui/jetpack-compose';
-import { useTheme, ThemedHost } from '@/theme';
+import { useTheme } from '@/theme';
+import { IconView } from '@/ui/IconView';
 
 type PermissionPrimerProps = {
   visible: boolean;
@@ -49,13 +49,11 @@ export default function PermissionPrimer({ visible, onDismiss, onGranted }: Perm
       <View style={styles.overlay}>
         <View style={[styles.dialog, { backgroundColor: theme.surface }]}>
           <View style={styles.iconContainer}>
-             <ThemedHost matchContents={true} colorScheme={theme.isDark ? 'dark' : 'light'}>
-                <Icon 
-                  source={require('@/assets/photo_library.xml')} 
+                <IconView 
+                  name="photo_library" 
                   size={32} 
-                  tint={theme.primary} 
+                  tintColor={theme.primary} 
                 />
-             </ThemedHost>
           </View>
           
           <Text style={[styles.title, { color: theme.onSurface }]}>

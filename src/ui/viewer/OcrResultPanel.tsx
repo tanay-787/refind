@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, ScrollView, Dimensions } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { IconView } from '@/ui/IconView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -20,7 +20,7 @@ export function ViewerOcrResultPanel({ text, onClose }: ViewerOcrResultPanelProp
       <View style={styles.textPanelHeader}>
         <Text style={styles.textPanelTitle}>Extracted Text</Text>
         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-          <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel' }} size={24} tintColor="#rgba(255,255,255,0.6)" />
+          <IconView name="cancel" size={24} tintColor="#rgba(255,255,255,0.6)" />
         </TouchableOpacity>
       </View>
       <ScrollView style={styles.textScrollView}>

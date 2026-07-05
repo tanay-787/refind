@@ -10,7 +10,6 @@ import {
   ScrollView,
   Platform
 } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/theme';
 import { usePermissionContext } from '@/hooks';

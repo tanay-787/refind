@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { SymbolView } from 'expo-symbols';
+import { IconView } from '@/ui/IconView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ViewerBottomBarProps {
@@ -19,19 +19,19 @@ export function ViewerBottomBar({ onOcrPress, style, pointerEvents }: ViewerBott
       pointerEvents={pointerEvents}
     >
       <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={onOcrPress}>
-        <SymbolView name={{ ios: 'text.viewfinder', android: 'text_fields' }} size={24} tintColor="#fff" />
+        <IconView name="text_fields" size={24} tintColor="#fff" />
       </TouchableOpacity>
       
       <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-        <SymbolView name={{ ios: 'square.and.arrow.up', android: 'share' }} size={24} tintColor="#fff" />
+        <IconView name="share" size={24} tintColor="#fff" />
       </TouchableOpacity>
       
       <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-        <SymbolView name={{ ios: 'info.circle', android: 'info' }} size={24} tintColor="#fff" />
+        <IconView name="info" size={24} tintColor="#fff" />
       </TouchableOpacity>
       
       <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-        <SymbolView name={{ ios: 'trash', android: 'delete' }} size={24} tintColor="#fff" />
+        <IconView name="delete" size={24} tintColor="#fff" />
       </TouchableOpacity>
     </Animated.View>
   );

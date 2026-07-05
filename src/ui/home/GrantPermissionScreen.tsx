@@ -12,7 +12,6 @@ import {
   weight,
   padding,
 } from '@expo/ui/jetpack-compose/modifiers';
-import { SymbolView } from 'expo-symbols';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PhotoLibraryIllustration } from '@/ui/illustrations';
 

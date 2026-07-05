@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Button } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { SymbolView } from 'expo-symbols';
+import { IconView } from '@/ui/IconView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBrandColors } from '@/theme';
 
@@ -25,7 +25,7 @@ export function ViewerTopBar({ onDismiss, style, pointerEvents }: ViewerTopBarPr
         style={styles.iconButton}
         hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
       >
-        <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back' }} size={28} tintColor={colors.onSurface} />
+        <IconView name="keyboard_backspace" />
       </TouchableOpacity>
       </Animated.View>
   );
