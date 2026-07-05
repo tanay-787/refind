@@ -2,18 +2,18 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { usePermissionContext } from '@/hooks';
-import { useTheme } from '@/theme';
 import * as SecureStore from 'expo-secure-store';
 import { 
   initializeJobJournalDatabase, 
   registerJobJournalBackgroundTask, 
   scheduleJobJournalBackgroundTask 
 } from '@/core/jobjournal';
+import { useBrandColors } from '@/theme';
 
 export default function IndexScreen() {
   const router = useRouter();
-  const theme = useTheme();
   const { hasPermission, isChecking } = usePermissionContext();
+  const colors = useBrandColors();
 
   useEffect(() => {
     if (isChecking || hasPermission === null) return;
@@ -44,8 +44,8 @@ export default function IndexScreen() {
   }, [hasPermission, isChecking, router]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" color={theme.primary} />
+    <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );
 }

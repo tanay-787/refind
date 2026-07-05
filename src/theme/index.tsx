@@ -1,38 +1,36 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React from 'react';
 import { useColorScheme } from 'react-native';
-import { tokens, ColorTokens } from './tokens';
+import { Host, useMaterialColors } from '@expo/ui/jetpack-compose';
 
-// Define the shape of our theme
-export type Theme = ColorTokens & {
-  isDark: boolean;
+export const DEFAULT_SEED_COLOR = '#0057FF';
+
+export type ThemedHostProps = React.ComponentProps<typeof Host> & {
+  seedColor?: string;
 };
 
-const ThemeContext = createContext<Theme | null>(null);
-
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
-
-  // Memoize the theme object to prevent unnecessary re-renders
-  const theme = useMemo(() => {
-    const baseTokens = isDark ? tokens.dark : tokens.light;
-    return {
-      ...baseTokens,
-      isDark,
-    };
-  }, [isDark]);
-
+export function ThemedHost({ 
+  children, 
+  seedColor = DEFAULT_SEED_COLOR, 
+  ...props 
+}: ThemedHostProps) {
   return (
-    <ThemeContext.Provider value={theme}>
+    <Host seedColor={seedColor} {...props}>
       {children}
-    </ThemeContext.Provider>
+    </Host>
   );
 }
 
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
+export const useBrandColors = (seedColor: string = DEFAULT_SEED_COLOR) => {
+  return useMaterialColors({ seedColor });
+};
+
+export const useTheme = (seedColor: string = DEFAULT_SEED_COLOR) => {
+  const colors = useBrandColors(seedColor);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  return {
+    ...colors,
+    isDark,
+  };
 };

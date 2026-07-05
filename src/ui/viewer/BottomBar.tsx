@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     alignItems: 'center',
-    paddingTop: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingTop: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
   iconButton: {
     width: 44,

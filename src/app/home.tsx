@@ -7,7 +7,7 @@ import {
 import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, align, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
 import { useSearch, useJobJournalOperations, usePermissionContext } from '@/hooks';
-import { Host } from '@expo/ui/jetpack-compose';
+import { ThemedHost } from '@/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { 
@@ -75,7 +75,7 @@ export default function HomeScreen() {
   // the layout-level Host and screen content, breaking the Compose boundary.
   if (!hasPermission) {
     return (
-      <Host style={{ flex: 1 }} seedColor="#0057FF">
+      <ThemedHost style={{ flex: 1 }}>
         <Box modifiers={[fillMaxSize()]}>
           <GrantPermissionScreen
             onGrantPermission={handleGrantPermission}
@@ -85,12 +85,12 @@ export default function HomeScreen() {
             modifiers={[align('topCenter'), paddingModifier(16, 0, 16, Math.max(insets.bottom, 16) + 16)]} 
           />
         </Box>
-      </Host>
+      </ThemedHost>
     );
   }
 
   return (
-    <Host style={{ flex: 1 }} seedColor="#0057FF">
+    <ThemedHost style={{ flex: 1 }}>
       <Surface modifiers={[fillMaxSize()]}>
         <Column modifiers={[fillMaxSize()]}>
         <Header />
@@ -120,6 +120,6 @@ export default function HomeScreen() {
         </Box>
         </Column>
       </Surface>
-    </Host>
+    </ThemedHost>
   );
 }
