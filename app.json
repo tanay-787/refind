@@ -76,7 +76,8 @@
           ],
           "ocrUseBundled": true
         }
-      ]
+      ],
+      "react-native-notify-kit"
     ],
     "experiments": {
       "typedRoutes": true,
