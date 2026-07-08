@@ -6,7 +6,7 @@ import {
   ingestJobJournalScreenshots,
   resetFailedExecutions,
 } from '@/core/jobjournal';
-import { processUntilEmpty } from '@/core/jobjournal/06-backgroundTasks';
+import { processUntilEmpty } from '@/core/jobjournal/background-tasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
 
 interface JobJournalStats {

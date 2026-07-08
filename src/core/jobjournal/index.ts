@@ -17,7 +17,7 @@ export {
   registerJobJournalBackgroundTask,
   scheduleJobJournalBackgroundTask,
   unregisterJobJournalBackgroundTask
-} from './06-backgroundTasks';
+} from './background-tasks';
 export { runKeywordsStage } from './stages/05-keywords.stage';
 export { getJobJournalDatabase, getJobJournalVecStatus, initializeJobJournalDatabase } from './storage/database';
 export { JOB_JOURNAL_SCHEMA, JOB_JOURNAL_VEC_SCHEMA } from './storage/schema';

@@ -8,6 +8,7 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { runNextStageExecution } from './05-runner';
 import { recoveryExpiredLeases } from './03-executor';
+import { setupNotificationChannel, updateSyncNotification, clearSyncNotification } from './utils/notifications';
 
 const JOB_JOURNAL_TASK_NAME = 'JOB_JOURNAL_RUNNER_TASK';
 
@@ -20,6 +21,8 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
   
   // 1. Recover any abandoned leases from crashes/background kills
   await recoveryExpiredLeases();
+  await setupNotificationChannel();
+  await updateSyncNotification(0, maxTotal);
 
   while (totalProcessed < maxTotal) {
     let batchProcessed = 0;
@@ -28,11 +31,15 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
     for (let i = 0; i < batchSize; i++) {
       const didWork = await runNextStageExecution();
       if (!didWork) {
+        await clearSyncNotification();
         return totalProcessed; // Queue is fully empty
       }
       batchProcessed++;
       totalProcessed++;
     }
+
+    // Update notification
+    await updateSyncNotification(totalProcessed, maxTotal);
 
     // 2. Hardware "Breath": Pause briefly after each batch 
     // to let Native GC and the JS Event Loop catch up.
@@ -41,6 +48,7 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
     console.log(`[backgroundTasks] Sub-batch complete. Total processed: ${totalProcessed}`);
   }
 
+  await clearSyncNotification();
   return totalProcessed;
 }
 
@@ -49,11 +57,17 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
  */
 async function processOnce(maxIterations = 16) {
   let processed = 0;
+  await setupNotificationChannel();
+  await updateSyncNotification(0, null);
+
   for (let i = 0; i < maxIterations; i++) {
     const didWork = await runNextStageExecution();
     if (!didWork) break;
     processed++;
+    await updateSyncNotification(processed, null);
   }
+
+  await clearSyncNotification();
   return processed;
 }
 
@@ -67,6 +81,7 @@ try {
       return BackgroundTask.BackgroundTaskResult.Success;
     } catch (err) {
       console.error('JobJournal background task failed:', err);
+      await clearSyncNotification();
       return BackgroundTask.BackgroundTaskResult.Failed;
     }
   });

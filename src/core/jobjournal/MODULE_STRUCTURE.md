@@ -8,7 +8,7 @@
 03-executor.ts        → Manage execution state (claim/complete/fail/recover)
 04-stages.ts          → Stage exports (DAG order)
 05-runner.ts          → Orchestrate stage execution
-06-backgroundTasks.ts → Schedule background work
+background-tasks.ts   → Schedule background work
 ```
 
 ## Stage DAG Flow (Inner Numbering within `stages/`)
