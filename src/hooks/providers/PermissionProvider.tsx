@@ -1,11 +1,13 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Linking, Platform, AppState } from 'react-native';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { Linking, AppState } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
+import notifee, { AuthorizationStatus } from 'react-native-notify-kit';
 
 interface PermissionContextValue {
-  hasPermission: boolean | null; // null means checking, boolean is status
+  hasMediaPermission: boolean | null; // null means checking
+  hasNotificationPermission: boolean | null;
   isChecking: boolean;
-  requestPermission: () => Promise<boolean>;
+  requestPermissions: () => Promise<{ media: boolean; notifications: boolean }>;
 }
 
 const PermissionContext = createContext<PermissionContextValue | null>(null);
@@ -15,33 +17,36 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     granularPermissions: ['photo'],
   });
 
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [hasMediaPermission, setHasMediaPermission] = useState<boolean | null>(null);
+  const [hasNotificationPermission, setHasNotificationPermission] = useState<boolean | null>(null);
 
   const checkIsFullyGranted = (res: MediaLibrary.PermissionResponse | null) => {
     if (!res) return false;
-    
-    // In recent Expo SDKs, the generic PermissionResponse type omits 'accessPrivileges', 
-    // but the native iOS and Android modules still return it. We cast to 'any' to bypass the TS error.
     const rawRes = res as any;
-    
-    // We strictly require 'all' access. If it's 'limited' (iOS 14+ and Android 14+ Selected Photos Access), 
-    // it's insufficient for background indexing.
     return res.granted && rawRes.accessPrivileges !== 'limited';
   };
 
+  const checkNotifStatus = async () => {
+    const settings = await notifee.getNotificationSettings();
+    setHasNotificationPermission(settings.authorizationStatus === AuthorizationStatus.AUTHORIZED);
+  };
+
   useEffect(() => {
-    console.log('[PermissionProvider] permissionResponse changed:', permissionResponse);
     if (permissionResponse) {
-      setHasPermission(checkIsFullyGranted(permissionResponse));
+      setHasMediaPermission(checkIsFullyGranted(permissionResponse));
     }
   }, [permissionResponse]);
 
   useEffect(() => {
+    checkNotifStatus();
+  }, []);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (nextAppState === 'active') {
-        console.log('[PermissionProvider] App became active, re-checking permissions');
         const currentRes = await MediaLibrary.getPermissionsAsync();
-        setHasPermission(checkIsFullyGranted(currentRes));
+        setHasMediaPermission(checkIsFullyGranted(currentRes));
+        await checkNotifStatus();
       }
     });
 
@@ -50,29 +55,40 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
-  const requestPermission = async () => {
-    // If the OS won't let us prompt again (because they previously denied or selected limited),
-    // or if they are in 'limited' state on iOS, we must route them to Settings to fix it.
+  const requestPermissions = async () => {
+    let mediaGranted = false;
+
+    // Handle Media Permission
     if (permissionResponse && !checkIsFullyGranted(permissionResponse)) {
       const rawRes = permissionResponse as any;
-      // If we can't ask again, or if it's explicitly limited (which often blocks the native prompt from upgrading)
       if (!rawRes.canAskAgain || rawRes.accessPrivileges === 'limited') {
         Linking.openSettings();
-        return false;
+        return { media: false, notifications: hasNotificationPermission || false };
       }
     }
 
     const result = await requestPermissionHook();
-    const isFullyGranted = checkIsFullyGranted(result);
-    setHasPermission(isFullyGranted);
-    return isFullyGranted;
+    mediaGranted = checkIsFullyGranted(result);
+    setHasMediaPermission(mediaGranted);
+
+    let notifGranted = hasNotificationPermission || false;
+
+    // Handle Notification Permission if Media is granted
+    if (mediaGranted) {
+      const notifSettings = await notifee.requestPermission();
+      notifGranted = notifSettings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
+      setHasNotificationPermission(notifGranted);
+    }
+
+    return { media: mediaGranted, notifications: notifGranted };
   };
 
-  const value = React.useMemo(() => ({
-    hasPermission,
-    isChecking: permissionResponse === null,
-    requestPermission,
-  }), [hasPermission, permissionResponse, requestPermissionHook]);
+  const value = useMemo(() => ({
+    hasMediaPermission,
+    hasNotificationPermission,
+    isChecking: permissionResponse === null || hasNotificationPermission === null,
+    requestPermissions,
+  }), [hasMediaPermission, hasNotificationPermission, permissionResponse]);
 
   return (
     <PermissionContext.Provider value={value}>

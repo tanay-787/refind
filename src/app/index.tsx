@@ -12,11 +12,11 @@ import { useBrandColors } from '@/theme';
 
 export default function IndexScreen() {
   const router = useRouter();
-  const { hasPermission, isChecking } = usePermissionContext();
+  const { hasMediaPermission, isChecking } = usePermissionContext();
   const colors = useBrandColors();
 
   useEffect(() => {
-    if (isChecking || hasPermission === null) return;
+    if (isChecking || hasMediaPermission === null) return;
 
     (async () => {
       try {
@@ -25,7 +25,7 @@ export default function IndexScreen() {
         
         const hasSeenOnboarding = await SecureStore.getItemAsync('has_seen_onboarding');
 
-        if (hasPermission) {
+        if (hasMediaPermission) {
           // If permission is already granted, set up background tasks and go to home
           await registerJobJournalBackgroundTask();
           await scheduleJobJournalBackgroundTask();
@@ -41,7 +41,7 @@ export default function IndexScreen() {
         console.error('[IndexScreen] Failed to initialize:', err);
       }
     })();
-  }, [hasPermission, isChecking, router]);
+  }, [hasMediaPermission, isChecking, router]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>

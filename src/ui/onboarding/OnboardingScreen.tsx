@@ -1,69 +1,37 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   Pressable, 
   ActivityIndicator, 
-  useWindowDimensions,
-  Animated,
-  ScrollView,
   Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTheme } from '@/theme';
 import { usePermissionContext } from '@/hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-
-import { SearchIllustration, PrivacyIllustration } from '@/ui/illustrations';
-
-const SLIDES = [
-  {
-    id: '1',
-    Illustration: SearchIllustration,
-    title: 'Never lose a screenshot',
-    description: 'Refind creates a private, intelligent index of your screenshots so you can search them instantly.',
-  },
-  {
-    id: '2',
-    Illustration: PrivacyIllustration,
-    title: '100% Private & Local',
-    description: 'Your data never leaves your device. All processing happens locally for maximum privacy and offline access.',
-  }
-] as const;
+import { Image } from 'expo-image';
 
 export default function OnboardingScreen() {
-  const theme = useTheme();
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { requestPermissions } = usePermissionContext();
   
   const [loading, setLoading] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const slidesRef = useRef<ScrollView>(null);
-
-  const viewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems && viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index || 0);
-    }
-  }).current;
-
-  const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
-
-  const scrollToNext = () => {
-    if (currentIndex < SLIDES.length - 1) {
-      slidesRef.current?.scrollTo({ x: (currentIndex + 1) * width, animated: true });
-    }
-  };
 
   async function handleContinue() {
+    if (loading) return;
     setLoading(true);
     try {
-      await SecureStore.setItemAsync('has_seen_onboarding', 'true');
-      router.replace('/home');
+      // Step 1: Request Permissions (orchestrated via context)
+      const { media } = await requestPermissions();
+      
+      if (media) {
+        // Step 2: Complete onboarding
+        await SecureStore.setItemAsync('has_seen_onboarding', 'true');
+        router.replace('/home');
+      }
     } catch (err) {
       console.error('Failed to save onboarding state:', err);
     } finally {
@@ -71,97 +39,39 @@ export default function OnboardingScreen() {
     }
   }
 
-  const Paginator = () => {
-    return (
-      <View style={styles.paginatorContainer}>
-        {SLIDES.map((_, i) => {
-          const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
-
-          const dotWidth = scrollX.interpolate({
-            inputRange,
-            outputRange: [8, 24, 8],
-            extrapolate: 'clamp',
-          });
-
-          const opacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.3, 1, 0.3],
-            extrapolate: 'clamp',
-          });
-
-          return (
-            <Animated.View
-              key={i.toString()}
-              style={[
-                styles.dot,
-                {
-                  width: dotWidth,
-                  opacity,
-                  backgroundColor: theme.primary,
-                },
-              ]}
-            />
-          );
-        })}
-      </View>
-    );
-  };
-
-  const isLastSlide = currentIndex === SLIDES.length - 1;
-
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={{ flex: 3 }}>
-        <Animated.FlatList
-          ref={slidesRef as any}
-          data={SLIDES}
-          renderItem={({ item }) => (
-            <View style={[styles.slide, { width }]}>
-              <View style={[styles.iconContainer, { backgroundColor: 'transparent' }]}>
-                <item.Illustration size={140} />
-              </View>
-              
-              <Text style={[styles.title, { color: theme.onSurface }]}>
-                {item.title}
-              </Text>
-              
-              <Text style={[styles.description, { color: theme.onSurfaceVariant }]}>
-                {item.description}
-              </Text>
-            </View>
-          )}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          bounces={false}
-          keyExtractor={(item) => item.id}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: false }
-          )}
-          onViewableItemsChanged={viewableItemsChanged}
-          viewabilityConfig={viewConfig}
-          scrollEventThrottle={32}
-        />
-      </View>
+    <View style={styles.container}>
+      <Image 
+        source={require('../../../assets/images/onboarding-bg.jpg')} 
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+      />
+      
+      {/* Overlay to ensure text readability */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 0, 0, 0.7)' }]} />
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-        <Paginator />
-        
+      <View style={[styles.content, { paddingTop: insets.top + 60, paddingBottom: Math.max(insets.bottom, 24) }]}>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>Refind.</Text>
+          <Text style={[styles.description, { marginTop: 16 }]}>
+            Refind meets you at that moment, the one where the memory is clear but the file is buried, and it gives you back the thing you came for. Instantly.
+          </Text>
+        </View>
+
         <Pressable
-          onPress={isLastSlide ? handleContinue : scrollToNext}
+          onPress={handleContinue}
           disabled={loading}
           style={({ pressed }) => [
             styles.button,
-            { backgroundColor: theme.primary },
+            { backgroundColor: '#FFFFFF' },
             pressed && { opacity: 0.8 },
           ]}
         >
           {loading ? (
-            <ActivityIndicator color={theme.onPrimary} />
+            <ActivityIndicator color="#000000" />
           ) : (
-            <Text style={[styles.buttonText, { color: theme.onPrimary }]}>
-              {isLastSlide ? 'Continue' : 'Next'}
+            <Text style={[styles.buttonText, { color: '#000000' }]}>
+              Get Started
             </Text>
           )}
         </Pressable>
@@ -173,60 +83,31 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000',
   },
-  slide: {
+  content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 32,
   },
-  iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 36,
+  textContainer: {
+    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 48,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 24,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
   title: {
     fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 32,
-    marginBottom: 16,
-    textAlign: 'center',
-    letterSpacing: -0.5,
+    fontSize: 56,
+    color: '#FFFFFF',
+    letterSpacing: -1,
+    marginBottom: 8,
   },
+
   description: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 17,
-    lineHeight: 26,
-    textAlign: 'center',
-  },
-  footer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 24,
-  },
-  paginatorContainer: {
-    flexDirection: 'row',
-    height: 64,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dot: {
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 18,
+    lineHeight: 28,
+    color: '#FFFFFF',
+    opacity: 0.85,
   },
   button: {
     width: '100%',
@@ -238,11 +119,11 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.2,
         shadowRadius: 12,
       },
       android: {
-        elevation: 4,
+        elevation: 6,
       },
     }),
   },

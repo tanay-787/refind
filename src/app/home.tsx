@@ -33,7 +33,7 @@ export default function HomeScreen() {
   const { results, search, loading } = useSearch();
 
   const { sync } = useJobJournalOperations();
-  const { hasPermission, requestPermission } = usePermissionContext();
+  const { hasMediaPermission, requestPermissions } = usePermissionContext();
   const snackbarRef = React.useRef<SnackbarHostRef>(null);
   const insets = useSafeAreaInsets();
 
@@ -51,14 +51,14 @@ export default function HomeScreen() {
 
   // Sync screenshots on mount (only when permission is granted)
   useEffect(() => {
-    if (hasPermission) {
+    if (hasMediaPermission) {
       sync();
     }
-  }, [sync, hasPermission]);
+  }, [sync, hasMediaPermission]);
 
   const handleGrantPermission = async () => {
-    const granted = await requestPermission();
-    if (granted) {
+    const { media } = await requestPermissions();
+    if (media) {
       await registerJobJournalBackgroundTask();
       await scheduleJobJournalBackgroundTask();
       sync();
@@ -73,7 +73,7 @@ export default function HomeScreen() {
   // Permission gate: render nothing else until the user grants full access.
   // Must wrap in its own <Host> — Expo's Stack navigator inserts native Views between
   // the layout-level Host and screen content, breaking the Compose boundary.
-  if (!hasPermission) {
+  if (!hasMediaPermission) {
     return (
       <ThemedHost style={{ flex: 1 }}>
         <Box modifiers={[fillMaxSize()]}>
