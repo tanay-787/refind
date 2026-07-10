@@ -11,17 +11,16 @@ export async function setupNotificationChannel() {
   });
 }
 
-export async function updateSyncNotification(processed: number, total: number | null) {
-  const progressText = total ? `Processed ${processed} of ${total} tasks...` : `Processed ${processed} tasks...`;
+export async function updateSyncNotification() {
   await notifee.displayNotification({
     id: NOTIFICATION_ID,
-    title: 'Indexing Screenshots',
-    body: progressText,
+    title: 'Processing screenshots',
+    body: 'Syncing in the background...',
     android: {
       channelId: CHANNEL_ID,
       ongoing: true,
-      ...(total ? { progress: { max: total, current: processed } } : { progress: { indeterminate: true } }),
-      smallIcon: 'ic_launcher', // fallback to default app icon
+      progress: { indeterminate: true },
+      smallIcon: 'ic_launcher',
     },
   });
 }

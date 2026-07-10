@@ -22,7 +22,8 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
   // 1. Recover any abandoned leases from crashes/background kills
   await recoveryExpiredLeases();
   await setupNotificationChannel();
-  await updateSyncNotification(0, maxTotal);
+  // Fire and forget the indeterminate notification once
+  void updateSyncNotification();
 
   while (totalProcessed < maxTotal) {
     let batchProcessed = 0;
@@ -31,15 +32,12 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
     for (let i = 0; i < batchSize; i++) {
       const didWork = await runNextStageExecution();
       if (!didWork) {
-        await clearSyncNotification();
+        void clearSyncNotification();
         return totalProcessed; // Queue is fully empty
       }
       batchProcessed++;
       totalProcessed++;
     }
-
-    // Update notification
-    await updateSyncNotification(totalProcessed, maxTotal);
 
     // 2. Hardware "Breath": Pause briefly after each batch 
     // to let Native GC and the JS Event Loop catch up.
@@ -48,7 +46,7 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
     console.log(`[backgroundTasks] Sub-batch complete. Total processed: ${totalProcessed}`);
   }
 
-  await clearSyncNotification();
+  void clearSyncNotification();
   return totalProcessed;
 }
 
@@ -58,16 +56,16 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
 async function processOnce(maxIterations = 16) {
   let processed = 0;
   await setupNotificationChannel();
-  await updateSyncNotification(0, null);
+  // Fire and forget the indeterminate notification once
+  void updateSyncNotification();
 
   for (let i = 0; i < maxIterations; i++) {
     const didWork = await runNextStageExecution();
     if (!didWork) break;
     processed++;
-    await updateSyncNotification(processed, null);
   }
 
-  await clearSyncNotification();
+  void clearSyncNotification();
   return processed;
 }
 
@@ -81,7 +79,7 @@ try {
       return BackgroundTask.BackgroundTaskResult.Success;
     } catch (err) {
       console.error('JobJournal background task failed:', err);
-      await clearSyncNotification();
+      void clearSyncNotification();
       return BackgroundTask.BackgroundTaskResult.Failed;
     }
   });
