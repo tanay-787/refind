@@ -1,11 +1,11 @@
 import React from 'react';
-import { SymbolView, SymbolViewProps } from 'expo-symbols';
+import { SymbolView, SymbolViewProps, AndroidSymbol } from 'expo-symbols';
 import androidThin from 'expo-symbols/androidWeights/thin';
 import { RNHostView } from '@expo/ui/jetpack-compose';
 import { useBrandColors } from '@/theme';
 
 export interface IconViewProps extends Omit<SymbolViewProps, 'name' | 'weight'> {
-  name: any; // We use 'any' here since we know it's AndroidSymbol but we avoid deep imports
+  name: AndroidSymbol;
   inNative?: boolean;
 }
 
