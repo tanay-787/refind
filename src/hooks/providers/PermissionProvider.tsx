@@ -1,13 +1,19 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { Linking, AppState } from 'react-native';
+import { Linking, AppState, Alert } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import notifee, { AuthorizationStatus } from 'react-native-notify-kit';
+import { SettingsAlertDialog } from '@/ui/SettingsAlertDialog';
+import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { ThemedHost } from '@/theme';
 
 interface PermissionContextValue {
   hasMediaPermission: boolean | null; // null means checking
   hasNotificationPermission: boolean | null;
   isChecking: boolean;
   requestPermissions: () => Promise<{ media: boolean; notifications: boolean }>;
+  requestNotificationPermission: () => Promise<boolean>;
+  checkAndRequestNotificationPermission: () => Promise<boolean>;
 }
 
 const PermissionContext = createContext<PermissionContextValue | null>(null);
@@ -19,6 +25,8 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
 
   const [hasMediaPermission, setHasMediaPermission] = useState<boolean | null>(null);
   const [hasNotificationPermission, setHasNotificationPermission] = useState<boolean | null>(null);
+  const [showSettingsAlert, setShowSettingsAlert] = useState(false);
+  const router = useRouter();
 
   const checkIsFullyGranted = (res: MediaLibrary.PermissionResponse | null) => {
     if (!res) return false;
@@ -55,6 +63,30 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
+  const requestNotificationPermission = async () => {
+    try {
+      const notifSettings = await notifee.requestPermission();
+      const granted = notifSettings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
+      setHasNotificationPermission(granted);
+      return granted;
+    } catch (err) {
+      console.warn("Notification request rejected or failed:", err);
+      setHasNotificationPermission(false);
+      return false;
+    }
+  };
+
+  const checkAndRequestNotificationPermission = async () => {
+    const settings = await notifee.getNotificationSettings();
+    if (settings.authorizationStatus === AuthorizationStatus.NOT_DETERMINED) {
+      return await requestNotificationPermission();
+    } else if (settings.authorizationStatus === AuthorizationStatus.DENIED) {
+      await notifee.openNotificationSettings();
+      return false;
+    }
+    return settings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
+  };
+
   const requestPermissions = async () => {
     let mediaGranted = false;
 
@@ -62,7 +94,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     if (permissionResponse && !checkIsFullyGranted(permissionResponse)) {
       const rawRes = permissionResponse as any;
       if (!rawRes.canAskAgain || rawRes.accessPrivileges === 'limited') {
-        Linking.openSettings();
+        setShowSettingsAlert(true);
         return { media: false, notifications: hasNotificationPermission || false };
       }
     }
@@ -73,11 +105,9 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
 
     let notifGranted = hasNotificationPermission || false;
 
-    // Handle Notification Permission if Media is granted
+    // If media was granted via standard prompt, ask sequentially
     if (mediaGranted) {
-      const notifSettings = await notifee.requestPermission();
-      notifGranted = notifSettings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
-      setHasNotificationPermission(notifGranted);
+      notifGranted = await requestNotificationPermission();
     }
 
     return { media: mediaGranted, notifications: notifGranted };
@@ -88,11 +118,24 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     hasNotificationPermission,
     isChecking: permissionResponse === null || hasNotificationPermission === null,
     requestPermissions,
+    requestNotificationPermission,
+    checkAndRequestNotificationPermission,
   }), [hasMediaPermission, hasNotificationPermission, permissionResponse]);
 
   return (
     <PermissionContext.Provider value={value}>
       {children}
+      <SettingsAlertDialog 
+        visible={showSettingsAlert} 
+        onDismiss={() => setShowSettingsAlert(false)} 
+        onConfirm={async () => {
+          setShowSettingsAlert(false);
+          Linking.openSettings();
+          
+          await SecureStore.setItemAsync('has_seen_onboarding', 'true');
+          router.replace('/home');
+        }}
+      />
     </PermissionContext.Provider>
   );
 }

@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Pressable, 
-  ActivityIndicator, 
-  Platform
-} from 'react-native';
 import { useRouter } from 'expo-router';
 import { usePermissionContext } from '@/hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { Image } from 'expo-image';
+import { ThemedHost, useBrandColors } from '@/theme';
+import { Column, Box, RNHostView, Spacer, Text, Button, LoadingIndicator, ElevatedButton } from '@expo/ui/jetpack-compose';
+import { 
+  fillMaxSize, 
+  fillMaxWidth, 
+  background, 
+  padding as paddingModifier, 
+  weight,
+  size
+} from '@expo/ui/jetpack-compose/modifiers';
+import { IconView } from '../IconView';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { requestPermissions } = usePermissionContext();
+  const colors = useBrandColors();
   
   const [loading, setLoading] = useState(false);
 
@@ -24,11 +28,8 @@ export default function OnboardingScreen() {
     if (loading) return;
     setLoading(true);
     try {
-      // Step 1: Request Permissions (orchestrated via context)
       const { media } = await requestPermissions();
-      
       if (media) {
-        // Step 2: Complete onboarding
         await SecureStore.setItemAsync('has_seen_onboarding', 'true');
         router.replace('/home');
       }
@@ -40,96 +41,72 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Image 
-        source={require('../../../assets/images/onboarding-bg.jpg')} 
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-      />
-      
-      {/* Overlay to ensure text readability */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 0, 0, 0.7)' }]} />
+    <ThemedHost style={{ flex: 1 }}>
+      <Box modifiers={[fillMaxSize(), background(colors.background)]}>
+        
+        {/* Background Image */}
+        <Box modifiers={[fillMaxSize()]}>
+          <RNHostView matchContents={false}>
+            <Image 
+              source={require('../../../assets/images/onboarding-bg.jpg')} 
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              contentFit="cover"
+            />
+          </RNHostView>
+        </Box>
+        
+        {/* Overlay to ensure text readability */}
+        <Box modifiers={[fillMaxSize(), background('rgba(0, 0, 0, 0.7)')]} />
 
-      <View style={[styles.content, { paddingTop: insets.top + 60, paddingBottom: Math.max(insets.bottom, 24) }]}>
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>Refind.</Text>
-          <Text style={[styles.description, { marginTop: 16 }]}>
-            Refind meets you at that moment, the one where the memory is clear but the file is buried, and it gives you back the thing you came for. Instantly.
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={handleContinue}
-          disabled={loading}
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: '#FFFFFF' },
-            pressed && { opacity: 0.8 },
+        {/* Content */}
+        <Column 
+          modifiers={[
+            fillMaxSize(), 
+            paddingModifier(32, insets.top + 60, 32, Math.max(insets.bottom + 12, 24))
           ]}
         >
-          {loading ? (
-            <ActivityIndicator color="#000000" />
-          ) : (
-            <Text style={[styles.buttonText, { color: '#000000' }]}>
-              Get Started
+          {/* Text Container centered vertically */}
+          <Column modifiers={[weight(1)]} verticalArrangement="center">
+            <Text 
+              color="#FFFFFF" 
+              style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 56, letterSpacing: -1 }}
+            >
+              Refind.
             </Text>
-          )}
-        </Pressable>
-      </View>
-    </View>
+            <Spacer modifiers={[size(0, 16)]} />
+            <Text 
+              color={colors.onSurface}
+              style={{ fontFamily: 'JetBrainsMono_400Regular', fontSize: 18, lineHeight: 28 }}
+            >
+              Refind meets you at that moment, the one where the memory is clear but the screenshot is buried, and it gives you back the thing you came for. Instantly.
+            </Text>
+          </Column>
+
+          {/* Button at the bottom */}
+          <Box modifiers={[fillMaxWidth()]}>
+            <ElevatedButton
+              onClick={handleContinue}
+              enabled={!loading}
+              colors={{ 
+                containerColor: colors.background, 
+                contentColor: colors.onBackground, 
+                disabledContainerColor: colors.surfaceVariant 
+              }}
+              modifiers={[fillMaxWidth()]}
+              contentPadding={{ top: 18, bottom: 18 }}
+              
+            >
+              {loading ? (
+                <LoadingIndicator color={colors.onSurface} modifiers={[size(32, 32)]} />
+              ) : (
+                <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, letterSpacing: 0.3 }}>
+                  Get Started
+                </Text>
+              )}
+            </ElevatedButton>
+          </Box>
+        </Column>
+      </Box>
+    </ThemedHost>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 32,
-  },
-  textContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 56,
-    color: '#FFFFFF',
-    letterSpacing: -1,
-    marginBottom: 8,
-  },
-
-  description: {
-    fontFamily: 'JetBrainsMono_400Regular',
-    fontSize: 18,
-    lineHeight: 28,
-    color: '#FFFFFF',
-    opacity: 0.85,
-  },
-  button: {
-    width: '100%',
-    paddingVertical: 18,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
-  },
-  buttonText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 17,
-    letterSpacing: 0.3,
-  },
-});

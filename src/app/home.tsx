@@ -3,6 +3,7 @@ import {
   Keyboard,
   Dimensions,
 } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, align, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
@@ -22,6 +23,7 @@ import {
   NoResultsState,
   GrantPermissionScreen,
 } from '@/ui/home';
+import { NotificationPromptDialog } from '@/ui/NotificationPromptDialog';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLUMN_COUNT = 2; 
@@ -30,6 +32,7 @@ const ITEM_SIZE = (SCREEN_WIDTH - (SPACING * (COLUMN_COUNT + 1))) / COLUMN_COUNT
 
 export default function HomeScreen() {
   const [query, setQuery] = useState('');
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const { results, search, loading } = useSearch();
 
   const { sync } = useJobJournalOperations();
@@ -52,7 +55,15 @@ export default function HomeScreen() {
   // Sync screenshots on mount (only when permission is granted)
   useEffect(() => {
     if (hasMediaPermission) {
-      sync();
+      sync().then(async (result) => {
+        // If we processed any new screenshots in the background, ask if they want notifications
+        if (result && result.createdJobs > 0) {
+          const hasSeenPrompt = await SecureStore.getItemAsync('has_seen_notif_prompt');
+          if (hasSeenPrompt !== 'true') {
+            setShowNotifPrompt(true);
+          }
+        }
+      }).catch((err) => console.error("Error during background sync on home mount:", err));
     }
   }, [sync, hasMediaPermission]);
 
@@ -71,8 +82,6 @@ export default function HomeScreen() {
   };
 
   // Permission gate: render nothing else until the user grants full access.
-  // Must wrap in its own <Host> — Expo's Stack navigator inserts native Views between
-  // the layout-level Host and screen content, breaking the Compose boundary.
   if (!hasMediaPermission) {
     return (
       <ThemedHost style={{ flex: 1 }}>
@@ -103,7 +112,6 @@ export default function HomeScreen() {
           {results.length > 0 ? (
             <ResultsList 
               results={results}
-
               itemSize={ITEM_SIZE}
               spacing={SPACING}
               columnCount={COLUMN_COUNT}
@@ -120,6 +128,11 @@ export default function HomeScreen() {
         </Box>
         </Column>
       </Surface>
+      
+      <NotificationPromptDialog 
+        visible={showNotifPrompt} 
+        onDismiss={() => setShowNotifPrompt(false)} 
+      />
     </ThemedHost>
   );
 }
