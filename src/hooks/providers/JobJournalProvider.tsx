@@ -8,6 +8,10 @@ import {
 } from '@/core/jobjournal';
 import { processUntilEmpty } from '@/core/jobjournal/background-tasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
+import { count } from 'drizzle-orm';
+import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
+import { getDrizzleDb } from '@/core/jobjournal/storage/database';
 
 interface JobJournalStats {
   pending: number;
@@ -42,6 +46,39 @@ const DEFAULT_STATS: JobJournalStats = {
   totalJobs: 0,
 };
 
+function StatsTracker({ db, onStatsUpdate }: { db: any, onStatsUpdate: (stats: JobJournalStats) => void }) {
+  const query = db
+    .select({
+      status: jobJournalJobs.status,
+      count: count(jobJournalJobs.id),
+    })
+    .from(jobJournalJobs)
+    .groupBy(jobJournalJobs.status);
+
+  const { data } = useLiveQuery(query);
+
+  useEffect(() => {
+    if (!data) return;
+    let pending = 0;
+    let running = 0;
+    let completed = 0;
+    let failed = 0;
+    let totalJobs = 0;
+
+    for (const row of data) {
+      if (row.status === 'pending') pending = row.count;
+      else if (row.status === 'running') running = row.count;
+      else if (row.status === 'completed') completed = row.count;
+      else if (row.status === 'failed') failed = row.count;
+      totalJobs += row.count;
+    }
+
+    onStatsUpdate({ pending, running, completed, failed, totalJobs });
+  }, [data, onStatsUpdate]);
+
+  return null;
+}
+
 export function JobJournalProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<JobJournalState>({
     stats: DEFAULT_STATS,
@@ -52,46 +89,18 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     lastErrorCode: null,
   });
 
+  const [drizzleDb, setDrizzleDb] = useState<any | null>(null);
   const isMounted = useRef(true);
   const syncLock = useRef(false);
   const engineLock = useRef(false);
   const appState = useRef(AppState.currentState);
 
-  const refreshStats = useCallback(async () => {
-    try {
-      const db = await getJobJournalDatabase();
-      const [rows, jobsCount] = await Promise.all([
-        db.getAllAsync<{ status: string; count: number }>(
-          `SELECT status, COUNT(*) as count FROM job_journal_jobs GROUP BY status`
-        ),
-        db.getFirstAsync<{ count: number }>(`SELECT COUNT(*) as count FROM job_journal_jobs`),
-      ]);
-
-      if (!isMounted.current) return;
-
-      const stats = {
-        pending: 0,
-        running: 0,
-        completed: 0,
-        failed: 0,
-        totalJobs: jobsCount?.count ?? 0,
-      };
-
-      for (const row of rows) {
-        if (row.status === 'pending') stats.pending = row.count;
-        else if (row.status === 'running') stats.running = row.count;
-        else if (row.status === 'completed') stats.completed = row.count;
-        else if (row.status === 'failed') stats.failed = row.count;
-      }
-
-      setState(prev => ({
-        ...prev,
-        stats,
-        loading: false,
-      }));
-    } catch (error) {
-      console.error('[JobJournalProvider] Failed to refresh stats:', error);
-    }
+  const handleStatsUpdate = useCallback((newStats: JobJournalStats) => {
+    setState(prev => ({
+      ...prev,
+      stats: newStats,
+      loading: false,
+    }));
   }, []);
 
   /**
@@ -111,7 +120,6 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     try {
       console.log(`[JobJournalEngine] Waking up. Found ${stats.pending} pending tasks.`);
       await processUntilEmpty(1000, 10); 
-      await refreshStats();
     } catch (err) {
       console.error('[JobJournalEngine] Loop error:', err);
     } finally {
@@ -120,7 +128,7 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
         setState(prev => ({ ...prev, isProcessing: false }));
       }
     }
-  }, [refreshStats]);
+  }, []);
 
   const sync = useCallback(async () => {
     if (syncLock.current) return null;
@@ -130,7 +138,6 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     
     try {
       const result = await ingestJobJournalScreenshots();
-      await refreshStats();
       // Inform the engine that new work might be available
       void runEngine();
       return result;
@@ -145,7 +152,7 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
         setState(prev => ({ ...prev, isSyncing: false }));
       }
     }
-  }, [refreshStats, runEngine]);
+  }, [runEngine]);
 
   const processManually = useCallback(async (iterations = 8) => {
     // Standard process call for manual UI triggers
@@ -153,22 +160,19 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
     engineLock.current = true;
     setState(prev => ({ ...prev, isProcessing: true }));
     try {
-      const processed = await processUntilEmpty(iterations, 10);
-      await refreshStats();
-      return processed;
+      return await processUntilEmpty(iterations, 10);
     } finally {
       engineLock.current = false;
       if (isMounted.current) {
         setState(prev => ({ ...prev, isProcessing: false }));
       }
     }
-  }, [refreshStats]);
+  }, []);
 
   const retryFailed = useCallback(async () => {
     setState(prev => ({ ...prev, lastError: null, lastErrorCode: null }));
     try {
       const resetCount = await resetFailedExecutions();
-      await refreshStats();
       // Inform the engine that new work might be available
       void runEngine();
       return resetCount;
@@ -178,21 +182,20 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
       console.error('[JobJournalProvider] Retry error:', error);
       return 0;
     }
-  }, [refreshStats, runEngine]);
+  }, [runEngine]);
 
   useEffect(() => {
     isMounted.current = true;
     
     // 1. Initial Load & Engine Start
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    refreshStats().then(() => {
-      void runEngine();
+    getDrizzleDb().then(db => {
+      if (isMounted.current) {
+        setDrizzleDb(db);
+        void runEngine();
+      }
     });
 
-    // 2. Poll stats for eventual consistency
-    const statsInterval = setInterval(refreshStats, 5000);
-
-    // 3. AppState Awareness: Stop/Start engine on foreground/background
+    // 2. AppState Awareness: Stop/Start engine on foreground/background
     const appStateSub = AppState.addEventListener('change', (nextStatus) => {
       appState.current = nextStatus;
       if (nextStatus === 'active') {
@@ -202,10 +205,9 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
 
     return () => {
       isMounted.current = false;
-      clearInterval(statsInterval);
       appStateSub.remove();
     };
-  }, [refreshStats, runEngine]);
+  }, [runEngine]);
 
   const value = React.useMemo<JobJournalContextValue>(() => ({
     ...state,
@@ -216,6 +218,7 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <JobJournalContext.Provider value={value}>
+      {drizzleDb && <StatsTracker db={drizzleDb} onStatsUpdate={handleStatsUpdate} />}
       {children}
     </JobJournalContext.Provider>
   );
