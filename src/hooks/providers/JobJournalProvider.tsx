@@ -8,29 +8,17 @@ import {
 } from '@/core/jobjournal';
 import { processUntilEmpty } from '@/core/jobjournal/background-tasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
-import { count } from 'drizzle-orm';
-import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
 import { getDrizzleDb } from '@/core/jobjournal/storage/database';
 
-interface JobJournalStats {
-  pending: number;
-  running: number;
-  completed: number;
-  failed: number;
-  totalJobs: number;
-}
-
 interface JobJournalState {
-  stats: JobJournalStats;
   isSyncing: boolean;
   isProcessing: boolean;
-  loading: boolean;
   lastError: string | null;
   lastErrorCode: JobJournalErrorCode | null;
 }
 
 interface JobJournalContextValue extends JobJournalState {
+  db: any | null;
   sync: () => Promise<any | null>;
   process: (iterations?: number) => Promise<number>;
   retryFailed: () => Promise<number>;
@@ -38,53 +26,10 @@ interface JobJournalContextValue extends JobJournalState {
 
 const JobJournalContext = createContext<JobJournalContextValue | null>(null);
 
-const DEFAULT_STATS: JobJournalStats = {
-  pending: 0,
-  running: 0,
-  completed: 0,
-  failed: 0,
-  totalJobs: 0,
-};
-
-function StatsTracker({ db, onStatsUpdate }: { db: any, onStatsUpdate: (stats: JobJournalStats) => void }) {
-  const query = db
-    .select({
-      status: jobJournalJobs.status,
-      count: count(jobJournalJobs.id),
-    })
-    .from(jobJournalJobs)
-    .groupBy(jobJournalJobs.status);
-
-  const { data } = useLiveQuery(query);
-
-  useEffect(() => {
-    if (!data) return;
-    let pending = 0;
-    let running = 0;
-    let completed = 0;
-    let failed = 0;
-    let totalJobs = 0;
-
-    for (const row of data) {
-      if (row.status === 'pending') pending = row.count;
-      else if (row.status === 'running') running = row.count;
-      else if (row.status === 'completed') completed = row.count;
-      else if (row.status === 'failed') failed = row.count;
-      totalJobs += row.count;
-    }
-
-    onStatsUpdate({ pending, running, completed, failed, totalJobs });
-  }, [data, onStatsUpdate]);
-
-  return null;
-}
-
 export function JobJournalProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<JobJournalState>({
-    stats: DEFAULT_STATS,
     isSyncing: false,
     isProcessing: false,
-    loading: true,
     lastError: null,
     lastErrorCode: null,
   });
@@ -94,14 +39,6 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
   const syncLock = useRef(false);
   const engineLock = useRef(false);
   const appState = useRef(AppState.currentState);
-
-  const handleStatsUpdate = useCallback((newStats: JobJournalStats) => {
-    setState(prev => ({
-      ...prev,
-      stats: newStats,
-      loading: false,
-    }));
-  }, []);
 
   /**
    * Autonomous Workflow Engine
@@ -211,14 +148,14 @@ export function JobJournalProvider({ children }: { children: React.ReactNode }) 
 
   const value = React.useMemo<JobJournalContextValue>(() => ({
     ...state,
+    db: drizzleDb,
     sync,
     process: processManually,
     retryFailed,
-  }), [state, sync, processManually, retryFailed]);
+  }), [state, drizzleDb, sync, processManually, retryFailed]);
 
   return (
     <JobJournalContext.Provider value={value}>
-      {drizzleDb && <StatsTracker db={drizzleDb} onStatsUpdate={handleStatsUpdate} />}
       {children}
     </JobJournalContext.Provider>
   );
