@@ -7,7 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 
 import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, align, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
-import { useSearch, useJobJournalContext, usePermissionContext } from '@/hooks';
+import { useSearch, useJobJournalStore, usePermissionContext } from '@/hooks';
 import { ThemedHost } from '@/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,7 +35,7 @@ export default function HomeScreen() {
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const { results, search, loading } = useSearch();
 
-  const { sync } = useJobJournalContext();
+  const sync = useJobJournalStore(state => state.sync);
   const { hasMediaPermission, requestPermissions } = usePermissionContext();
   const snackbarRef = React.useRef<SnackbarHostRef>(null);
   const insets = useSafeAreaInsets();

@@ -1,5 +1,5 @@
 
 export * from './useSearch';
 export * from './useJobJournalLibrary';
-export { JobJournalProvider, useJobJournalContext } from './providers/JobJournalProvider';
+export { useJobJournalStore } from './useJobJournalStore';
 export { PermissionProvider, usePermissionContext } from './providers/PermissionProvider';

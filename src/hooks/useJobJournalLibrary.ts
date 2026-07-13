@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import { eq, desc, sql } from 'drizzle-orm';
 
-import { useJobJournalContext } from './providers/JobJournalProvider';
+import { useJobJournalStore } from './useJobJournalStore';
 import { getDrizzleDb } from '@/core/jobjournal/storage/database';
 import { jobJournalJobs, stageExecutions, metadataStageResults } from '@/core/jobjournal/storage/drizzle-schema';
 
@@ -51,7 +51,8 @@ export function useJobJournalLibrary() {
   const [items, setItems] = useState<JobJournalLibraryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const { sync, process } = useJobJournalContext();
+  const sync = useJobJournalStore(state => state.sync);
+  const process = useJobJournalStore(state => state.process);
 
   const loadFromJournal = useCallback(async () => {
     const db = await getDrizzleDb();
