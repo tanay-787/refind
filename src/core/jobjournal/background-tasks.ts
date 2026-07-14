@@ -52,16 +52,33 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 10) {
 
 /**
  * Standard background pass for short-lived OS-invocations.
+ * Uses a time-budget instead of a strict iteration count to maximize
+ * processing across different device speeds.
  */
-async function processOnce(maxIterations = 16) {
+async function processOnce() {
   let processed = 0;
+  
+  // The OS usually gives us ~30 seconds. We play it safe with 24 seconds.
+  const MAX_EXECUTION_TIME_MS = 24 * 1000; 
+  const startTime = Date.now();
+
   await setupNotificationChannel();
   // Fire and forget the indeterminate notification once
   void updateSyncNotification();
 
-  for (let i = 0; i < maxIterations; i++) {
+  while (true) {
+    const elapsedMs = Date.now() - startTime;
+    if (elapsedMs >= MAX_EXECUTION_TIME_MS) {
+      console.log(`[backgroundTasks] Time budget exhausted (${elapsedMs}ms). Processed ${processed} items safely.`);
+      break;
+    }
+
     const didWork = await runNextStageExecution();
-    if (!didWork) break;
+    if (!didWork) {
+      console.log(`[backgroundTasks] Queue empty! Processed ${processed} items in ${elapsedMs}ms.`);
+      break;
+    }
+    
     processed++;
   }
 
@@ -74,7 +91,7 @@ try {
   TaskManager.defineTask(JOB_JOURNAL_TASK_NAME, async () => {
     try {
       console.log('[backgroundTasks] Starting background processing cycle...');
-      const count = await processOnce(16); 
+      const count = await processOnce(); 
       console.log(`[backgroundTasks] Background cycle finished. Processed ${count} tasks.`);
       return BackgroundTask.BackgroundTaskResult.Success;
     } catch (err) {
