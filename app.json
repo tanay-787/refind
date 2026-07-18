@@ -77,7 +77,8 @@
           "ocrUseBundled": true
         }
       ],
-      "react-native-notify-kit"
+      "react-native-notify-kit",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -28,6 +28,7 @@
     "@shopify/flash-list": "2.0.2",
     "drizzle-orm": "^0.45.2",
     "expo": "^56.0.11",
+    "expo-asset": "~56.0.20",
     "expo-background-fetch": "~56.0.18",
     "expo-background-task": "~56.0.18",
     "expo-build-properties": "~56.0.18",
