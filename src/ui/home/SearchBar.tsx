@@ -12,7 +12,7 @@ export const SearchBar = React.memo(({ onQueryChange }: SearchBarProps) => {
   const colors = useMaterialColors();
   
   return (
-    <Box modifiers={[fillMaxWidth(), paddingModifier(16, 16, 16, 16)]}>
+    <Box modifiers={[fillMaxWidth(), paddingModifier(16, 8, 16, 16)]}>
       <DockedSearchBar onQueryChange={onQueryChange}>
         <DockedSearchBar.LeadingIcon>
           <IconView 

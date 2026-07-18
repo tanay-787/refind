@@ -102,7 +102,7 @@ export default function HomeScreen() {
     <ThemedHost style={{ flex: 1 }}>
       <Surface modifiers={[fillMaxSize()]}>
         <Column modifiers={[fillMaxSize()]}>
-        <Header />
+        <Header insets={insets} />
         
         <SearchBar 
           onQueryChange={setQuery} 

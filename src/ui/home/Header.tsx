@@ -2,12 +2,12 @@ import React from 'react';
 import { Text } from '@expo/ui';
 import { Column } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { LiveStatusText } from './LiveStatusText';
+import { EdgeInsets } from 'react-native-safe-area-context';
 
-export const Header = React.memo(() => {
-  const colors = useMaterialColors();
+export const Header = React.memo(({ insets }: { insets: EdgeInsets }) => {
   return (
-    <Column modifiers={[fillMaxWidth(), paddingModifier(16, 32, 16, 16)]}>
+    <Column modifiers={[fillMaxWidth(), paddingModifier(16, (insets.top), 16, 16)]}>
       <Text 
         textStyle={{ 
           fontFamily: 'Newsreader_600SemiBold',
@@ -17,15 +17,7 @@ export const Header = React.memo(() => {
       >
         Refind
       </Text>
-      <Text 
-        textStyle={{ 
-          fontFamily: 'Inter_400Regular',
-          color: colors.onSurfaceVariant, 
-          fontSize: 14 
-        }}
-      >
-        Search everything you've seen
-      </Text>
+      <LiveStatusText />
     </Column>
   );
 });
