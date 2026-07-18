@@ -5,7 +5,7 @@ import { fillMaxSize, size, background, clip, Shapes, padding as paddingModifier
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import EmptySearch from '@/ui/illustrations/EmptySearchIllustration';
 
-export const EmptyState = React.memo(() => {
+export const WelcomeState = React.memo(() => {
   const colors = useMaterialColors();
   
   return (

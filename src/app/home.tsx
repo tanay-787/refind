@@ -19,7 +19,7 @@ import {
   Header, 
   SearchBar, 
   ResultsList, 
-  EmptyState, 
+  WelcomeState, 
   NoResultsState,
   GrantPermissionScreen,
 } from '@/ui/home';
@@ -43,8 +43,8 @@ export default function HomeScreen() {
   // Trigger search on query change with debounce
   useEffect(() => {
     const handler = setTimeout(() => {
+      search(query);
       if (query) {
-        search(query);
         Keyboard.dismiss();
       }
     }, 300);
@@ -118,10 +118,10 @@ export default function HomeScreen() {
             />
           ) : (
             <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-              {query && !loading ? (
+              {(query && !loading) ? (
                 <NoResultsState />
               ) : (
-                <EmptyState />
+                <WelcomeState />
               )}
             </Column>
           )}

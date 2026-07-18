@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { hybridSearch, type SearchResult } from '@/core/jobjournal/search/hybrid';
+import { hybridSearch, getRecentItems, type SearchResult } from '@/core/jobjournal/search/hybrid';
 
 interface SearchState {
   results: SearchResult[];
@@ -17,15 +17,15 @@ export function useSearch() {
   });
 
   const search = useCallback(async (query: string, limit: number = 10) => {
-    if (!query.trim()) {
-      setState(prev => ({ ...prev, results: [], lastQuery: '' }));
-      return;
-    }
-
     setState(prev => ({ ...prev, loading: true, error: null, lastQuery: query }));
 
     try {
-      const results = await hybridSearch(query, limit);
+      let results;
+      if (!query.trim()) {
+        results = await getRecentItems(12);
+      } else {
+        results = await hybridSearch(query, limit);
+      }
       
       setState(prev => ({
         ...prev,

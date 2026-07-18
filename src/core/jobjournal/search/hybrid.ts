@@ -137,3 +137,38 @@ export async function hybridSearch(
 
   return finalResults;
 }
+
+export async function getRecentItems(limit: number = 12): Promise<SearchResult[]> {
+  const db = await getDrizzleDb();
+  
+  const rawMatches = await db.all(sql`
+    SELECT 
+      j.id as job_id,
+      j.image_uri as uri,
+      m.width,
+      m.height
+    FROM job_journal_jobs j
+    LEFT JOIN metadata_stage_results m ON m.job_id = j.id
+    WHERE j.status = 'completed'
+    ORDER BY j.created_at DESC
+    LIMIT ${limit}
+  `);
+
+  return rawMatches.map((row: any) => {
+    const w = row.width || 1;
+    const h = row.height || 1;
+    const aspect = w / h;
+    return {
+      jobId: row.job_id,
+      uri: row.uri,
+      ocrText: '',
+      keywords: [],
+      score: 1.0,
+      searchMethod: 'fts',
+      width: w,
+      height: h,
+      aspectRatio: aspect,
+      isLandscape: aspect > 1,
+    } as SearchResult;
+  });
+}
