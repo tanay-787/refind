@@ -4,6 +4,7 @@ import {
   Dimensions,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, align, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
@@ -39,6 +40,11 @@ export default function HomeScreen() {
   const { hasMediaPermission, requestPermissions } = usePermissionContext();
   const snackbarRef = React.useRef<SnackbarHostRef>(null);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    // Hide splash screen only when this screen mounts
+    SplashScreen.hideAsync();
+  }, []);
 
   // Trigger search on query change with debounce
   useEffect(() => {

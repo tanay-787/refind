@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { usePermissionContext } from '@/hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
+import * as SplashScreen from 'expo-splash-screen';
 import { Image } from 'expo-image';
 import { ThemedHost, useBrandColors } from '@/theme';
 import { Column, Box, RNHostView, Spacer, Text, Button, LoadingIndicator, ElevatedButton } from '@expo/ui/jetpack-compose';
@@ -23,6 +24,12 @@ export default function OnboardingScreen() {
   const colors = useBrandColors();
   
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // We delay hiding the splash screen until the OnboardingScreen has fully mounted.
+    // This prevents the user from seeing any intermediate routing states from index.tsx.
+    SplashScreen.hideAsync();
+  }, []);
 
   async function handleContinue() {
     if (loading) return;
@@ -47,10 +54,16 @@ export default function OnboardingScreen() {
         {/* Background Image */}
         <Box modifiers={[fillMaxSize()]}>
           <RNHostView matchContents={false}>
+            {/* 
+              Transition is set to 0 to bypass the default fade-in.
+              The image is aggressively preloaded in _layout.tsx, ensuring an instant render.
+            */}
             <Image 
               source={require('../../../assets/images/onboarding-bg.jpg')} 
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
               contentFit="cover"
+              transition={0}
+              onLoad={() => SplashScreen.hideAsync()}
             />
           </RNHostView>
         </Box>

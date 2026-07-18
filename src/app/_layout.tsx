@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
@@ -13,6 +13,8 @@ import { useFonts, Newsreader_400Regular, Newsreader_600SemiBold } from '@expo-g
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 import * as SplashScreen from 'expo-splash-screen';
+import { Asset } from 'expo-asset';
+import { Image } from 'expo-image';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,16 +33,29 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
-  useEffect(() => {
     useJobJournalStore.getState().init();
   }, []);
 
-  if (!fontsLoaded) return null;
+  /**
+   * HACK: Aggressive Image Preloading Workaround
+   * 
+   * We render an invisible `<Image />` component while the native splash screen is 
+   * still visible (during font loading). This forces the React Native bridge and 
+   * the underlying native image loader (e.g. SDWebImage/Glide via expo-image) to 
+   * immediately decode the image into GPU memory on the very first frame.
+   * 
+   * By the time the `OnboardingScreen` mounts, the native side already has the exact 
+   * `require(...)` image mapped in memory, completely eliminating any cache-miss delay
+   * or "flashes" where the UI text renders before the background image.
+   */
+  if (!fontsLoaded) {
+    return (
+      <Image 
+        source={require('../../assets/images/onboarding-bg.jpg')} 
+        style={{ width: 1, height: 1, opacity: 0 }} 
+      />
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
