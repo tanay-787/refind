@@ -78,10 +78,5 @@
     "husky": "^9.1.7",
     "typescript": "~6.0.3"
   },
-  "private": true,
-  "pnpm": {
-    "overrides": {
-      "@expo/dom-webview": "56.0.5"
-    }
-  }
+  "private": true
 }

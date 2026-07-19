@@ -5,3 +5,5 @@ allowBuilds:
   react-native-litert-lm: true
   react-native-siglip: true
   unrs-resolver: true
+overrides:
+  '@expo/dom-webview': 56.0.5
