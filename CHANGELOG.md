@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/tanay-787/refind/compare/refind-v1.1.2...refind-v1.1.3) (2026-07-19)
+
+
+### Bug Fixes
+
+* add missing `babel-preset-expo` module ([5a69f51](https://github.com/tanay-787/refind/commit/5a69f5173e19159479e9c8ab90bb5f95bbf4b05b))
+
 ## [1.1.2](https://github.com/tanay-787/refind/compare/refind-v1.1.1...refind-v1.1.2) (2026-07-19)
 
 
