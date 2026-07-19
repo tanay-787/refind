@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/tanay-787/refind/compare/refind-v1.1.0...refind-v1.1.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* pin pnpm version in release-please Android build workflow ([56e6539](https://github.com/tanay-787/refind/commit/56e6539f436fc75cec71a799e0f97ebc6b752837))
+
 ## [1.1.0](https://github.com/tanay-787/refind/compare/refind-v1.0.0...refind-v1.1.0) (2026-07-19)
 
 
