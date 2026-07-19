@@ -56,26 +56,25 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
   if (isProcessing && totalProcessed < 12) {
     return (
       <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-        <LoadingIndicator color={colors.primary} modifiers={[size(48, 48)]} />
+        <LoadingIndicator color={colors.primary} modifiers={[size(98, 98)]} />
         
         <Box modifiers={[padding(0, 24, 0, 0)]} />
         
-        <ComposeText 
-          color={colors.onSurface} 
-          style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 28, textAlign: 'center', letterSpacing: -0.5 }}
-        >
-          Building your memory...
-        </ComposeText>
-        
-        <Box modifiers={[padding(0, 12, 0, 0)]} />
-        
-        <ComposeText 
-          color={colors.onSurfaceVariant} 
-          modifiers={[padding(40, 0, 40, 0)]}
-          style={{ fontFamily: 'Inter_400Regular', fontSize: 16, textAlign: 'center', lineHeight: 24 }}
-        >
-          {totalProcessed} screenshots processed so far. This might take a minute or two depending on your library size.
-        </ComposeText>
+        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }} modifiers={[padding(20, 0, 20, 0)]}>
+          <ComposeText 
+            color={colors.onSurface} 
+            style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 20, textAlign: 'center' }}
+          >
+            Building your memory...
+          </ComposeText>
+          
+          <ComposeText 
+            color={colors.onSurfaceVariant} 
+            style={{ fontFamily: 'Inter_400Regular', fontSize: 14, textAlign: 'center' }}
+          >
+            {totalProcessed} screenshots processed so far. This might take a minute or two depending on your library size.
+          </ComposeText>
+        </Column>
       </Column>
     );
   }

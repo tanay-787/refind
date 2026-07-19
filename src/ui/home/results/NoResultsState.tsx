@@ -11,7 +11,7 @@ export const NoResultsState = React.memo(() => {
     <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
       <IconView 
         name="search" 
-        size={48} 
+        size={56} 
         tintColor={colors.outline} 
         inNative={true}
       />
