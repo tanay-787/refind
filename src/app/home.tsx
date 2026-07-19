@@ -6,8 +6,8 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 
-import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, align, padding as paddingModifier } from '@expo/ui/jetpack-compose/modifiers';
+import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef, LoadingIndicator, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { fillMaxSize, align, padding as paddingModifier, size } from '@expo/ui/jetpack-compose/modifiers';
 import { useSearch, useJobJournalStore, usePermissionContext } from '@/hooks';
 import { ThemedHost } from '@/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import {
   WelcomeState, 
   NoResultsState,
   GrantPermissionScreen,
+  IdleDashboard,
 } from '@/ui/home';
 import { NotificationPromptDialog } from '@/ui/NotificationPromptDialog';
 
@@ -40,6 +41,7 @@ export default function HomeScreen() {
   const { hasMediaPermission, requestPermissions } = usePermissionContext();
   const snackbarRef = React.useRef<SnackbarHostRef>(null);
   const insets = useSafeAreaInsets();
+  const colors = useMaterialColors();
 
   useEffect(() => {
     // Hide splash screen only when this screen mounts
@@ -115,21 +117,32 @@ export default function HomeScreen() {
         />
 
         <Box modifiers={[fillMaxSize()]}>
-          {results.length > 0 ? (
-            <ResultsList 
-              results={results}
+          {query ? (
+            // ACTIVE SEARCH BRANCH
+            loading ? (
+              <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
+                <LoadingIndicator color={colors.primary} modifiers={[size(40, 40)]} />
+              </Column>
+            ) : results.length > 0 ? (
+              <ResultsList 
+                results={results}
+                itemSize={ITEM_SIZE}
+                spacing={SPACING}
+                columnCount={COLUMN_COUNT}
+              />
+            ) : (
+              <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
+                <NoResultsState />
+              </Column>
+            )
+          ) : (
+            // IDLE DASHBOARD BRANCH (The Catch-all)
+            <IdleDashboard 
+              recentItems={results}
               itemSize={ITEM_SIZE}
               spacing={SPACING}
               columnCount={COLUMN_COUNT}
             />
-          ) : (
-            <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-              {(query && !loading) ? (
-                <NoResultsState />
-              ) : (
-                <WelcomeState />
-              )}
-            </Column>
           )}
         </Box>
         </Column>

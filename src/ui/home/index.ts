@@ -4,4 +4,5 @@ export * from './results/WelcomeState';
 export * from './onboarding/GrantPermissionScreen';
 export * from './results/NoResultsState';
 export * from './results/ResultsList';
+export * from './results/IdleDashboard';
 export * from './results/ResultItem';
