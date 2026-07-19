@@ -23,7 +23,11 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.tanay22.refind",
       "permissions": [
-        "ACCESS_MEDIA_LOCATION"
+        "ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "plugins": [
@@ -87,7 +91,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "1ce03484-5e96-4e67-9c39-c8d3a9109dd0"
+        "projectId": "b3a9ae42-d9cd-463f-a47e-fc6bb758e11b"
       }
     },
     "owner": "tanay22"
