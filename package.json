@@ -71,6 +71,7 @@
     "@commitlint/config-conventional": "^21.0.2",
     "@types/react": "~19.2.2",
     "babel-plugin-inline-import": "^3.0.0",
+    "babel-preset-expo": "^57.0.3",
     "drizzle-kit": "^0.31.10",
     "eas-cli": "^18.11.0",
     "eslint": "^9.39.4",
