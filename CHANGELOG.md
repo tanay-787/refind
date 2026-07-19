@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/tanay-787/refind/compare/refind-v1.1.1...refind-v1.1.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* move pnpm overrides to workspace config ([b4c7f16](https://github.com/tanay-787/refind/commit/b4c7f160083f80ae86091f98dea64209ba2d33a3))
+
 ## [1.1.1](https://github.com/tanay-787/refind/compare/refind-v1.1.0...refind-v1.1.1) (2026-07-19)
 
 
