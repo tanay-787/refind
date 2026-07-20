@@ -3,6 +3,8 @@ import * as MediaLibrary from 'expo-media-library/legacy';
 import { SCREENSHOT_NAME_RE } from './constants';
 
 const DEV_SCREENSHOT_LIMIT = 15;
+// Set this to true to temporarily test production behavior (unlimited screenshots) while in dev
+const ENFORCE_PROD_BEHAVIOR = true;
 
 export function isScreenshotAsset(asset: MediaLibrary.Asset) {
   return SCREENSHOT_NAME_RE.test(asset.filename);
@@ -39,7 +41,7 @@ export async function loadScreenshotAssets() {
       while (hasNextPage) {
         const page = await MediaLibrary.getAssetsAsync({
           album,
-          first: __DEV__ ? Math.min(DEV_SCREENSHOT_LIMIT, pageSize) : pageSize,
+          first: (__DEV__ && !ENFORCE_PROD_BEHAVIOR) ? Math.min(DEV_SCREENSHOT_LIMIT, pageSize) : pageSize,
           mediaType: [MediaLibrary.MediaType.photo],
           sortBy: [MediaLibrary.SortBy.creationTime],
           after,
@@ -47,7 +49,7 @@ export async function loadScreenshotAssets() {
 
         allAssets.push(...page.assets);
         after = page.endCursor;
-        hasNextPage = page.hasNextPage && !(__DEV__ && allAssets.length >= DEV_SCREENSHOT_LIMIT);
+        hasNextPage = page.hasNextPage && !(__DEV__ && !ENFORCE_PROD_BEHAVIOR && allAssets.length >= DEV_SCREENSHOT_LIMIT);
       }
 
       return allAssets;
@@ -56,7 +58,7 @@ export async function loadScreenshotAssets() {
 
   const assets = uniqueAssets(albumAssets.flat()).sort((left, right) => right.creationTime - left.creationTime);
 
-  return __DEV__ ? assets.slice(0, DEV_SCREENSHOT_LIMIT) : assets;
+  return (__DEV__ && !ENFORCE_PROD_BEHAVIOR) ? assets.slice(0, DEV_SCREENSHOT_LIMIT) : assets;
 }
 
 /**
