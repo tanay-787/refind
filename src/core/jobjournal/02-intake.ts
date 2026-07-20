@@ -23,7 +23,7 @@ function getJobId(asset: MediaLibrary.Asset) {
   return `job_${asset.id}`;
 }
 
-async function getImageHash(asset: MediaLibrary.Asset) {
+function getImageHash(asset: MediaLibrary.Asset) {
   // To avoid expensive I/O when processing thousands of screenshots, we generate a unique hash
   // using asset metadata. Since asset.id is guaranteed to be unique and stable, this is 100% reliable.
   const fallbackHash = [
@@ -94,12 +94,17 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
   const existingHashes = new Set(existingJobRows.map(r => r.imageHash));
   const existingExecutions = new Set(existingExecutionRows.map(r => r.jobId));
 
+  const hashToJobIdMap = new Map<string, string>();
+  for (const r of existingJobRows) {
+    hashToJobIdMap.set(r.imageHash, r.id);
+  }
+
   const jobsToInsert: typeof jobJournalJobs.$inferInsert[] = [];
   const executionsToInsert: typeof stageExecutions.$inferInsert[] = [];
 
   for (const asset of nextAssets) {
     const jobId = getJobId(asset);
-    const hashResult = await getImageHash(asset);
+    const hashResult = getImageHash(asset);
     const imageHash = hashResult.hash;
 
     // Check if job exists
@@ -108,7 +113,7 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
 
       const matchedJobId = existingJobIds.has(jobId) 
         ? jobId 
-        : existingJobRows.find(r => r.imageHash === imageHash)?.id;
+        : hashToJobIdMap.get(imageHash);
 
       if (matchedJobId && !existingExecutions.has(matchedJobId)) {
         const stageExecutionId = getStageExecutionId(matchedJobId, INITIAL_STAGE);
