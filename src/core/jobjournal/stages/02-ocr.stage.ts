@@ -80,15 +80,12 @@ export async function runOcrStage(job: JobJournalJob): Promise<{
 
     console.log(`[ocr.stage] Processing ${job.id} (Landscape: ${!!isLandscape})`);
 
-    // PASS 1: Global OCR
-    let finalResult = await recognizeText(job.imageUri, 'latin');
-    if (!finalResult) {
-      return { status: 'failed', error: 'OCR returned no result' };
-    }
+    let finalResult: OcrResult;
 
-    // LANDSCAPE OPTIMIZATION: Tiled Deep Scan
-    // If landscape, we split into Left and Right halves to increase text density per pass
+    // LANDSCAPE: Tiled-only path — tiles cover full image with overlap, 
+    // so the global pass is redundant. Saves 1 ML Kit call per landscape image.
     if (isLandscape && metadata?.width && metadata?.height) {
+      finalResult = { text: '', blocks: [] };
       const halfWidth = Math.floor(metadata.width / 2);
       const height = metadata.height;
       
@@ -130,6 +127,21 @@ export async function runOcrStage(job: JobJournalJob): Promise<{
           console.warn(`[ocr.stage] Failed processing tile ${i}:`, tileErr);
         }
       }
+
+      // If tiles produced nothing, fall back to global pass
+      if (!finalResult.text && (!finalResult.blocks || finalResult.blocks.length === 0)) {
+        console.log(`[ocr.stage] Tiled scan empty, falling back to global OCR`);
+        const globalResult = await recognizeText(job.imageUri, 'latin');
+        if (globalResult) finalResult = globalResult;
+      }
+    } else {
+      // PORTRAIT / SQUARE: Single global pass
+      console.log(`[ocr.stage] Processing ${job.id} (Portrait/Square)`);
+      const globalResult = await recognizeText(job.imageUri, 'latin');
+      if (!globalResult) {
+        return { status: 'failed', error: 'OCR returned no result' };
+      }
+      finalResult = globalResult;
     }
 
 
