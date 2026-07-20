@@ -239,7 +239,8 @@ async function runStageExecution(execution: JobJournalStageExecution): Promise<b
  * in timeouts to ensure system stability.
  */
 export async function runNextStageExecution(): Promise<boolean> {
-  await recoveryExpiredLeases();
+  // NOTE: recoveryExpiredLeases() removed from here — caller is responsible.
+  // Previously this ran on every stage (1000x for 200 screenshots). Now runs once at loop start.
   
   const execution = await claimNextStageExecution();
   if (!execution) return false;
