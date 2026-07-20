@@ -190,6 +190,51 @@ export async function claimNextStageExecution(): Promise<JobJournalStageExecutio
   return null;
 }
 
+/**
+ * Claim the next pending stage for a specific job.
+ * Much cheaper than claimNextStageExecution() — no global scan, no job status update.
+ * Used by stage fusion to drive all stages for one job without re-entering the full ceremony.
+ */
+export async function claimNextStageForJob(jobId: string): Promise<JobJournalStageExecution | null> {
+  const db = await getDrizzleDb();
+  const now = new Date();
+
+  const pendingExecution = await db.query.stageExecutions.findFirst({
+    where: and(
+      eq(stageExecutions.jobId, jobId),
+      eq(stageExecutions.status, 'pending'),
+    ),
+    orderBy: [asc(stageExecutions.createdAt)]
+  });
+
+  if (!pendingExecution) return null;
+
+  const leaseUntil = new Date(now.getTime() + LEASE_DURATION_MS);
+
+  const result = await db.update(stageExecutions)
+    .set({ status: 'running', leaseUntil, updatedAt: now })
+    .where(and(
+      eq(stageExecutions.id, pendingExecution.id),
+      eq(stageExecutions.status, 'pending')
+    ));
+
+  if (result.changes === 0) return null;
+
+  // No job status update needed — job is already 'running' from initial claim
+
+  return {
+    id: pendingExecution.id,
+    jobId: pendingExecution.jobId,
+    stage: pendingExecution.stage as JobJournalStage,
+    attempt: pendingExecution.attempt,
+    status: 'running',
+    leaseUntil: leaseUntil.getTime(),
+    createdAt: pendingExecution.createdAt.getTime(),
+    updatedAt: now.getTime(),
+    lastError: pendingExecution.lastError,
+  };
+}
+
 export async function renewExecutionLease(
   executionId: string,
   leaseDurationMs: number = LEASE_DURATION_MS,
