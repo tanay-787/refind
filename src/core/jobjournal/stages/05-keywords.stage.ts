@@ -70,30 +70,38 @@ export async function runKeywordsStage(job: JobJournalJob): Promise<{ status: 'c
     // Index EVERY unit. FTS5 handles this efficiently.
     const keywordsList = Array.from(uniqueSearchableUnits);
     if (keywordsList.length > 0) {
-      const CHUNK_SIZE = 100;
-      for (let i = 0; i < keywordsList.length; i += CHUNK_SIZE) {
-        const chunk = keywordsList.slice(i, i + CHUNK_SIZE);
-        const placeholdersList = chunk.map(() => `(?, ?, ?, ?, ?, ?, ?, ?)`).join(', ');
-        const sql = `INSERT INTO keyword_stage_results (id, job_id, keyword, type, score, positions_json, created_at, updated_at) VALUES ${placeholdersList}`;
-        
-        const params: any[] = [];
-        chunk.forEach((unit, idx) => {
-          const counter = i + idx;
-          const safeKw = unit.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
-          const id = `${job.id}_k${counter}_${safeKw}`;
-          params.push(
-            id,
-            job.id,
-            unit,
-            'expanded',
-            100,
-            '[]',
-            now,
-            now
-          );
-        });
+      // Wrap in explicit transaction to avoid per-statement auto-commit (reduces fsync overhead)
+      await db.execAsync('BEGIN');
+      try {
+        const CHUNK_SIZE = 100;
+        for (let i = 0; i < keywordsList.length; i += CHUNK_SIZE) {
+          const chunk = keywordsList.slice(i, i + CHUNK_SIZE);
+          const placeholdersList = chunk.map(() => `(?, ?, ?, ?, ?, ?, ?, ?)`).join(', ');
+          const sql = `INSERT INTO keyword_stage_results (id, job_id, keyword, type, score, positions_json, created_at, updated_at) VALUES ${placeholdersList}`;
+          
+          const params: any[] = [];
+          chunk.forEach((unit, idx) => {
+            const counter = i + idx;
+            const safeKw = unit.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
+            const id = `${job.id}_k${counter}_${safeKw}`;
+            params.push(
+              id,
+              job.id,
+              unit,
+              'expanded',
+              100,
+              '[]',
+              now,
+              now
+            );
+          });
 
-        await db.runAsync(sql, params);
+          await db.runAsync(sql, params);
+        }
+        await db.execAsync('COMMIT');
+      } catch (err) {
+        await db.execAsync('ROLLBACK');
+        throw err;
       }
     }
 

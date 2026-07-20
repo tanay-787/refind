@@ -49,27 +49,17 @@ export async function runIndexFtsStage(job: JobJournalJob): Promise<{ status: 'c
       [job.id, rawText, ''],
     );
 
-    // 2. Update Search Readiness
-    // We use a transaction-safe way to update specific columns without overwriting vector status
-    const existing = await db.getFirstAsync<{ job_id: string }>(
-      `SELECT job_id FROM search_readiness WHERE job_id = ?`,
-      [job.id]
+    // 2. Update Search Readiness (UPSERT to avoid SELECT+conditional branch)
+    await db.runAsync(
+      `INSERT INTO search_readiness (job_id, fts_ready, keywords_ready, indexed_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(job_id) DO UPDATE SET
+         fts_ready = excluded.fts_ready,
+         keywords_ready = excluded.keywords_ready,
+         indexed_at = excluded.indexed_at,
+         updated_at = excluded.updated_at`,
+      [job.id, ftsReady ? 1 : 0, keywordsReady ? 1 : 0, now, now]
     );
-
-    if (existing) {
-      await db.runAsync(
-        `UPDATE search_readiness 
-         SET fts_ready = ?, keywords_ready = ?, indexed_at = ?, updated_at = ?
-         WHERE job_id = ?`,
-        [ftsReady ? 1 : 0, keywordsReady ? 1 : 0, now, now, job.id]
-      );
-    } else {
-      await db.runAsync(
-        `INSERT INTO search_readiness (job_id, fts_ready, keywords_ready, indexed_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [job.id, ftsReady ? 1 : 0, keywordsReady ? 1 : 0, now, now]
-      );
-    }
 
     return { status: 'completed' };
   } catch (error) {
