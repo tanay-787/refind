@@ -1,4 +1,4 @@
-import { eq, and, inArray, sql, count, asc, notInArray } from 'drizzle-orm';
+import { eq, and, inArray, sql, count, asc, desc, notInArray } from 'drizzle-orm';
 import { getJobJournalDatabase, getDrizzleDb } from './storage/database';
 import { 
   jobJournalJobs, 
@@ -143,10 +143,12 @@ export async function claimNextStageExecution(): Promise<JobJournalStageExecutio
   while (attempts < 5) {
     const now = new Date();
     
-    // Prioritize by creation time for steady throughput
+    // Prioritize by creation time descending (Depth-First execution!)
+    // This ensures that child stages (created later) are processed before 
+    // the massive backlog of initial stages, allowing jobs to complete quickly.
     const pendingExecution = await db.query.stageExecutions.findFirst({
       where: eq(stageExecutions.status, 'pending'),
-      orderBy: [asc(stageExecutions.createdAt)]
+      orderBy: [desc(stageExecutions.createdAt)]
     });
 
     if (!pendingExecution) {
