@@ -1,8 +1,8 @@
 import React from 'react';
 import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
-import { count } from 'drizzle-orm';
-import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
+import { count, eq, desc } from 'drizzle-orm';
+import { jobJournalJobs, metadataStageResults } from '@/core/jobjournal/storage/drizzle-schema';
 import { Column, Text as ComposeText, LoadingIndicator, Box } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, size, padding } from '@expo/ui/jetpack-compose/modifiers';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
@@ -33,6 +33,42 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
     .groupBy(jobJournalJobs.status);
 
   const { data } = useLiveQuery(query);
+
+  const recentItemsQuery = db
+    .select({
+      jobId: jobJournalJobs.id,
+      uri: jobJournalJobs.imageUri,
+      width: metadataStageResults.width,
+      height: metadataStageResults.height,
+    })
+    .from(jobJournalJobs)
+    .leftJoin(metadataStageResults, eq(jobJournalJobs.id, metadataStageResults.jobId))
+    .where(eq(jobJournalJobs.status, 'completed'))
+    .orderBy(desc(jobJournalJobs.createdAt))
+    .limit(12);
+
+  const { data: recentItemsData } = useLiveQuery(recentItemsQuery);
+
+  const liveRecentItems: SearchResult[] = React.useMemo(() => {
+    if (!recentItemsData) return [];
+    return recentItemsData.map((row: { width: number; height: number; jobId: any; uri: any; }) => {
+      const w = row.width || 1;
+      const h = row.height || 1;
+      const aspect = w / h;
+      return {
+        jobId: row.jobId,
+        uri: row.uri,
+        ocrText: '',
+        keywords: [],
+        score: 1.0,
+        searchMethod: 'fts',
+        width: w,
+        height: h,
+        aspectRatio: aspect,
+        isLandscape: aspect > 1,
+      } as SearchResult;
+    });
+  }, [recentItemsData]);
 
   let pending = 0;
   let running = 0;
@@ -80,10 +116,12 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
   }
 
   // Phase 2: Populated Feed (Recent Activity)
-  if (recentItems.length > 0) {
+  const displayItems = liveRecentItems.length > 0 ? liveRecentItems : recentItems;
+
+  if (displayItems.length > 0) {
     return (
       <ResultsList 
-        results={recentItems}
+        results={displayItems}
         itemSize={itemSize}
         spacing={spacing}
         columnCount={columnCount}
