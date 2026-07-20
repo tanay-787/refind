@@ -11,7 +11,7 @@ export {
   resetFailedExecutions
 } from './03-executor';
 export {
-  getExecutorStats, runNextStageExecution
+  getExecutorStats, runNextStageExecution, runNextJobToCompletion
 } from './05-runner';
 export {
   registerJobJournalBackgroundTask,

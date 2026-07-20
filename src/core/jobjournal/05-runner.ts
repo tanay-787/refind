@@ -6,6 +6,7 @@
 import { eq, count } from 'drizzle-orm';
 import {
   claimNextStageExecution,
+  claimNextStageForJob,
   completeStageExecution,
   failStageExecution,
   recoveryExpiredLeases,
@@ -311,4 +312,68 @@ export async function getExecutorStats() {
   }
 
   return result;
+}
+
+/**
+ * Stage-fused job execution: claims a job, then drives ALL its stages
+ * to completion in a single cycle without re-entering the full
+ * claim/recover ceremony for each stage.
+ *
+ * Overhead reduction: ~8-12 DB ops per stage → 2-3 DB ops per stage.
+ * For a 5-stage pipeline, this eliminates ~30 redundant DB round trips per screenshot.
+ */
+export async function runNextJobToCompletion(): Promise<boolean> {
+  const execution = await claimNextStageExecution();
+  if (!execution) return false;
+
+  const jobId = execution.jobId;
+  console.log(`[runner] Job fusion: starting ${jobId} from stage ${execution.stage}`);
+
+  currentExecutionId = execution.id;
+  if (!shutdownHandlerInstalled) {
+    if (typeof process !== 'undefined' && typeof (process as any).on === 'function') {
+      const handleSignal = async (sig: string) => {
+        try {
+          if (currentExecutionId) {
+            await revokeExecutionLease(currentExecutionId);
+            console.log(`revoked execution lease for ${currentExecutionId} due to signal ${sig}`);
+          }
+        } catch (err) {
+          console.error('Error revoking execution lease during shutdown', err);
+        } finally {
+          try {
+            process.exit(0);
+          } catch {}
+        }
+      };
+      (process as any).on('SIGINT', () => void handleSignal('SIGINT'));
+      (process as any).on('SIGTERM', () => void handleSignal('SIGTERM'));
+    }
+    shutdownHandlerInstalled = true;
+  }
+
+  let stagesRun = 0;
+  try {
+    // Run the first claimed stage
+    await runStageExecution(execution);
+    stagesRun++;
+    currentExecutionId = null;
+
+    // Drive remaining stages for this job using the cheaper targeted claim
+    while (true) {
+      const nextExecution = await claimNextStageForJob(jobId);
+      if (!nextExecution) break;
+
+      currentExecutionId = nextExecution.id;
+      console.log(`[runner] Job fusion: continuing ${jobId} → ${nextExecution.stage}`);
+      await runStageExecution(nextExecution);
+      stagesRun++;
+      currentExecutionId = null;
+    }
+  } finally {
+    currentExecutionId = null;
+  }
+
+  console.log(`[runner] Job fusion: ${jobId} completed ${stagesRun} stages`);
+  return true;
 }
