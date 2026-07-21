@@ -13,15 +13,13 @@ import type { JobJournalStage, JobJournalStageExecution } from './types';
 const LEASE_DURATION_MS = 5 * 60 * 1000;
 
 const STAGE_DEPENDENCIES: Record<JobJournalStage, JobJournalStage[]> = {
-  metadata: [],
-  ocr: ['metadata'],
+  ocr: [],
   ocr_postprocess: ['ocr'],
   keywords: ['ocr_postprocess'],
   index_fts: ['ocr_postprocess', 'keywords'],
 };
 
 const STAGE_CHILDREN: Record<JobJournalStage, JobJournalStage[]> = {
-  metadata: ['ocr'],
   ocr: ['ocr_postprocess'],
   ocr_postprocess: ['keywords', 'index_fts'],
   keywords: ['index_fts'],
@@ -272,10 +270,7 @@ export async function completeStageExecution(
     const now = new Date();
 
     // Verify stage results before marking completed
-    if (stage === 'metadata') {
-      const res = await db.query.metadataStageResults.findFirst({ where: eq(metadataStageResults.jobId, jobId) });
-      if (!res) throw new Error(`Metadata missing for job ${jobId}`);
-    } else if (stage === 'ocr') {
+    if (stage === 'ocr') {
       const res = await db.query.ocrStageResults.findFirst({ where: eq(ocrStageResults.jobId, jobId) });
       if (!res) throw new Error(`OCR missing for job ${jobId}`);
     } else if (stage === 'ocr_postprocess') {

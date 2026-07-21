@@ -1,5 +1,6 @@
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
 import { eq, and, inArray } from 'drizzle-orm';
 
 import {
@@ -7,10 +8,10 @@ import {
   watchJobJournalScreenshotSource,
 } from './01-source';
 import { getDrizzleDb } from './storage/database';
-import { jobJournalJobs, stageExecutions } from './storage/drizzle-schema';
+import { jobJournalJobs, stageExecutions, metadataStageResults } from './storage/drizzle-schema';
 import type { JobJournalStage } from './types';
 
-const INITIAL_STAGE: JobJournalStage = 'metadata';
+const INITIAL_STAGE: JobJournalStage = 'ocr';
 
 export type JobJournalIntakeResult = {
   totalAssets: number;
@@ -101,6 +102,7 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
 
   const jobsToInsert: typeof jobJournalJobs.$inferInsert[] = [];
   const executionsToInsert: typeof stageExecutions.$inferInsert[] = [];
+  const metadataToInsert: typeof metadataStageResults.$inferInsert[] = [];
 
   for (const asset of nextAssets) {
     const jobId = getJobId(asset);
@@ -134,7 +136,9 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
     // New Job
     jobsToInsert.push({
       id: jobId,
-      imageUri: asset.uri,
+      imageUri: Platform.OS === 'android' 
+        ? `content://media/external/images/media/${asset.id}` 
+        : asset.uri,
       imageHash,
       status: 'pending',
       createdAt: now,
@@ -153,6 +157,17 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
       createdAt: now,
       updatedAt: now,
     });
+    
+    metadataToInsert.push({
+      jobId,
+      width: asset.width,
+      height: asset.height,
+      fileSize: null,
+      fileExists: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    
     createdExecutions += 1;
     existingExecutions.add(jobId);
   }
@@ -171,6 +186,12 @@ export async function ingestJobJournalScreenshots(assets: MediaLibrary.Asset[] =
       for (let i = 0; i < executionsToInsert.length; i += INSERT_BATCH_SIZE) {
         const chunk = executionsToInsert.slice(i, i + INSERT_BATCH_SIZE);
         await tx.insert(stageExecutions).values(chunk);
+      }
+
+      // Insert metadata
+      for (let i = 0; i < metadataToInsert.length; i += INSERT_BATCH_SIZE) {
+        const chunk = metadataToInsert.slice(i, i + INSERT_BATCH_SIZE);
+        await tx.insert(metadataStageResults).values(chunk);
       }
     });
   }

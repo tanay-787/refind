@@ -1,7 +1,6 @@
 export type JobJournalStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export type JobJournalStage =
-  | 'metadata'
   | 'ocr'
   | 'ocr_postprocess'
   | 'keywords'

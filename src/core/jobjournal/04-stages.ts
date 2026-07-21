@@ -1,4 +1,3 @@
-export { runMetadataStage, getMetadata, type MetadataResult } from './stages/01-metadata.stage';
 
 export { runOcrStage, getOcrResult, type OcrResult, type OcrBlock } from './stages/02-ocr.stage';
 

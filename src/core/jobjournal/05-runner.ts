@@ -23,16 +23,12 @@ import {
 } from './storage/drizzle-schema';
 import type { JobJournalJob, JobJournalStage, JobJournalStageExecution } from './types';
 
-import {
-  runMetadataStage,
-} from './stages/01-metadata.stage';
 import { runOcrStage } from './stages/02-ocr.stage';
 import { runOcrPostprocessStage } from './stages/03-ocr_postprocess.stage';
 import { runKeywordsStage } from './stages/05-keywords.stage';
 import { runIndexFtsStage } from './stages/06-index_fts.stage';
 
 const STAGE_TIMEOUTS: Record<JobJournalStage, number> = {
-  metadata: 30_000,
   ocr: 120_000,
   ocr_postprocess: 30_000,
   keywords: 60_000,
@@ -155,17 +151,6 @@ async function runStageExecution(execution: JobJournalStageExecution): Promise<b
     console.log(`[runner] Running stage: ${execution.stage} (timeout: ${timeoutMs}ms)`);
     
     switch (execution.stage as JobJournalStage) {
-      case 'metadata': {
-        try {
-          const metadata = await promiseWithTimeout(runMetadataStage(job), timeoutMs);
-          result = metadata.fileExists
-            ? { status: 'completed' }
-            : { status: 'failed', error: 'Image file does not exist' };
-        } catch (err) {
-          result = { status: 'failed', error: err instanceof Error ? err.message : 'Stage timed out' };
-        }
-        break;
-      }
       case 'ocr': {
         try {
           result = await promiseWithTimeout(runOcrStage(job), timeoutMs);

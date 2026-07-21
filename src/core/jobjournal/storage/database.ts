@@ -144,3 +144,32 @@ export async function getDrizzleDb() {
   }
   return drizzlePromise;
 }
+
+export interface MetadataResult {
+  width: number | null;
+  height: number | null;
+  fileSize: number | null;
+  fileExists: boolean;
+}
+
+export async function getMetadata(jobId: string): Promise<MetadataResult | null> {
+  const db = await getJobJournalDatabase();
+
+  const row = await db.getFirstAsync<{
+    width: number | null;
+    height: number | null;
+    file_size: number | null;
+    file_exists: number;
+  }>(`SELECT width, height, file_size, file_exists FROM metadata_stage_results WHERE job_id = ?`, [
+    jobId,
+  ]);
+
+  if (!row) return null;
+
+  return {
+    width: row.width,
+    height: row.height,
+    fileSize: row.file_size,
+    fileExists: row.file_exists === 1,
+  };
+}
