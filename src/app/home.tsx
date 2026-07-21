@@ -52,9 +52,6 @@ export default function HomeScreen() {
   useEffect(() => {
     const handler = setTimeout(() => {
       search(query);
-      if (query) {
-        Keyboard.dismiss();
-      }
     }, 300);
 
     return () => clearTimeout(handler);
