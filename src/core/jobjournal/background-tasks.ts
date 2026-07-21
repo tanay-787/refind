@@ -21,8 +21,10 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 25) {
   
   // 1. Recover any abandoned leases from crashes/background kills (once, not per-stage)
   await recoveryExpiredLeases();
-  await setupNotificationChannel();
-  // Fire and forget the indeterminate notification once
+  // Fire-and-forget: setupNotificationChannel() initializes the Notifee TurboModule
+  // lazily on first call. Awaiting it blocks the JS thread for ~30s on first run
+  // (especially when notification permission hasn't been granted yet).
+  void setupNotificationChannel();
   void updateSyncNotification();
 
   while (totalProcessed < maxTotal) {
@@ -66,8 +68,8 @@ async function processOnce() {
 
   // Recover expired leases once per background invocation
   await recoveryExpiredLeases();
-  await setupNotificationChannel();
-  // Fire and forget the indeterminate notification once
+  // Fire-and-forget: avoid blocking on first-time Notifee native init (see processUntilEmpty)
+  void setupNotificationChannel();
   void updateSyncNotification();
 
   while (true) {

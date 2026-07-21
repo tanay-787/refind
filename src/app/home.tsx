@@ -38,7 +38,7 @@ export default function HomeScreen() {
   const { results, search, loading } = useSearch();
 
   const sync = useJobJournalStore(state => state.sync);
-  const { hasMediaPermission, requestPermissions } = usePermissionContext();
+  const { hasMediaPermission, hasNotificationPermission, requestPermissions } = usePermissionContext();
   const snackbarRef = React.useRef<SnackbarHostRef>(null);
   const insets = useSafeAreaInsets();
   const colors = useMaterialColors();
@@ -64,8 +64,8 @@ export default function HomeScreen() {
   useEffect(() => {
     if (hasMediaPermission) {
       sync().then(async (result) => {
-        // If we processed any new screenshots in the background, ask if they want notifications
-        if (result && result.createdJobs > 0) {
+        // Only prompt for notifications if we got new jobs AND permission isn't already granted
+        if (result && result.createdJobs > 0 && !hasNotificationPermission) {
           const hasSeenPrompt = await SecureStore.getItemAsync('has_seen_notif_prompt');
           if (hasSeenPrompt !== 'true') {
             setShowNotifPrompt(true);
@@ -73,7 +73,7 @@ export default function HomeScreen() {
         }
       }).catch((err) => console.error("Error during background sync on home mount:", err));
     }
-  }, [sync, hasMediaPermission]);
+  }, [sync, hasMediaPermission, hasNotificationPermission]);
 
   const handleGrantPermission = async () => {
     const { media } = await requestPermissions();
