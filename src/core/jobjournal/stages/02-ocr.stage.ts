@@ -23,14 +23,14 @@ import type { JobJournalJob } from '../types';
 export type { OcrBlock, OcrResult } from 'rn-mlkit-ocr';
 
 // Lazily resolved — populated on first runOcrStage() call, then reused.
-let recognizeTextFn: ((uri: string, language: string) => Promise<any>) | null = null;
+let recognizeTextFn: typeof import('rn-mlkit-ocr').recognizeText | null = null;
 
 async function getRecognizeText() {
   if (!recognizeTextFn) {
     const mlkit = await import('rn-mlkit-ocr');
     recognizeTextFn = mlkit.recognizeText;
   }
-  return recognizeTextFn;
+  return recognizeTextFn!;
 }
 
 type OcrResult = { text: string; blocks: any[] };
