@@ -4,8 +4,13 @@
  *   If the image is Landscape, it performs a "Tiled Deep Scan" by splitting 
  *   the image into two halves (Left/Right). This helps ML Kit handle 
  *   small, dense, and multi-colored text in complex layouts.
+ *
+ * NOTE: rn-mlkit-ocr is intentionally NOT imported at the top level.
+ * ML Kit initializes its TFLite model synchronously when the module is first
+ * evaluated, which blocks the JS thread for several seconds. By using a
+ * dynamic import inside runOcrStage(), initialization is deferred until the
+ * OCR stage actually runs — well after the home screen is interactive.
  */
-import { recognizeText, type OcrBlock, type OcrResult } from 'rn-mlkit-ocr';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
 
@@ -13,7 +18,22 @@ import { getJobJournalDatabase } from '../storage/database';
 import { getMetadata } from './01-metadata.stage';
 import type { JobJournalJob } from '../types';
 
-export type { OcrBlock, OcrResult };
+// Re-export types so callers can still import them from here without
+// pulling in the native module at their own parse time.
+export type { OcrBlock, OcrResult } from 'rn-mlkit-ocr';
+
+// Lazily resolved — populated on first runOcrStage() call, then reused.
+let recognizeTextFn: ((uri: string, language: string) => Promise<any>) | null = null;
+
+async function getRecognizeText() {
+  if (!recognizeTextFn) {
+    const mlkit = await import('rn-mlkit-ocr');
+    recognizeTextFn = mlkit.recognizeText;
+  }
+  return recognizeTextFn;
+}
+
+type OcrResult = { text: string; blocks: any[] };
 
 /**
  * Merges a tiled OCR result into a base result, adjusting coordinates.
@@ -75,6 +95,10 @@ export async function runOcrStage(job: JobJournalJob): Promise<{
   const SCALE_FACTOR = 2.0; // Upscale tiles by 2x for deep scan precision
 
   try {
+    // Lazily load ML Kit — deferred to avoid blocking the JS thread at module
+    // evaluation time (see top-of-file note).
+    const recognizeText = await getRecognizeText();
+
     const metadata = await getMetadata(job.id);
     const isLandscape = metadata && metadata.width && metadata.height && metadata.width > metadata.height;
 
