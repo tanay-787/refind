@@ -15,6 +15,7 @@ import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-
 import * as SplashScreen from 'expo-splash-screen';
 import { Asset } from 'expo-asset';
 import { Image } from 'expo-image';
+import { setupNotificationChannel } from '@/core/jobjournal/utils/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,6 +35,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     useJobJournalStore.getState().init();
+    void setupNotificationChannel();
   }, []);
 
   /**

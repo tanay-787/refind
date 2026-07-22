@@ -8,7 +8,7 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { runNextStageExecution, runNextJobToCompletion } from './05-runner';
 import { recoveryExpiredLeases } from './03-executor';
-import { setupNotificationChannel, updateSyncNotification, clearSyncNotification } from './utils/notifications';
+import { updateSyncNotification, clearSyncNotification } from './utils/notifications';
 
 const JOB_JOURNAL_TASK_NAME = 'JOB_JOURNAL_RUNNER_TASK';
 
@@ -21,10 +21,8 @@ export async function processUntilEmpty(maxTotal = 1000, batchSize = 25) {
   
   // 1. Recover any abandoned leases from crashes/background kills (once, not per-stage)
   await recoveryExpiredLeases();
-  // Fire-and-forget: setupNotificationChannel() initializes the Notifee TurboModule
-  // lazily on first call. Awaiting it blocks the JS thread for ~30s on first run
-  // (especially when notification permission hasn't been granted yet).
-  void setupNotificationChannel();
+  
+  // Channel should already be created natively or on app start.
   void updateSyncNotification();
 
   while (totalProcessed < maxTotal) {
@@ -68,9 +66,6 @@ async function processOnce() {
 
   // Recover expired leases once per background invocation
   await recoveryExpiredLeases();
-  // Fire-and-forget: avoid blocking on first-time Notifee native init (see processUntilEmpty)
-  void setupNotificationChannel();
-  void updateSyncNotification();
 
   while (true) {
     const elapsedMs = Date.now() - startTime;
