@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.2.0](https://github.com/tanay-787/refind/compare/refind-v1.1.3...refind-v1.2.0) (2026-07-23)
+
+
+### Features
+
+* **stages:** shifted the metadata phase to `intake` phase ([7adc51b](https://github.com/tanay-787/refind/commit/7adc51b56e2656c94102bbafc3304c3a1596073d))
+
+
+### Bug Fixes
+
+* **engine:** switch stage execution to depth-first to complete jobs quickly ([33b74a5](https://github.com/tanay-787/refind/commit/33b74a537804057b501778dd6fdb0b8106fc1bb4))
+* **home:** memoize `useLiveQuery()` inputs to eliminate 30-40s hang on mount ([a8c3048](https://github.com/tanay-787/refind/commit/a8c304851b448526fd5d3d3d660fe08bfaeeea63))
+* initialize the Notification Channel in a Fire and Forget manner to avoid blocking ([e6e0abc](https://github.com/tanay-787/refind/commit/e6e0abc347b76a7cca34fa24cfdefb527fa9419a))
+* **notifications:** shift channel initialization to app startup to avoid blocking native thread ([e5aa83d](https://github.com/tanay-787/refind/commit/e5aa83dd47c18c00303726d079d6afe004a9446d))
+* removed a problematic `Keyboard.dismiss()` ([c65edd9](https://github.com/tanay-787/refind/commit/c65edd9011b3556ad10d57f92a59478210830769))
+* resolve `recognizeText()` related type errors ([8d8b55a](https://github.com/tanay-787/refind/commit/8d8b55a685835744e7a361c4957b872eb5188bc8))
+* **ui:** use live query for Recent Activity Feed in IdleState ([be5ebe3](https://github.com/tanay-787/refind/commit/be5ebe3ccd29fe0270522da04c7ebbaffee84d6c))
+
+
+### Performance Improvements
+
+* **executor:** add job-targeted stage claim function ([460a530](https://github.com/tanay-787/refind/commit/460a530e05f4ba4cd0a22d79333d465bc0a2d692))
+* **intake:** replace O(N2) loop with a O(1) Hash Map ([89a8d0f](https://github.com/tanay-787/refind/commit/89a8d0f05c6e027180267919f7abf00a4eb588b8))
+* **ocr:** dynamically resolve and cache the `recognizeText()` ([c536eb4](https://github.com/tanay-787/refind/commit/c536eb4ac53f4a1f5254ee78b5a6eb90d693420f))
+* **ocr:** skip redundant global pass for landscape images ([82fdb8a](https://github.com/tanay-787/refind/commit/82fdb8abe9c0703a49825d5ef1a9e775c9af38ce))
+* **runner:** add stage-fused job execution ([ff691e6](https://github.com/tanay-787/refind/commit/ff691e6118ff448524a33e712e5dc15767ec7f36))
+* **runner:** remove per-stage recoveryExpiredLeases call ([371aa18](https://github.com/tanay-787/refind/commit/371aa18d1222767e391a7f4a892fbd5fafd57713))
+* **stages:** optimize keyword and FTS index writes ([deac8c0](https://github.com/tanay-787/refind/commit/deac8c096130c198d4acbe5a3b6db60d207a47f9))
+
 ## [1.1.3](https://github.com/tanay-787/refind/compare/refind-v1.1.2...refind-v1.1.3) (2026-07-19)
 
 
