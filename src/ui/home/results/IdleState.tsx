@@ -24,28 +24,32 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
   
   if (!db) return <WelcomeState />;
 
-  const query = db
-    .select({
-      status: jobJournalJobs.status,
-      count: count(jobJournalJobs.id),
-    })
-    .from(jobJournalJobs)
-    .groupBy(jobJournalJobs.status);
+  const query = React.useMemo(() => {
+    return db
+      .select({
+        status: jobJournalJobs.status,
+        count: count(jobJournalJobs.id),
+      })
+      .from(jobJournalJobs)
+      .groupBy(jobJournalJobs.status);
+  }, [db]);
 
   const { data } = useLiveQuery(query);
 
-  const recentItemsQuery = db
-    .select({
-      jobId: jobJournalJobs.id,
-      uri: jobJournalJobs.imageUri,
-      width: metadataStageResults.width,
-      height: metadataStageResults.height,
-    })
-    .from(jobJournalJobs)
-    .leftJoin(metadataStageResults, eq(jobJournalJobs.id, metadataStageResults.jobId))
-    .where(eq(jobJournalJobs.status, 'completed'))
-    .orderBy(desc(jobJournalJobs.createdAt))
-    .limit(12);
+  const recentItemsQuery = React.useMemo(() => {
+    return db
+      .select({
+        jobId: jobJournalJobs.id,
+        uri: jobJournalJobs.imageUri,
+        width: metadataStageResults.width,
+        height: metadataStageResults.height,
+      })
+      .from(jobJournalJobs)
+      .leftJoin(metadataStageResults, eq(jobJournalJobs.id, metadataStageResults.jobId))
+      .where(eq(jobJournalJobs.status, 'completed'))
+      .orderBy(desc(jobJournalJobs.createdAt))
+      .limit(12);
+  }, [db]);
 
   const { data: recentItemsData } = useLiveQuery(recentItemsQuery);
 

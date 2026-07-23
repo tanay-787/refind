@@ -35,13 +35,15 @@ export function LiveStatusText() {
 function LiveStatusTracker({ db }: { db: any }) {
   const brandColors = useBrandColors();
   
-  const query = db
-    .select({
-      status: jobJournalJobs.status,
-      count: count(jobJournalJobs.id),
-    })
-    .from(jobJournalJobs)
-    .groupBy(jobJournalJobs.status);
+  const query = React.useMemo(() => {
+    return db
+      .select({
+        status: jobJournalJobs.status,
+        count: count(jobJournalJobs.id),
+      })
+      .from(jobJournalJobs)
+      .groupBy(jobJournalJobs.status);
+  }, [db]);
 
   const { data } = useLiveQuery(query);
   
