@@ -67,7 +67,7 @@ jobs:
         run: |
           ARTIFACT_URL=$(jq -r '.[0].artifacts.buildUrl' eas-build-result.json)
           echo "Artifact URL: $ARTIFACT_URL"
-          curl -L "$ARTIFACT_URL" -o "refind-${{ needs.release-please.outputs.tag_name }}.apk"
+          curl -L "$ARTIFACT_URL" -o "${{ needs.release-please.outputs.tag_name }}.apk"
 
       - name: Upload APK to GitHub Release
         env:
@@ -75,5 +75,5 @@ jobs:
         run: |
           gh release upload \
             "${{ needs.release-please.outputs.tag_name }}" \
-            "refind-${{ needs.release-please.outputs.tag_name }}.apk" \
+            "${{ needs.release-please.outputs.tag_name }}.apk" \
             --clobber
