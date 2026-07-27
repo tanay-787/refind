@@ -62,7 +62,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemedHost style={{ flex: 1 }} seedColor="#0057FF">
+        <ThemedHost style={{ flex: 1 }}>
           <PermissionProvider>
             <StatusBar style={isDark ? 'light' : 'dark'} />
             <Stack screenOptions={{ headerShown: false }}>

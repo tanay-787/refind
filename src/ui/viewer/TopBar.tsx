@@ -3,7 +3,7 @@ import { StyleSheet, TouchableOpacity, View, Button } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { IconView } from '@/ui/IconView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 
 interface ViewerTopBarProps {
   onDismiss: () => void;
@@ -13,7 +13,7 @@ interface ViewerTopBarProps {
 
 export function ViewerTopBar({ onDismiss, style, pointerEvents }: ViewerTopBarProps) {
   const insets = useSafeAreaInsets();
-  const colors = useBrandColors();
+  const colors = useThemeColors();
   
   return (
     <Animated.View 

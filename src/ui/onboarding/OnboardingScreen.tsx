@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { Image } from 'expo-image';
-import { ThemedHost, useBrandColors } from '@/theme';
+import { ThemedHost, useThemeColors } from '@/theme';
 import { Column, Box, RNHostView, Spacer, Text, Button, LoadingIndicator, ElevatedButton } from '@expo/ui/jetpack-compose';
 import { 
   fillMaxSize, 
@@ -21,7 +21,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { requestPermissions } = usePermissionContext();
-  const colors = useBrandColors();
+  const colors = useThemeColors();
   
   const [loading, setLoading] = useState(false);
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useColorScheme } from 'react-native';
 import { Host, useMaterialColors } from '@expo/ui/jetpack-compose';
 
-export const DEFAULT_SEED_COLOR = '#0057FF';
+export const DEFAULT_SEED_COLOR = '#208AEF';
 
 export type ThemedHostProps = React.ComponentProps<typeof Host> & {
   seedColor?: string;
@@ -20,12 +20,12 @@ export function ThemedHost({
   );
 }
 
-export const useBrandColors = (seedColor: string = DEFAULT_SEED_COLOR) => {
+export const useThemeColors = (seedColor: string = DEFAULT_SEED_COLOR) => {
   return useMaterialColors({ seedColor });
 };
 
 export const useTheme = (seedColor: string = DEFAULT_SEED_COLOR) => {
-  const colors = useBrandColors(seedColor);
+  const colors = useThemeColors(seedColor);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 

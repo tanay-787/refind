@@ -6,7 +6,7 @@ import { jobJournalJobs, metadataStageResults } from '@/core/jobjournal/storage/
 import { Column, Text as ComposeText, LoadingIndicator, Box } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, size, padding } from '@expo/ui/jetpack-compose/modifiers';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 import { ResultsList } from './ResultsList';
 import { WelcomeState } from './WelcomeState';
 import { SearchResult } from '@/core/jobjournal/search/hybrid';
@@ -20,7 +20,7 @@ interface IdleDashboardProps {
 
 export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: IdleDashboardProps) {
   const db = useJobJournalStore(state => state.db);
-  const colors = useBrandColors();
+  const colors = useThemeColors();
   
   if (!db) return <WelcomeState />;
 

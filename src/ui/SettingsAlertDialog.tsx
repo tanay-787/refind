@@ -1,7 +1,7 @@
 import React from 'react';
 import { Linking } from 'react-native';
 import { AlertDialog, TextButton, Text } from '@expo/ui/jetpack-compose';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 
 interface SettingsAlertDialogProps {
   visible: boolean;
@@ -10,7 +10,7 @@ interface SettingsAlertDialogProps {
 }
 
 export function SettingsAlertDialog({ visible, onDismiss, onConfirm }: SettingsAlertDialogProps) {
-  const colors = useBrandColors();
+  const colors = useThemeColors();
 
   if (!visible) return null;
 

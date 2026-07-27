@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertDialog, TextButton, Text } from '@expo/ui/jetpack-compose';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 import * as SecureStore from 'expo-secure-store';
 import { usePermissionContext } from '@/hooks';
 
@@ -10,7 +10,7 @@ interface NotificationPromptDialogProps {
 }
 
 export function NotificationPromptDialog({ visible, onDismiss }: NotificationPromptDialogProps) {
-  const colors = useBrandColors();
+  const colors = useThemeColors();
   const { checkAndRequestNotificationPermission } = usePermissionContext();
 
   if (!visible) return null;

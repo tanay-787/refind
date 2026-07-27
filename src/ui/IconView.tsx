@@ -2,7 +2,7 @@ import React from 'react';
 import { SymbolView, SymbolViewProps, AndroidSymbol } from 'expo-symbols';
 import androidThin from 'expo-symbols/androidWeights/thin';
 import { RNHostView } from '@expo/ui/jetpack-compose';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 
 export interface IconViewProps extends Omit<SymbolViewProps, 'name' | 'weight'> {
   name: AndroidSymbol;
@@ -16,7 +16,7 @@ export function IconView({
   inNative = false,
   ...rest 
 }: IconViewProps) {
-  const colors = useBrandColors();
+  const colors = useThemeColors();
   
   const symbol = (
     <SymbolView

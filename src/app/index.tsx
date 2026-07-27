@@ -8,12 +8,12 @@ import {
   registerJobJournalBackgroundTask, 
   scheduleJobJournalBackgroundTask 
 } from '@/core/jobjournal';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 
 export default function IndexScreen() {
   const router = useRouter();
   const { hasMediaPermission, isChecking } = usePermissionContext();
-  const colors = useBrandColors();
+  const colors = useThemeColors();
 
   useEffect(() => {
     if (isChecking || hasMediaPermission === null) return;

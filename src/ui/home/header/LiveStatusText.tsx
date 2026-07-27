@@ -1,5 +1,5 @@
 import React from 'react';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
@@ -8,7 +8,7 @@ import { Row, LoadingIndicator, Text as ComposeText } from '@expo/ui/jetpack-com
 import { size } from '@expo/ui/jetpack-compose/modifiers';
 
 function LoadingState() {
-  const brandColors = useBrandColors();
+  const brandColors = useThemeColors();
   return (
     <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 4 }}>
       <ComposeText 
@@ -33,7 +33,7 @@ export function LiveStatusText() {
 }
 
 function LiveStatusTracker({ db }: { db: any }) {
-  const brandColors = useBrandColors();
+  const brandColors = useThemeColors();
   
   const query = React.useMemo(() => {
     return db
@@ -93,7 +93,7 @@ function LiveStatusTracker({ db }: { db: any }) {
 }
 
 function DefaultText({ count }: { count?: number }) {
-  const brandColors = useBrandColors();
+  const brandColors = useThemeColors();
   return (
     <Row verticalAlignment="center">
       <ComposeText 

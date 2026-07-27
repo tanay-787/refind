@@ -1,13 +1,13 @@
 import React from 'react';
 import Svg, { Rect, Circle, Path, G } from 'react-native-svg';
-import { useBrandColors } from '@/theme';
+import { useThemeColors } from '@/theme';
 
 interface IllustrationProps {
   size?: number;
 }
 
 export const SearchIllustration = React.memo(({ size = 64 }: IllustrationProps) => {
-  const colors = useBrandColors();
+  const colors = useThemeColors();
 
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
