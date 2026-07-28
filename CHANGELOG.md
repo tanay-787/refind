@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/tanay-787/refind/compare/refind-v1.2.0...refind-v1.2.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **assets:** resize based on Android's adaptive icons guidelines ([1dd6a3c](https://github.com/tanay-787/refind/commit/1dd6a3c20b4d58d6763fac791d0fdd8565dc1270))
+
 ## [1.2.0](https://github.com/tanay-787/refind/compare/refind-v1.1.3...refind-v1.2.0) (2026-07-27)
 
 
