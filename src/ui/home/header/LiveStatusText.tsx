@@ -26,7 +26,7 @@ export function LiveStatusText() {
   const db = useJobJournalStore(state => state.db);
   
   if (!db) {
-    return <DefaultText />;
+    return <LoadingState />;
   }
 
   return <LiveStatusTracker db={db} />;
@@ -47,7 +47,7 @@ function LiveStatusTracker({ db }: { db: any }) {
 
   const { data } = useLiveQuery(query);
   
-  if (!data) return <DefaultText />;
+  if (!data) return <LoadingState />;
 
   let pending = 0;
   let running = 0;
@@ -67,6 +67,10 @@ function LiveStatusTracker({ db }: { db: any }) {
   const processedCount = completed + failed;
   
   if (isProcessing && processedCount === 0) {
+    return <LoadingState />;
+  }
+
+  if (totalJobs === 0) {
     return <LoadingState />;
   }
 
