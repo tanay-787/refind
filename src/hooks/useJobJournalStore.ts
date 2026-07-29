@@ -97,7 +97,7 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
 }));
 
 async function runEngine(set: any) {
-  if (engineLock || AppState.currentState !== 'active') return;
+  if (engineLock) return;
   
   const stats = await getExecutorStats();
   if (stats.pending === 0) return;
