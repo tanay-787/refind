@@ -3,8 +3,7 @@ import * as MediaLibrary from 'expo-media-library/legacy';
 import { SCREENSHOT_NAME_RE } from './constants';
 
 const DEV_SCREENSHOT_LIMIT = 15;
-// Set this to true to temporarily test production behavior (unlimited screenshots) while in dev
-const ENFORCE_PROD_BEHAVIOR = true;
+const ENFORCE_PROD_BEHAVIOR = process.env.EXPO_PUBLIC_ENFORCE_PROD === 'true';
 
 export function isScreenshotAsset(asset: MediaLibrary.Asset) {
   return SCREENSHOT_NAME_RE.test(asset.filename);
