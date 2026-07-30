@@ -34,16 +34,20 @@ export default function OnboardingScreen() {
   async function handleContinue() {
     if (loading) return;
     setLoading(true);
+    let navigatingAway = false;
     try {
       const { media } = await requestPermissions();
       if (media) {
         await SecureStore.setItemAsync('has_seen_onboarding', 'true');
+        navigatingAway = true;
         router.replace('/home');
       }
     } catch (err) {
       console.error('Failed to save onboarding state:', err);
     } finally {
-      setLoading(false);
+      if (!navigatingAway) {
+        setLoading(false);
+      }
     }
   }
 
