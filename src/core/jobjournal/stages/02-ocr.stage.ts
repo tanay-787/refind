@@ -12,7 +12,7 @@
  * OCR stage actually runs — well after the home screen is interactive.
  */
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import { getJobJournalDatabase } from '../storage/database';
 import { getMetadata } from '../storage/database';
