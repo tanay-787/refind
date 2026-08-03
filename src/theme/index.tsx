@@ -37,16 +37,3 @@ export const useThemeColors = (options?: string | ThemeColorsOptions) => {
     colorScheme: options.colorScheme,
   });
 };
-
-export const useTheme = (options?: string | ThemeColorsOptions) => {
-  const colors = useThemeColors(options);
-  const colorScheme = useColorScheme();
-  const requestedScheme = typeof options === 'object' ? options?.colorScheme : undefined;
-  const activeScheme = requestedScheme || colorScheme;
-  const isDark = activeScheme === 'dark';
-
-  return {
-    ...colors,
-    isDark,
-  };
-};
