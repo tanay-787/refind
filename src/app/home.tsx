@@ -11,6 +11,7 @@ import { fillMaxSize, align, padding as paddingModifier, size } from '@expo/ui/j
 import { useSearch, useJobJournalStore, usePermissionContext } from '@/hooks';
 import { ThemedHost } from '@/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SystemBars } from 'react-native-edge-to-edge';
 
 import { 
   registerJobJournalBackgroundTask, 
@@ -105,6 +106,7 @@ export default function HomeScreen() {
 
   return (
     <ThemedHost style={{ flex: 1 }}>
+      <SystemBars hidden={{ navigationBar: true }} />
       <Surface modifiers={[fillMaxSize()]}>
         <Column modifiers={[fillMaxSize()]}>
         <Header insets={insets} />

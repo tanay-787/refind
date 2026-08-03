@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { SystemBars } from 'react-native-edge-to-edge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CropOverlay } from '@/ui/viewer/CropOverlay';
 import { ViewerTopBar } from '@/ui/viewer/TopBar';
@@ -40,7 +40,7 @@ export default function ViewerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [isStatusBarHidden, setStatusBarHidden] = useState(false);
+  const [isSystemBarHidden, setSystemBarHidden] = useState(false);
   const [isOcrMode, setIsOcrMode] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -76,8 +76,8 @@ export default function ViewerScreen() {
 
   // ─── JS-thread dismiss (safe to call from anywhere) ───────────────────────
   const dismiss = useCallback(() => {
-    // Show status bar again before dismissing so the layout beneath doesn't jump aggressively
-    setStatusBarHidden(false);
+    // Show system bars again before dismissing so the layout beneath doesn't jump aggressively
+    setSystemBarHidden(false);
     backdropOpacity.value = withTiming(0, { duration: 180 }, () => {
       runOnJS(router.back)();
     });
@@ -95,13 +95,13 @@ export default function ViewerScreen() {
       
       setIsOcrMode(true);
       chromeVisible.value = withTiming(0, { duration: 200 });
-      setStatusBarHidden(true);
+      setSystemBarHidden(true);
     } else {
       // Exit OCR mode
       setIsOcrMode(false);
       setExtractedText(null);
       chromeVisible.value = withTiming(1, { duration: 200 });
-      setStatusBarHidden(false);
+      setSystemBarHidden(false);
     }
   }, [isOcrMode]);
 
@@ -326,10 +326,10 @@ export default function ViewerScreen() {
       'worklet';
       if (chromeVisible.value === 1) {
         chromeVisible.value = withTiming(0, { duration: 200 });
-        runOnJS(setStatusBarHidden)(true);
+        runOnJS(setSystemBarHidden)(true);
       } else {
         chromeVisible.value = withTiming(1, { duration: 200 });
-        runOnJS(setStatusBarHidden)(false);
+        runOnJS(setSystemBarHidden)(false);
       }
     });
 
@@ -378,7 +378,7 @@ export default function ViewerScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style='light' hidden={isStatusBarHidden} />
+      <SystemBars style='light' hidden={isSystemBarHidden} />
 
       {/* Scrim */}
       <Animated.View style={[styles.backdrop, backdropStyle]} />
@@ -407,7 +407,7 @@ export default function ViewerScreen() {
       <ViewerTopBar 
         onDismiss={dismiss} 
         style={chromeStyle} 
-        pointerEvents={isStatusBarHidden ? 'none' : 'box-none'} 
+        pointerEvents={isSystemBarHidden ? 'none' : 'box-none'} 
       />
 
       <ViewerBottomBar 
@@ -415,7 +415,7 @@ export default function ViewerScreen() {
         onSharePress={handleShare}
         isSharing={isSharing}
         style={bottomChromeStyle} 
-        pointerEvents={isStatusBarHidden ? 'none' : 'box-none'} 
+        pointerEvents={isSystemBarHidden ? 'none' : 'box-none'} 
       />
 
       {/* ─── OCR Mode Chrome ─── */}

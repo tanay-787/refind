@@ -15,7 +15,7 @@ import {
   weight,
   size
 } from '@expo/ui/jetpack-compose/modifiers';
-import { StatusBar } from 'expo-status-bar';
+import { SystemBars } from 'react-native-edge-to-edge';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function OnboardingScreen() {
 
   return (
     <ThemedHost style={{ flex: 1 }}>
-      <StatusBar style='light'/>
+      <SystemBars style='light'/>
       <Box modifiers={[fillMaxSize(), background(colors.background)]}>
         
         {/* Background Image */}

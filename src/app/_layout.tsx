@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { SystemBars } from 'react-native-edge-to-edge';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -64,7 +64,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemedHost style={{ flex: 1 }}>
           <PermissionProvider>
-            <StatusBar style={isDark ? 'light' : 'dark'} />
+            <SystemBars style={isDark ? 'light' : 'dark'} />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="onboarding" />
