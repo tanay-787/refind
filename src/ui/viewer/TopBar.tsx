@@ -13,7 +13,7 @@ interface ViewerTopBarProps {
 
 export function ViewerTopBar({ onDismiss, style, pointerEvents }: ViewerTopBarProps) {
   const insets = useSafeAreaInsets();
-  const colors = useThemeColors();
+  const colors = useThemeColors({ colorScheme:'dark'});
   
   return (
     <Animated.View 
@@ -25,7 +25,7 @@ export function ViewerTopBar({ onDismiss, style, pointerEvents }: ViewerTopBarPr
         style={styles.iconButton}
         hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
       >
-        <IconView name="keyboard_backspace" />
+        <IconView name="keyboard_backspace" tintColor={colors.onSurface} />
       </TouchableOpacity>
       </Animated.View>
   );

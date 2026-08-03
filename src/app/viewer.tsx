@@ -8,6 +8,7 @@ import {
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { recognizeText } from 'rn-mlkit-ocr';
 import Animated, {
   useSharedValue,
@@ -42,6 +43,7 @@ export default function ViewerScreen() {
   const [isStatusBarHidden, setStatusBarHidden] = useState(false);
   const [isOcrMode, setIsOcrMode] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [extractedText, setExtractedText] = useState<string | null>(null);
 
   // ─── Shared values ────────────────────────────────────────────────────────
@@ -181,6 +183,43 @@ export default function ViewerScreen() {
       setIsScanning(false);
     }
   }, [uri, imgWStr, imgHStr]);
+
+  const handleShare = useCallback(async () => {
+    if (!uri || isSharing) return;
+    setIsSharing(true);
+    let tempShareUri: string | null = null;
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        console.warn('Sharing is not available on this device');
+        return;
+      }
+
+      let shareTargetUri = uri;
+      if (!shareTargetUri.startsWith('file://')) {
+        const dest = `${FileSystem.cacheDirectory}share_${Date.now()}.jpg`;
+        await FileSystem.copyAsync({
+          from: shareTargetUri,
+          to: dest,
+        });
+        tempShareUri = dest;
+        shareTargetUri = dest;
+      }
+
+      await Sharing.shareAsync(shareTargetUri);
+    } catch (e) {
+      console.error('Failed to share:', e);
+    } finally {
+      setIsSharing(false);
+      if (tempShareUri) {
+        try {
+          await FileSystem.deleteAsync(tempShareUri, { idempotent: true });
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+    }
+  }, [uri, isSharing]);
 
   // ─── Pinch ────────────────────────────────────────────────────────────────
   const pinch = Gesture.Pinch()
@@ -339,7 +378,7 @@ export default function ViewerScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar hidden={isStatusBarHidden} />
+      <StatusBar style='light' hidden={isStatusBarHidden} />
 
       {/* Scrim */}
       <Animated.View style={[styles.backdrop, backdropStyle]} />
@@ -373,6 +412,8 @@ export default function ViewerScreen() {
 
       <ViewerBottomBar 
         onOcrPress={toggleOcrMode} 
+        onSharePress={handleShare}
+        isSharing={isSharing}
         style={bottomChromeStyle} 
         pointerEvents={isStatusBarHidden ? 'none' : 'box-none'} 
       />

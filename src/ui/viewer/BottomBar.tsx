@@ -1,21 +1,23 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ActivityIndicator } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { IconView } from '@/ui/IconView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Host, Row, Column, Text, IconButton, FloatingActionButton, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, clickable } from '@expo/ui/jetpack-compose/modifiers';
-import { useThemeColors } from '@/theme';
+import { Host, Row, Column, Text, LoadingIndicator } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, clickable, padding as paddingModifier, size } from '@expo/ui/jetpack-compose/modifiers';
+import { useThemeColors, ThemedHost } from '@/theme';
 
 interface ViewerBottomBarProps {
   onOcrPress: () => void;
+  onSharePress: () => void;
+  isSharing?: boolean;
   style?: any;
   pointerEvents?: 'box-none' | 'none' | 'box-only' | 'auto';
 }
 
-export function ViewerBottomBar({ onOcrPress, style, pointerEvents }: ViewerBottomBarProps) {
+export function ViewerBottomBar({ onOcrPress, onSharePress, isSharing = false, style, pointerEvents }: ViewerBottomBarProps) {
   const insets = useSafeAreaInsets();
-  const colors = useThemeColors();
+  const colors = useThemeColors({ colorScheme: 'dark' });
 
   return (
     <Animated.View 
@@ -29,32 +31,32 @@ export function ViewerBottomBar({ onOcrPress, style, pointerEvents }: ViewerBott
       ]}
       pointerEvents={pointerEvents}
     >
-      <Host>
+      <ThemedHost>
         <Row modifiers={[fillMaxWidth()]} verticalAlignment="center" horizontalArrangement="spaceEvenly">
           
-          <Column modifiers={[clickable(() => console.log('Share clicked'))]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 2 }}>
-            <IconView name="share" size={24} tintColor={colors.onSurfaceVariant} inNative={true} />
+          <Column modifiers={[paddingModifier(16, 8, 16, 8), clickable(isSharing ? () => {} : onSharePress)]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 2 }}>
+              <IconView name="share" size={24} tintColor={colors.onSurface} inNative={true} />
             <Text color={colors.onSurface} style={{ fontFamily: 'Inter_400Regular', fontSize: 12}}>
-              Share
+              {'Share'}
             </Text>
           </Column>
           
-          <Column modifiers={[clickable(onOcrPress)]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 2 }}>
-            <IconView name="scan" size={24} tintColor={colors.primary} inNative={true} />
+          <Column modifiers={[paddingModifier(16, 8, 16, 8), clickable(onOcrPress)]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 2 }}>
+            <IconView name="scan" size={28} tintColor={colors.primary} inNative={true} />
             <Text color={colors.primary} style={{ fontFamily: 'Inter_500Medium', fontSize: 12}}>
-              Extract Text
+              {'Extract Text'}
             </Text>
           </Column>
           
-          <Column modifiers={[clickable(() => console.log('Info clicked'))]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 2 }}>
-            <IconView name="info" size={24} tintColor={colors.onSurfaceVariant} inNative={true} />
+          <Column modifiers={[paddingModifier(16, 8, 16, 8), clickable(() => console.log('Info clicked'))]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 2 }}>
+            <IconView name="info" size={24} tintColor={colors.onSurface} inNative={true} />
             <Text color={colors.onSurface} style={{ fontFamily: 'Inter_400Regular', fontSize: 12}}>
-              Info
+              {'Info'}
             </Text>
           </Column>
 
         </Row>
-      </Host>
+      </ThemedHost>
     </Animated.View>
   );
 }
