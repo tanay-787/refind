@@ -15,13 +15,13 @@ import {
   weight,
   size
 } from '@expo/ui/jetpack-compose/modifiers';
-import { IconView } from '../IconView';
+import { StatusBar } from 'expo-status-bar';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { requestPermissions } = usePermissionContext();
-  const colors = useThemeColors();
+  const colors = useThemeColors({ colorScheme: 'dark'});
   
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +53,7 @@ export default function OnboardingScreen() {
 
   return (
     <ThemedHost style={{ flex: 1 }}>
+      <StatusBar style='light'/>
       <Box modifiers={[fillMaxSize(), background(colors.background)]}>
         
         {/* Background Image */}
@@ -85,14 +86,14 @@ export default function OnboardingScreen() {
           {/* Text Container centered vertically */}
           <Column modifiers={[weight(1)]} verticalArrangement="center">
             <Text 
-              color="#FFFFFF" 
+              color={colors.onSurface} 
               style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 56, letterSpacing: -1 }}
             >
               Refind.
             </Text>
             <Spacer modifiers={[size(0, 16)]} />
             <Text 
-              color={colors.onSurface}
+              color={colors.onSurfaceVariant}
               style={{ fontFamily: 'JetBrainsMono_400Regular', fontSize: 18, lineHeight: 28 }}
             >
               Refind meets you at that moment, the one where the memory is clear but the screenshot is buried, and it gives you back the thing you came for. Instantly.
