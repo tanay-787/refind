@@ -1,5 +1,5 @@
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { ColorSchemeName, useColorScheme } from 'react-native';
 import { Host, useMaterialColors } from '@expo/ui/jetpack-compose';
 
 export const DEFAULT_SEED_COLOR = '#208AEF';
@@ -20,14 +20,30 @@ export function ThemedHost({
   );
 }
 
-export const useThemeColors = (seedColor: string = DEFAULT_SEED_COLOR) => {
-  return useMaterialColors({ seedColor });
+export type ThemeColorsOptions = {
+  seedColor?: string;
+  colorScheme?: ColorSchemeName;
 };
 
-export const useTheme = (seedColor: string = DEFAULT_SEED_COLOR) => {
-  const colors = useThemeColors(seedColor);
+export const useThemeColors = (options?: string | ThemeColorsOptions) => {
+  if (!options) {
+    return useMaterialColors();
+  }
+  if (typeof options === 'string') {
+    return useMaterialColors({ seedColor: options });
+  }
+  return useMaterialColors({
+    seedColor: options.seedColor,
+    colorScheme: options.colorScheme,
+  });
+};
+
+export const useTheme = (options?: string | ThemeColorsOptions) => {
+  const colors = useThemeColors(options);
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const requestedScheme = typeof options === 'object' ? options?.colorScheme : undefined;
+  const activeScheme = requestedScheme || colorScheme;
+  const isDark = activeScheme === 'dark';
 
   return {
     ...colors,
