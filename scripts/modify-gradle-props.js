@@ -44,6 +44,18 @@ const gradlePropsChanged = updateFile(gradlePropsPath, [
     pattern: /^org\.gradle\.java\.home=.*$/m,
     value: javaHomeLine,
   },
+  {
+    pattern: /^reactNativeArchitectures=.*$/m,
+    value: 'reactNativeArchitectures=arm64-v8a',
+  },
+  {
+    pattern: /^org\.gradle\.jvmargs=.*$/m,
+    value: 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m',
+  },
+  {
+    pattern: /^org\.gradle\.workers\.max=.*$/m,
+    value: 'org.gradle.workers.max=2',
+  },
 ]);
 
 console.log(
