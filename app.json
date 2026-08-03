@@ -31,7 +31,7 @@
           "backgroundColor": "#208AEF",
           "android": {
             "image": "./assets/images/splash-icon.png",
-            "imageWidth": 160
+            "imageWidth": 200
           }
         }
       ],
@@ -76,7 +76,16 @@
       ],
       "react-native-notify-kit",
       "expo-asset",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "react-native-edge-to-edge",
+        {
+          "android": {
+            "parentTheme": "Default",
+            "enforceNavigationBarContrast": false
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
