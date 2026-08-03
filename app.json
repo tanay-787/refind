@@ -75,7 +75,8 @@
         }
       ],
       "react-native-notify-kit",
-      "expo-asset"
+      "expo-asset",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
