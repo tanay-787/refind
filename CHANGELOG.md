@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.3.0](https://github.com/tanay-787/refind/compare/refind-v1.2.1...refind-v1.3.0) (2026-08-04)
+
+
+### Features
+
+* **onboarding:** enforced `dark` colorScheme ([bcdad07](https://github.com/tanay-787/refind/commit/bcdad0715d9cac39d1cbbbb55eab74c563c8b8e5))
+* **system-bars:** utilize `SystemBars` for handling StatusBar and NavBar behaviour ([180e98d](https://github.com/tanay-787/refind/commit/180e98d4411a73f0f477688d3c2ab8c672030b06))
+* **theme:** expose `colorScheme` with proper type-safety ([92e6a13](https://github.com/tanay-787/refind/commit/92e6a13518955ddfafdf915fe7654f3ee78c3864))
+* **viewer:** add Sharing logic ([0a85ca8](https://github.com/tanay-787/refind/commit/0a85ca87219674625e311c631176d1bfed2fe757))
+
+
+### Bug Fixes
+
+* **engine:** import `deleteAsync()` from legacy path ([5f0ba9d](https://github.com/tanay-787/refind/commit/5f0ba9d617ab4e3f3ac77d54832f05c7865d93b1))
+* **onboarding:** update `handleContinue` to track navigation before toggling `loading` state ([8fd989b](https://github.com/tanay-787/refind/commit/8fd989ba0f7b6cfc253e7d13aeaecf0c0f501a22))
+
+
+### Performance Improvements
+
+* **engine:** remove manual engine throttling when AppState = 'background' ([76fa1d0](https://github.com/tanay-787/refind/commit/76fa1d044726564aeeac22b188542b6929fbe6f0))
+* **viewer:** optimize animations and scheduling ([41f9b52](https://github.com/tanay-787/refind/commit/41f9b5220b30bdd0702b86c9d27a48c0464b5517))
+
 ## [1.2.1](https://github.com/tanay-787/refind/compare/refind-v1.2.0...refind-v1.2.1) (2026-07-28)
 
 
