@@ -15,9 +15,9 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
-  runOnJS,
   Easing,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SystemBars } from 'react-native-edge-to-edge';
@@ -66,7 +66,7 @@ export default function ViewerScreen() {
   const boxW = useSharedValue(280);
   const boxH = useSharedValue(280);
 
-  // ─── Reset & animate in when mounted ────────────────────────────────────
+  // Reset & animate in when mounted
   useEffect(() => {
     backdropOpacity.value = withTiming(1, {
       duration: 200,
@@ -74,12 +74,18 @@ export default function ViewerScreen() {
     });
   }, []);
 
-  // ─── JS-thread dismiss (safe to call from anywhere) ───────────────────────
-  const dismiss = useCallback(() => {
-    // Show system bars again before dismissing so the layout beneath doesn't jump aggressively
+  // Direct navigation back when backdrop has already faded out
+  const navigateBack = useCallback(() => {
     setSystemBarHidden(false);
+    router.back();
+  }, [router]);
+
+  // Programmatic dismiss with backdrop fade-out and subtle scale-down
+  const dismiss = useCallback(() => {
+    setSystemBarHidden(false);
+    scale.value = withTiming(0.92, { duration: 180 });
     backdropOpacity.value = withTiming(0, { duration: 180 }, () => {
-      runOnJS(router.back)();
+      scheduleOnRN(router.back);
     });
   }, [router]);
 
@@ -94,19 +100,18 @@ export default function ViewerScreen() {
       baseY.value = 0;
       
       setIsOcrMode(true);
-      chromeVisible.value = withTiming(0, { duration: 200 });
+      chromeVisible.value = withTiming(0, { duration: 180 });
       setSystemBarHidden(true);
     } else {
       // Exit OCR mode
       setIsOcrMode(false);
       setExtractedText(null);
-      chromeVisible.value = withTiming(1, { duration: 200 });
+      chromeVisible.value = withTiming(1, { duration: 180 });
       setSystemBarHidden(false);
     }
   }, [isOcrMode]);
 
   const handleScan = useCallback(async () => {
-    'worklet'
     if (!uri || !imgWStr || !imgHStr) {
       console.warn('[handleScan] Missing params:', { uri: !!uri, imgWStr, imgHStr });
       return;
@@ -279,7 +284,7 @@ export default function ViewerScreen() {
           const dir = translateY.value >= 0 ? 1 : -1;
           translateY.value = withTiming(dir * SCREEN_HEIGHT * 1.2, { duration: 220 });
           backdropOpacity.value = withTiming(0, { duration: 220 }, () => {
-            runOnJS(dismiss)();
+            scheduleOnRN(navigateBack);
           });
         } else {
           translateX.value = withSpring(0, SPRING);
@@ -296,7 +301,7 @@ export default function ViewerScreen() {
   // ─── Double-tap ───────────────────────────────────────────────────────────
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
-    .maxDuration(250)
+    .maxDuration(180)
     .onEnd((e) => {
       'worklet';
       if (scale.value > 1) {
@@ -321,15 +326,20 @@ export default function ViewerScreen() {
 
   // ─── Single-tap (Toggle Chrome) ───────────────────────────────────────────
   const singleTap = Gesture.Tap()
-    .maxDuration(250)
+    .maxDuration(180)
     .onEnd(() => {
       'worklet';
       if (chromeVisible.value === 1) {
-        chromeVisible.value = withTiming(0, { duration: 200 });
-        runOnJS(setSystemBarHidden)(true);
+        // Fade out chrome smoothly over 160ms, then hide native system bars without causing animation stutter
+        chromeVisible.value = withTiming(0, { duration: 160 }, (finished) => {
+          if (finished) {
+            scheduleOnRN(setSystemBarHidden, true);
+          }
+        });
       } else {
-        chromeVisible.value = withTiming(1, { duration: 200 });
-        runOnJS(setSystemBarHidden)(false);
+        // Show system bars immediately so status bar returns, then fade chrome in
+        scheduleOnRN(setSystemBarHidden, false);
+        chromeVisible.value = withTiming(1, { duration: 160 });
       }
     });
 
@@ -349,6 +359,7 @@ export default function ViewerScreen() {
   });
 
   const imageStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
     transform: [
       { translateX: translateX.value },
       { translateY: translateY.value },
@@ -356,22 +367,15 @@ export default function ViewerScreen() {
     ],
   }));
 
+  // Derive top/bottom translation directly from chromeVisible for smooth 60fps response
   const chromeStyle = useAnimatedStyle(() => ({
     opacity: chromeVisible.value,
-    transform: [
-      {
-        translateY: withTiming(chromeVisible.value === 1 ? 0 : -20, { duration: 200 })
-      }
-    ]
+    transform: [{ translateY: (1 - chromeVisible.value) * -20 }],
   }));
 
   const bottomChromeStyle = useAnimatedStyle(() => ({
     opacity: chromeVisible.value,
-    transform: [
-      {
-        translateY: withTiming(chromeVisible.value === 1 ? 0 : 20, { duration: 200 })
-      }
-    ]
+    transform: [{ translateY: (1 - chromeVisible.value) * 20 }],
   }));
 
   if (!uri) return null;
