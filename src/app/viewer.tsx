@@ -108,6 +108,11 @@ export default function ViewerScreen() {
     }
   }, [router]);
 
+  // Dedicated callback for pan dismissal to avoid worklet argument dropping
+  const navigateBackPanDismiss = useCallback(() => {
+    navigateBack(220);
+  }, [navigateBack]);
+
   // Programmatic dismiss with backdrop fade-out and subtle scale-down
   const dismiss = useCallback(() => {
     setSystemBarHidden(false);
@@ -305,13 +310,13 @@ export default function ViewerScreen() {
       if (scale.value <= 1.01) {
         const shouldDismiss =
           Math.abs(translateY.value) > DISMISS_THRESHOLD ||
-          Math.abs(e.velocityY) > DISMISS_VELOCITY;
+          (Math.abs(e.velocityY) > DISMISS_VELOCITY && Math.abs(e.translationY) > 20);
 
         if (shouldDismiss) {
           const dir = translateY.value >= 0 ? 1 : -1;
           translateY.value = withTiming(dir * SCREEN_HEIGHT * 1.2, { duration: 220 });
           backdropOpacity.value = withTiming(0, { duration: 220 });
-          scheduleOnRN(navigateBack, 220);
+          scheduleOnRN(navigateBackPanDismiss);
         } else {
           translateX.value = withSpring(0, SPRING);
           translateY.value = withSpring(0, SPRING);
