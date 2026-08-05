@@ -3,7 +3,8 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  View
+  View,
+  AppState
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -46,6 +47,8 @@ export default function ViewerScreen() {
   const [isSharing, setIsSharing] = useState(false);
   const [extractedText, setExtractedText] = useState<string | null>(null);
 
+  const [resumeKey, setResumeKey] = useState(0);
+
   // ─── Shared values ────────────────────────────────────────────────────────
   const backdropOpacity = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -66,28 +69,52 @@ export default function ViewerScreen() {
   const boxW = useSharedValue(280);
   const boxH = useSharedValue(280);
 
-  // Reset & animate in when mounted
+  // Reset & animate in when mounted, and ensure recovery from Android Intents
   useEffect(() => {
     backdropOpacity.value = withTiming(1, {
       duration: 200,
       easing: Easing.out(Easing.quad),
     });
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      // Reanimated sometimes drops shared value states back to initial (0) when 
+      // the activity is suspended (e.g., when the Android Share Sheet opens).
+      // We forcefully recover the opacity if the user returns to the Viewer.
+      if (nextAppState === 'active') {
+        if (backdropOpacity.value < 1) {
+          backdropOpacity.value = withTiming(1, { duration: 200 });
+        }
+        // Force remount of custom native views (expo-image, Jetpack Compose) 
+        // which lose their hardware Surface/Context in transparentModals upon resuming
+        setResumeKey(prev => prev + 1);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
-  // Direct navigation back when backdrop has already faded out
-  const navigateBack = useCallback(() => {
-    setSystemBarHidden(false);
-    router.back();
+  // Direct navigation back, bypassing Reanimated callbacks to prevent freeze bugs
+  const navigateBack = useCallback((delayMs?: number) => {
+    if (typeof delayMs === 'number' && delayMs > 0) {
+      setTimeout(() => {
+        setSystemBarHidden(false);
+        router.back();
+      }, delayMs);
+    } else {
+      setSystemBarHidden(false);
+      router.back();
+    }
   }, [router]);
 
   // Programmatic dismiss with backdrop fade-out and subtle scale-down
   const dismiss = useCallback(() => {
     setSystemBarHidden(false);
     scale.value = withTiming(0.92, { duration: 180 });
-    backdropOpacity.value = withTiming(0, { duration: 180 }, () => {
-      scheduleOnRN(router.back);
-    });
-  }, [router]);
+    backdropOpacity.value = withTiming(0, { duration: 180 });
+    navigateBack(180);
+  }, [navigateBack]);
 
   const toggleOcrMode = useCallback(() => {
     if (!isOcrMode) {
@@ -283,9 +310,8 @@ export default function ViewerScreen() {
         if (shouldDismiss) {
           const dir = translateY.value >= 0 ? 1 : -1;
           translateY.value = withTiming(dir * SCREEN_HEIGHT * 1.2, { duration: 220 });
-          backdropOpacity.value = withTiming(0, { duration: 220 }, () => {
-            scheduleOnRN(navigateBack);
-          });
+          backdropOpacity.value = withTiming(0, { duration: 220 });
+          scheduleOnRN(navigateBack, 220);
         } else {
           translateX.value = withSpring(0, SPRING);
           translateY.value = withSpring(0, SPRING);
@@ -391,6 +417,7 @@ export default function ViewerScreen() {
       <GestureDetector gesture={composed}>
         <Animated.View style={[styles.imageContainer, imageStyle]}>
           <Image
+            key={`img-${resumeKey}`}
             source={{ uri }}
             style={styles.image}
             contentFit="contain"
@@ -415,6 +442,7 @@ export default function ViewerScreen() {
       />
 
       <ViewerBottomBar 
+        key={`bottom-${resumeKey}`}
         onOcrPress={toggleOcrMode} 
         onSharePress={handleShare}
         isSharing={isSharing}
