@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1](https://github.com/tanay-787/refind/compare/refind-v1.3.0...refind-v1.3.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* **viewer:** prevent accidental swipe dismiss and worklet argument drops ([b413c2a](https://github.com/tanay-787/refind/commit/b413c2a49259c678c10a6552e4d2e9ddbbef11c5))
+* **viewer:** resolve native view loss and navigation freezes on returning from background ([82d9e02](https://github.com/tanay-787/refind/commit/82d9e02879632974a3360f03c3c8497a478cbfee))
+
 ## [1.3.0](https://github.com/tanay-787/refind/compare/refind-v1.2.1...refind-v1.3.0) (2026-08-04)
 
 
