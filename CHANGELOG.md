@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/tanay-787/refind/compare/refind-v1.3.1...refind-v1.3.2) (2026-08-13)
+
+
+### Bug Fixes
+
+* **viewer:** prevent image and scrim from disapearring on resume ([9bd388d](https://github.com/tanay-787/refind/commit/9bd388d3f0f3c9b22fdcc76296a81fa0ea519aa1))
+
 ## [1.3.1](https://github.com/tanay-787/refind/compare/refind-v1.3.0...refind-v1.3.1) (2026-08-05)
 
 
