@@ -50,7 +50,7 @@ export default function ViewerScreen() {
   const [resumeKey, setResumeKey] = useState(0);
 
   // ─── Shared values ────────────────────────────────────────────────────────
-  const backdropOpacity = useSharedValue(0);
+  const backdropOpacity = useSharedValue(1);
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -68,32 +68,6 @@ export default function ViewerScreen() {
   const boxY = useSharedValue((SCREEN_HEIGHT - 280) / 2);
   const boxW = useSharedValue(280);
   const boxH = useSharedValue(280);
-
-  // Reset & animate in when mounted, and ensure recovery from Android Intents
-  useEffect(() => {
-    backdropOpacity.value = withTiming(1, {
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-    });
-
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      // Reanimated sometimes drops shared value states back to initial (0) when 
-      // the activity is suspended (e.g., when the Android Share Sheet opens).
-      // We forcefully recover the opacity if the user returns to the Viewer.
-      if (nextAppState === 'active') {
-        if (backdropOpacity.value < 1) {
-          backdropOpacity.value = withTiming(1, { duration: 200 });
-        }
-        // Force remount of custom native views (expo-image, Jetpack Compose) 
-        // which lose their hardware Surface/Context in transparentModals upon resuming
-        setResumeKey(prev => prev + 1);
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
 
   // Direct navigation back, bypassing Reanimated callbacks to prevent freeze bugs
   const navigateBack = useCallback((delayMs?: number) => {
