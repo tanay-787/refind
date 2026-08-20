@@ -3,13 +3,14 @@ import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count, eq, desc } from 'drizzle-orm';
 import { jobJournalJobs, metadataStageResults } from '@/core/jobjournal/storage/drizzle-schema';
-import { Column, Text as ComposeText, LoadingIndicator, Box } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, size, padding } from '@expo/ui/jetpack-compose/modifiers';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Column, Row, Text as ComposeText, LoadingIndicator, Box, LinearProgressIndicator, LinearWavyProgressIndicator, AnimatedVisibility, EnterTransition, ExitTransition } from '@expo/ui/jetpack-compose';
+import { fillMaxSize, fillMaxWidth, height, size, padding, clip, Shapes, background, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useThemeColors } from '@/theme';
 import { ResultsList } from './ResultsList';
+import { ResultItem } from './ResultItem';
 import { WelcomeState } from './WelcomeState';
 import { SearchResult } from '@/core/jobjournal/search/hybrid';
+import { IconView } from '@/ui/IconView';
 
 interface IdleDashboardProps {
   recentItems: SearchResult[];
@@ -22,6 +23,9 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
   const db = useJobJournalStore(state => state.db);
   const colors = useThemeColors();
   
+  const [showCelebration, setShowCelebration] = React.useState(false);
+  const wasProcessing = React.useRef(false);
+
   if (!db) return <WelcomeState />;
 
   const query = React.useMemo(() => {
@@ -90,31 +94,126 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
 
   const isProcessing = pending > 0 || running > 0;
   const totalProcessed = completed + failed;
+  const totalJobs = pending + running + completed + failed;
+
+  React.useEffect(() => {
+    if (wasProcessing.current && !isProcessing && totalProcessed > 0) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => {
+        setShowCelebration(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    wasProcessing.current = isProcessing;
+  }, [isProcessing, totalProcessed]);
 
   // Phase 1: Heavy Lifting (Processing)
-  // We wait until we have at least 12 items OR syncing is completely done before showing the feed.
-  if (isProcessing && totalProcessed < 12) {
+  if ((isProcessing && totalProcessed < 12) || showCelebration) {
+    const progress = totalJobs > 0 ? totalProcessed / totalJobs : 0;
+
     return (
       <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-        <LoadingIndicator color={colors.primary} modifiers={[size(98, 98)]} />
-        
-        <Box modifiers={[padding(0, 24, 0, 0)]} />
-        
-        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }} modifiers={[padding(20, 0, 20, 0)]}>
-          <ComposeText 
-            color={colors.onSurface} 
-            style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 20, textAlign: 'center' }}
-          >
-            Building your memory...
-          </ComposeText>
-          
-          <ComposeText 
-            color={colors.onSurfaceVariant} 
-            style={{ fontFamily: 'Inter_400Regular', fontSize: 14, textAlign: 'center' }}
-          >
-            {totalProcessed} screenshots processed so far. This might take a minute or two depending on your library size.
-          </ComposeText>
-        </Column>
+        {showCelebration ? (
+          <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }} modifiers={[padding(32, 0, 32, 0)]}>
+
+            {/* Thumbnail row — carried over from the processing view for visual continuity */}
+            <AnimatedVisibility
+              visible={showCelebration}
+              enterTransition={EnterTransition.fadeIn({ initialAlpha: 0 }).plus(EnterTransition.slideInVertically({ initialOffsetY: 0.15 }))}
+            >
+              <Row horizontalArrangement={{ spacedBy: 8 }}>
+                {liveRecentItems.slice(0, 3).map((item, idx) => (
+                  <Box key={idx} modifiers={[size(72, 108), clip(Shapes.RoundedCorner(4)), background(colors.surfaceVariant)]}>
+                    <ResultItem item={item} />
+                  </Box>
+                ))}
+              </Row>
+            </AnimatedVisibility>
+
+            {/* Badge + headline */}
+            <AnimatedVisibility
+              visible={showCelebration}
+              enterTransition={EnterTransition.scaleIn({ initialScale: 0.7 }).plus(EnterTransition.fadeIn({ initialAlpha: 0 }))}
+            >
+              <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }}>
+                {/* Bordered check badge — borders over shadows per design system */}
+                <Box
+                  modifiers={[size(56, 56), clip(Shapes.RoundedCorner(4)), background(colors.primaryContainer)]}
+                  contentAlignment="center"
+                >
+                  <IconView name="check" size={28} tintColor={colors.onPrimaryContainer} inNative={true} />
+                </Box>
+
+                <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 6 }}>
+                  <ComposeText
+                    color={colors.onSurface}
+                    style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 28, textAlign: 'center' }}
+                  >
+                    All done.
+                  </ComposeText>
+                  {/* JetBrainsMono for data — per design system "Technical Meta" */}
+                  <ComposeText
+                    color={colors.onSurfaceVariant}
+                    style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, textAlign: 'center' }}
+                  >
+                    {`${totalProcessed.toLocaleString()} screenshots indexed`}
+                  </ComposeText>
+                </Column>
+              </Column>
+            </AnimatedVisibility>
+
+            {/* Action prompt — fades in last, uses primary blue */}
+            <AnimatedVisibility
+              visible={showCelebration}
+              enterTransition={EnterTransition.fadeIn({ initialAlpha: 0 })}
+            >
+              <ComposeText
+                color={colors.primary}
+                style={{ fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' }}
+              >
+                Start searching above ↑
+              </ComposeText>
+            </AnimatedVisibility>
+
+          </Column>
+        ) : (
+          <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }}>
+            <ComposeText color={colors.onSurface} style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 24, textAlign: 'center' }}>
+              Found {totalJobs.toLocaleString()} screenshots
+            </ComposeText>
+
+            <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(32, 0, 32, 0)]}>
+              <LinearWavyProgressIndicator 
+                progress={progress} 
+                color={colors.primary} 
+                trackColor={colors.surfaceVariant}
+                modifiers={[fillMaxWidth()]} 
+              />
+              
+              <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, textAlign: 'center' }}>
+                {totalProcessed.toLocaleString()} of {totalJobs.toLocaleString()} processed
+              </ComposeText>
+            </Column>
+
+            {liveRecentItems.length > 0 ? (
+              <Row horizontalArrangement={{ spacedBy: 8 }}>
+                {liveRecentItems.slice(0, 3).map((item, idx) => (
+                  <Box key={idx} modifiers={[size(64, 96), clip(Shapes.RoundedCorner(8)), background(colors.surfaceVariant)]}>
+                    <ResultItem item={item} />
+                  </Box>
+                ))}
+              </Row>
+            ) : (
+              <Box modifiers={[size(64, 96)]} />
+            )}
+
+            <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }} modifiers={[padding(12, 0, 0, 0)]}>
+              <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' }}>
+                Extracting text and making them searchable...
+              </ComposeText>
+            </Column>
+          </Column>
+        )}
       </Column>
     );
   }
@@ -124,12 +223,17 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
 
   if (displayItems.length > 0) {
     return (
-      <ResultsList 
-        results={displayItems}
-        itemSize={itemSize}
-        spacing={spacing}
-        columnCount={columnCount}
-      />
+      <Column modifiers={[fillMaxSize()]}>
+        <Box modifiers={[weight(1)]}>
+          <ResultsList 
+            results={displayItems}
+            itemSize={itemSize}
+            spacing={spacing}
+            columnCount={columnCount}
+            isRAF={true}
+          />
+        </Box>
+      </Column>
     );
   }
 
