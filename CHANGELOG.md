@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.0](https://github.com/tanay-787/refind/compare/refind-v1.3.2...refind-v1.4.0) (2026-08-20)
+
+
+### Features
+
+* **home:** semantic live status text and 300ms delayed search spinner ([4be6676](https://github.com/tanay-787/refind/commit/4be6676415676d328bd233582da53381c8f263ec))
+* **onboarding:** outcome-focused copy on grant permission screen ([1fa6c17](https://github.com/tanay-787/refind/commit/1fa6c17b5d65162bcbd45be19fc3cac558dd6d7b))
+* **results:** polished idle, welcome, and no-results states ([58b89cf](https://github.com/tanay-787/refind/commit/58b89cfa952762a201686b81718ca56b8195c5c3))
+
+
+### Bug Fixes
+
+* **permission:** unconditional onboarding nav and discriminated return type ([5cfd9df](https://github.com/tanay-787/refind/commit/5cfd9dff35df725fc26d6f3179706da17a2be1b2))
+
 ## [1.3.2](https://github.com/tanay-787/refind/compare/refind-v1.3.1...refind-v1.3.2) (2026-08-13)
 
 
