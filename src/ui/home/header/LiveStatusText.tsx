@@ -15,7 +15,7 @@ function LoadingState() {
         color={brandColors.onSurfaceVariant} 
         style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
       >
-        Indexing in progress
+        Initializing...
       </ComposeText>
       <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
     </Row>
@@ -67,11 +67,22 @@ function LiveStatusTracker({ db }: { db: any }) {
   const processedCount = completed + failed;
   
   if (isProcessing && processedCount === 0) {
-    return <LoadingState />;
+    return (
+      <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 4 }}>
+        <ComposeText 
+          color={brandColors.onSurfaceVariant} 
+          style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
+        >
+          Reading your screenshots...
+        </ComposeText>
+        <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
+      </Row>
+    );
   }
 
   if (totalJobs === 0) {
-    return <LoadingState />;
+    // True empty state, don't show a loader
+    return null;
   }
 
   if (!isProcessing) {
@@ -90,7 +101,7 @@ function LiveStatusTracker({ db }: { db: any }) {
         color={brandColors.onSurfaceVariant}
         style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
       >
-        {' screenshots indexed'}
+        {` searchable · ${(pending + running).toLocaleString()} remaining`}
       </ComposeText>
     </Row>
   );
@@ -101,16 +112,10 @@ function DefaultText({ count }: { count?: number }) {
   return (
     <Row verticalAlignment="center">
       <ComposeText 
-        color={brandColors.primary}
-        style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
-      >
-        {count !== undefined ? count.toLocaleString() : '...'}
-      </ComposeText>
-      <ComposeText 
         color={brandColors.onSurfaceVariant}
         style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
       >
-        {' screenshots indexed'}
+        {count !== undefined ? `${count.toLocaleString()} screenshots · all searchable` : 'Your library is ready'}
       </ComposeText>
     </Row>
   );

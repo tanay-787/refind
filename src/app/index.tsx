@@ -44,8 +44,6 @@ export default function IndexScreen() {
   }, [hasMediaPermission, isChecking, router]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" color={colors.primary} />
-    </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }} />
   );
 }

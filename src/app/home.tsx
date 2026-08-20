@@ -7,7 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef, LoadingIndicator, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, align, padding as paddingModifier, size } from '@expo/ui/jetpack-compose/modifiers';
+import { fillMaxSize, align, padding as paddingModifier, size, background } from '@expo/ui/jetpack-compose/modifiers';
 import { useSearch, useJobJournalStore, usePermissionContext } from '@/hooks';
 import { ThemedHost } from '@/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const { results, search, loading } = useSearch();
+  const [delayedLoading, setDelayedLoading] = useState(false);
 
   const sync = useJobJournalStore(state => state.sync);
   const { hasMediaPermission, hasNotificationPermission, requestPermissions } = usePermissionContext();
@@ -48,6 +49,18 @@ export default function HomeScreen() {
     // Hide splash screen only when this screen mounts
     SplashScreen.hideAsync();
   }, []);
+
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    if (loading) {
+      timeout = setTimeout(() => {
+        setDelayedLoading(true);
+      }, 300);
+    } else {
+      setDelayedLoading(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   // Trigger search on query change with debounce
   useEffect(() => {
@@ -75,16 +88,17 @@ export default function HomeScreen() {
 
   const handleGrantPermission = async () => {
     const { media } = await requestPermissions();
-    if (media) {
+    if (media === 'granted') {
       await registerJobJournalBackgroundTask();
       await scheduleJobJournalBackgroundTask();
       sync();
-    } else {
+    } else if (media === 'denied') {
       snackbarRef.current?.showSnackbar({
         message: 'Refind requires "Allow All" access to search your library',
         duration: 'short',
       });
     }
+    // If 'settings_prompted', do nothing (the alert dialog is already visible)
   };
 
   // Permission gate: render nothing else until the user grants full access.
@@ -97,7 +111,7 @@ export default function HomeScreen() {
           />
           <SnackbarHost 
             ref={snackbarRef} 
-            modifiers={[align('topCenter'), paddingModifier(16, 0, 16, Math.max(insets.bottom, 16) + 16)]} 
+            modifiers={[align('topCenter'), paddingModifier(16, insets.top + 16, 16, Math.max(insets.bottom, 16) + 16)]} 
           />
         </Box>
       </ThemedHost>
@@ -118,7 +132,7 @@ export default function HomeScreen() {
         <Box modifiers={[fillMaxSize()]}>
           {query ? (
             // ACTIVE SEARCH BRANCH
-            loading ? (
+            delayedLoading ? (
               <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
                 <LoadingIndicator color={colors.primary} modifiers={[size(40, 40)]} />
               </Column>
