@@ -44,7 +44,7 @@ export const GrantPermissionScreen = React.memo(({ onGrantPermission }: GrantPer
     {/* Title + body */}
     <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }}>
       <Text textStyle={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 28, textAlign: 'center', letterSpacing: -0.5 }}>
-        Accessing Your Library
+        Your screenshots, searchable in seconds
       </Text>
       <Text textStyle={{ fontFamily: 'Inter_400Regular', fontSize: 16, lineHeight: 24, textAlign: 'center' }}>
         To automatically find and index your screenshots, Refind needs access to your entire photo library.
@@ -62,7 +62,7 @@ export const GrantPermissionScreen = React.memo(({ onGrantPermission }: GrantPer
         contentPadding={{ top: 18, bottom: 18 }}
         >
         <Text textStyle={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, letterSpacing: 0.3 }}>
-          Grant Permissions
+          Enable Search
         </Text>
       </FilledTonalButton>
 
