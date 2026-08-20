@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { Image } from 'expo-image';
 import { ThemedHost, useThemeColors } from '@/theme';
-import { Column, Box, RNHostView, Spacer, Text, Button, LoadingIndicator, ElevatedButton } from '@expo/ui/jetpack-compose';
+import { Column, Box, RNHostView, Spacer, Text, LoadingIndicator, ElevatedButton } from '@expo/ui/jetpack-compose';
 import { 
   fillMaxSize, 
   fillMaxWidth, 
@@ -36,12 +36,11 @@ export default function OnboardingScreen() {
     setLoading(true);
     let navigatingAway = false;
     try {
-      const { media } = await requestPermissions();
-      if (media) {
-        await SecureStore.setItemAsync('has_seen_onboarding', 'true');
-        navigatingAway = true;
-        router.replace('/home');
-      }
+      await requestPermissions();
+      
+      await SecureStore.setItemAsync('has_seen_onboarding', 'true');
+      navigatingAway = true;
+      router.replace('/home');
     } catch (err) {
       console.error('Failed to save onboarding state:', err);
     } finally {
@@ -101,7 +100,7 @@ export default function OnboardingScreen() {
           </Column>
 
           {/* Button at the bottom */}
-          <Box modifiers={[fillMaxWidth()]}>
+          <Column modifiers={[fillMaxWidth()]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
             <ElevatedButton
               onClick={handleContinue}
               enabled={!loading}
@@ -112,7 +111,6 @@ export default function OnboardingScreen() {
               }}
               modifiers={[fillMaxWidth()]}
               contentPadding={{ top: 18, bottom: 18 }}
-              
             >
               {loading ? (
                 <LoadingIndicator color={colors.onSurface} modifiers={[size(32, 32)]} />
@@ -122,7 +120,13 @@ export default function OnboardingScreen() {
                 </Text>
               )}
             </ElevatedButton>
-          </Box>
+            <Text 
+              color={colors.onSurfaceVariant}
+              style={{ fontFamily: 'Inter_400Regular', fontSize: 12, textAlign: 'center' }}
+            >
+              You'll be asked to allow photo access next
+            </Text>
+          </Column>
         </Column>
       </Box>
     </ThemedHost>

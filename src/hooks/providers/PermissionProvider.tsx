@@ -11,7 +11,7 @@ interface PermissionContextValue {
   hasMediaPermission: boolean | null; // null means checking
   hasNotificationPermission: boolean | null;
   isChecking: boolean;
-  requestPermissions: () => Promise<{ media: boolean; notifications: boolean }>;
+  requestPermissions: () => Promise<{ media: 'granted' | 'denied' | 'settings_prompted'; notifications: boolean }>;
   requestNotificationPermission: () => Promise<boolean>;
   checkAndRequestNotificationPermission: () => Promise<boolean>;
 }
@@ -87,7 +87,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     return settings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
   };
 
-  const requestPermissions = async () => {
+  const requestPermissions = async (): Promise<{ media: 'granted' | 'denied' | 'settings_prompted'; notifications: boolean }> => {
     let mediaGranted = false;
 
     // Handle Media Permission
@@ -95,7 +95,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
       const rawRes = permissionResponse as any;
       if (!rawRes.canAskAgain || rawRes.accessPrivileges === 'limited') {
         setShowSettingsAlert(true);
-        return { media: false, notifications: hasNotificationPermission || false };
+        return { media: 'settings_prompted', notifications: hasNotificationPermission || false };
       }
     }
 
@@ -110,7 +110,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
       notifGranted = await requestNotificationPermission();
     }
 
-    return { media: mediaGranted, notifications: notifGranted };
+    return { media: mediaGranted ? 'granted' : 'denied', notifications: notifGranted };
   };
 
   const value = useMemo(() => ({
