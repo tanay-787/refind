@@ -1,6 +1,4 @@
-For your screenshot-search pipeline, I would not think of it as a traditional queue.
-
-I would think of it as a **durable execution journal with idempotent stages**.
+A **durable execution journal with idempotent stages**.
 
 The durable workflow literature has largely converged on a few principles:
 

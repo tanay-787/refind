@@ -5,6 +5,7 @@ import { RNHostView } from '@expo/ui/jetpack-compose';
 import { ResultItem } from './ResultItem';
 import { Link } from 'expo-router';
 import type { SearchResult } from '@/core/jobjournal/search/hybrid';
+import { useThemeColors } from '@/theme';
 
 type GridRow = 
   | { type: 'landscape', items: [SearchResult] }
@@ -16,6 +17,7 @@ interface ResultsListProps {
   itemSize: number;
   spacing: number;
   columnCount: number;
+  isRAF?: boolean;
 }
 
 function chunkResults(results: SearchResult[]): GridRow[] {
@@ -43,8 +45,19 @@ function chunkResults(results: SearchResult[]): GridRow[] {
   return rows;
 }
 
-export const ResultsList = React.memo(({ results, spacing }: ResultsListProps) => {
+export const ResultsList = React.memo(({ results, spacing, isRAF = false }: ResultsListProps) => {
   const chunkedData = useMemo(() => chunkResults(results), [results]);
+  const colors = useThemeColors();
+
+  const renderHeader = useCallback(() => {
+    return (
+      <View style={{ paddingBottom: spacing, paddingHorizontal: 4 }}>
+        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.onSurfaceVariant }}>
+          {isRAF ? 'Recent' : `Found ${results.length.toLocaleString()} result${results.length === 1 ? '' : 's'}`}
+        </Text>
+      </View>
+    );
+  }, [isRAF, results.length, colors.onSurface, spacing]);
 
   const renderItem = useCallback(({ item: row }: { item: GridRow }) => {
     if (row.type === 'landscape') {
@@ -110,6 +123,7 @@ export const ResultsList = React.memo(({ results, spacing }: ResultsListProps) =
           numColumns={1}
           contentContainerStyle={{ padding: spacing, paddingBottom: 100 }}
           keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={renderHeader}
           renderItem={renderItem}
           ListFooterComponent={renderFooter}
         />
