@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/tanay-787/refind/compare/refind-v1.4.1...refind-v1.4.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **ci:** use Node 24 in release workflow build job ([#17](https://github.com/tanay-787/refind/issues/17)) ([1fb7594](https://github.com/tanay-787/refind/commit/1fb7594fd536124a5c45337841d3aabef7eb5199))
+
 ## [1.4.1](https://github.com/tanay-787/refind/compare/refind-v1.4.0...refind-v1.4.1) (2026-08-30)
 
 
