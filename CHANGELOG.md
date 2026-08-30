@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/tanay-787/refind/compare/refind-v1.4.0...refind-v1.4.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **ci:** pin EAS CLI to Node 20-compatible version ([#15](https://github.com/tanay-787/refind/issues/15)) ([f08fed9](https://github.com/tanay-787/refind/commit/f08fed9cb0f541a8042d466ce5f00fbc6c258c94))
+
 ## [1.4.0](https://github.com/tanay-787/refind/compare/refind-v1.3.2...refind-v1.4.0) (2026-08-20)
 
 
