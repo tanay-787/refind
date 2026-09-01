@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/tanay-787/refind/compare/refind-v1.4.2...refind-v1.5.0) (2026-09-01)
+
+
+### Features
+
+* **search:** query-derived suggestion chips ([03fdc48](https://github.com/tanay-787/refind/commit/03fdc48faea7b3ca981c18070784c23dfd4aee64))
+
+
+### Bug Fixes
+
+* **search:** sanitize FTS5 query tokens and separate query execution ([eea8e9a](https://github.com/tanay-787/refind/commit/eea8e9a9dab64d7ac810340af93fce4d4509ae26))
+* **sync:** show syncing state during initial ingest to prevent Welcome hang ([c40095f](https://github.com/tanay-787/refind/commit/c40095f678948f42a50c414b3aba04cb8a87ff3b))
+
 ## [1.4.2](https://github.com/tanay-787/refind/compare/refind-v1.4.1...refind-v1.4.2) (2026-08-30)
 
 
