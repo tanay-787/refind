@@ -61,66 +61,91 @@ export async function hybridSearch(
 
   // 1. Keyword/Text Search (FTS5) - BROAD RETRIEVAL + DYNAMIC RERANKING
   if (queryTokens.length > 0) {
-    // Permissive broad retrieval: OR logic to get anything potentially related
-    const ftsQuery = queryTokens.map(t => `${t}*`).join(' OR '); 
+    // Sanitize for FTS5 syntax: strip special chars that FTS5 treats as syntax
+    // (double-quote, parens, caret, asterisk). Everything else — hyphens,
+    // numbers, Unicode, punctuation like dots — is left intact so broad recall
+    // is not narrowed. Pure boolean operator tokens (AND / OR / NOT) are also
+    // dropped because they would alter query grammar rather than add signal.
+    const FTS5_SPECIAL = /["()^*]/g;
+    const FTS5_OPERATORS = /^(AND|OR|NOT)$/i;
+    const safeTokens = queryTokens
+      .map(t => t.replace(FTS5_SPECIAL, ''))
+      .filter(t => t.length > 0 && !FTS5_OPERATORS.test(t));
+
+    // Broad retrieval: every safe token becomes a prefix wildcard (token*)
+    // joined with OR — a single token match is enough to become a candidate.
+    // Post-retrieval reranking (calculateQueryScore) handles precision.
+    const ftsQuery = safeTokens.map(t => `${t}*`).join(' OR ');
     const trigramQuery = canonQuery.replace(/[^\w]/g, ' ').trim();
 
     try {
-      console.log(`[hybridSearch] Broad retrieval with FTS ("${ftsQuery}") and Trigram ("${trigramQuery}")`);
-      
-      const rawMatches = await db.all(sql`
-        SELECT 
-          idx.job_id,
-          o.text as cleaned_ocr_text,
-          idx.keywords,
-          j.image_uri as uri,
-          m.width,
-          m.height
-        FROM screenshot_search_index idx
-        JOIN job_journal_jobs j ON j.id = idx.job_id
-        LEFT JOIN metadata_stage_results m ON m.job_id = idx.job_id
-        LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = idx.job_id
-        WHERE screenshot_search_index MATCH ${ftsQuery}
-        UNION
-        SELECT 
-          tri.job_id,
-          o.text as cleaned_ocr_text,
-          tri.keywords,
-          j.image_uri as uri,
-          m.width,
-          m.height
-        FROM screenshot_search_trigram tri
-        JOIN job_journal_jobs j ON j.id = tri.job_id
-        LEFT JOIN metadata_stage_results m ON m.job_id = tri.job_id
-        LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = tri.job_id
-        WHERE screenshot_search_trigram MATCH ${trigramQuery}
-        LIMIT 100
-      `);
+      console.log(`[hybridSearch] Broad retrieval — FTS: "${ftsQuery}" | Trigram: "${trigramQuery}"`);
 
-      console.log(`[hybridSearch] Broad retrieval found ${rawMatches.length} raw candidates. Reranking...`);
+      const processRows = (rows: any[]) => {
+        rows.forEach((row: any) => {
+          const docKeywords = row.keywords ? row.keywords.split(' ') : [];
+          const relevanceScore = calculateQueryScore(queryTokens, row.cleaned_ocr_text || '', docKeywords);
+          if (relevanceScore > 0 && !candidates.has(row.job_id)) {
+            const w = row.width || 1;
+            const h = row.height || 1;
+            const aspect = w / h;
+            candidates.set(row.job_id, {
+              jobId: row.job_id,
+              uri: row.uri,
+              ocrText: row.cleaned_ocr_text || '',
+              keywords: docKeywords,
+              score: relevanceScore,
+              searchMethod: 'fts',
+              width: w,
+              height: h,
+              aspectRatio: aspect,
+              isLandscape: aspect > 1,
+            });
+          }
+        });
+      };
 
-      rawMatches.forEach((row: any) => {
-        const docKeywords = row.keywords ? row.keywords.split(' ') : [];
-        const relevanceScore = calculateQueryScore(queryTokens, row.cleaned_ocr_text || '', docKeywords);
-        
-        if (relevanceScore > 0) {
-          const w = row.width || 1;
-          const h = row.height || 1;
-          const aspect = w / h;
-          candidates.set(row.job_id, {
-            jobId: row.job_id,
-            uri: row.uri,
-            ocrText: row.cleaned_ocr_text || '',
-            keywords: docKeywords,
-            score: relevanceScore,
-            searchMethod: 'fts',
-            width: w,
-            height: h,
-            aspectRatio: aspect,
-            isLandscape: aspect > 1,
-          });
-        }
-      });
+      // FTS5 leg — only runs when there are safe tokens to match against
+      if (safeTokens.length > 0) {
+        const ftsMatches = await db.all(sql`
+          SELECT
+            idx.job_id,
+            o.text  as cleaned_ocr_text,
+            idx.keywords,
+            j.image_uri as uri,
+            m.width,
+            m.height
+          FROM screenshot_search_index idx
+          JOIN job_journal_jobs j ON j.id = idx.job_id
+          LEFT JOIN metadata_stage_results m ON m.job_id = idx.job_id
+          LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = idx.job_id
+          WHERE screenshot_search_index MATCH ${ftsQuery}
+          LIMIT 100
+        `);
+        processRows(ftsMatches);
+      }
+
+      // Trigram leg — always runs as long as trigramQuery has content
+      if (trigramQuery.length > 0) {
+        const triMatches = await db.all(sql`
+          SELECT
+            tri.job_id,
+            o.text  as cleaned_ocr_text,
+            tri.keywords,
+            j.image_uri as uri,
+            m.width,
+            m.height
+          FROM screenshot_search_trigram tri
+          JOIN job_journal_jobs j ON j.id = tri.job_id
+          LEFT JOIN metadata_stage_results m ON m.job_id = tri.job_id
+          LEFT JOIN ocr_postprocess_stage_results o ON o.job_id = tri.job_id
+          WHERE screenshot_search_trigram MATCH ${trigramQuery}
+          LIMIT 100
+        `);
+        processRows(triMatches);
+      }
+
+      console.log(`[hybridSearch] ${candidates.size} candidates after broad retrieval. Reranking...`);
     } catch (err) {
       console.warn('[hybridSearch] FTS broad retrieval/reranking failed:', err);
     }
