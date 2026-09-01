@@ -121,7 +121,7 @@ export default function OnboardingScreen() {
               )}
             </ElevatedButton>
             <Text 
-              color={colors.onSurfaceVariant}
+              color={colors.outline}
               style={{ fontFamily: 'Inter_400Regular', fontSize: 12, textAlign: 'center' }}
             >
               You'll be asked to allow photo access next
