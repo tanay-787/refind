@@ -145,7 +145,13 @@ export default function HomeScreen() {
               />
             ) : (
               <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-                <NoResultsState />
+                <NoResultsState 
+                  query={query} 
+                  onSuggestionTap={(suggestion) => {
+                    setQuery(suggestion);
+                    search(suggestion);
+                  }} 
+                />
               </Column>
             )
           ) : (
