@@ -21,6 +21,8 @@ interface IdleDashboardProps {
 
 export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: IdleDashboardProps) {
   const db = useJobJournalStore(state => state.db);
+  const isSyncing = useJobJournalStore(state => state.isSyncing);
+  const storeIsProcessing = useJobJournalStore(state => state.isProcessing);
   const colors = useThemeColors();
   
   const [showCelebration, setShowCelebration] = React.useState(false);
@@ -36,7 +38,7 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
       })
       .from(jobJournalJobs)
       .groupBy(jobJournalJobs.status);
-  }, [db]);
+  }, [db, isSyncing]); // Depend on isSyncing so it forcefully refetches after sync completes
 
   const { data } = useLiveQuery(query);
 
@@ -53,7 +55,7 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
       .where(eq(jobJournalJobs.status, 'completed'))
       .orderBy(desc(jobJournalJobs.createdAt))
       .limit(12);
-  }, [db]);
+  }, [db, isSyncing]);
 
   const { data: recentItemsData } = useLiveQuery(recentItemsQuery);
 
@@ -92,7 +94,7 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
     }
   }
 
-  const isProcessing = pending > 0 || running > 0;
+  const isProcessing = isSyncing || storeIsProcessing || pending > 0 || running > 0;
   const totalProcessed = completed + failed;
   const totalJobs = pending + running + completed + failed;
 
@@ -179,7 +181,7 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
         ) : (
           <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }}>
             <ComposeText color={colors.onSurface} style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 24, textAlign: 'center' }}>
-              Found {totalJobs.toLocaleString()} screenshots
+              {isSyncing && totalJobs === 0 ? "Finding screenshots..." : `Found ${totalJobs.toLocaleString()} screenshots`}
             </ComposeText>
 
             <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(32, 0, 32, 0)]}>

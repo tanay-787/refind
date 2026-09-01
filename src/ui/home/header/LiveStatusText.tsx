@@ -35,6 +35,9 @@ export function LiveStatusText() {
 function LiveStatusTracker({ db }: { db: any }) {
   const brandColors = useThemeColors();
   
+  const isSyncing = useJobJournalStore(state => state.isSyncing);
+  const storeIsProcessing = useJobJournalStore(state => state.isProcessing);
+  
   const query = React.useMemo(() => {
     return db
       .select({
@@ -43,7 +46,7 @@ function LiveStatusTracker({ db }: { db: any }) {
       })
       .from(jobJournalJobs)
       .groupBy(jobJournalJobs.status);
-  }, [db]);
+  }, [db, isSyncing]);
 
   const { data } = useLiveQuery(query);
   
@@ -63,7 +66,7 @@ function LiveStatusTracker({ db }: { db: any }) {
     totalJobs += row.count;
   }
 
-  const isProcessing = pending > 0 || running > 0;
+  const isProcessing = isSyncing || storeIsProcessing || pending > 0 || running > 0;
   const processedCount = completed + failed;
   
   if (isProcessing && processedCount === 0) {
@@ -73,14 +76,14 @@ function LiveStatusTracker({ db }: { db: any }) {
           color={brandColors.onSurfaceVariant} 
           style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
         >
-          Reading your screenshots...
+          {isSyncing ? 'Finding screenshots...' : 'Reading your screenshots...'}
         </ComposeText>
         <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
       </Row>
     );
   }
 
-  if (totalJobs === 0) {
+  if (totalJobs === 0 && !isSyncing) {
     // True empty state, don't show a loader
     return null;
   }
