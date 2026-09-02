@@ -76,7 +76,7 @@ function LiveStatusTracker({ db }: { db: any }) {
           color={brandColors.onSurfaceVariant} 
           style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
         >
-          {isSyncing ? 'Finding screenshots...' : 'Reading your screenshots...'}
+          {totalJobs === 0 || isSyncing ? 'Finding screenshots...' : 'Reading your screenshots...'}
         </ComposeText>
         <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
       </Row>

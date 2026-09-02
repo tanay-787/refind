@@ -181,19 +181,29 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
         ) : (
           <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }}>
             <ComposeText color={colors.onSurface} style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 24, textAlign: 'center' }}>
-              {isSyncing && totalJobs === 0 ? "Finding screenshots..." : `Found ${totalJobs.toLocaleString()} screenshots`}
+              {totalJobs === 0 ? "Finding screenshots..." : `Found ${totalJobs.toLocaleString()} screenshots`}
             </ComposeText>
 
             <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(32, 0, 32, 0)]}>
-              <LinearWavyProgressIndicator 
-                progress={progress} 
-                color={colors.primary} 
-                trackColor={colors.surfaceVariant}
-                modifiers={[fillMaxWidth()]} 
-              />
+              {totalJobs > 0 ? (
+                <LinearWavyProgressIndicator 
+                  progress={progress} 
+                  color={colors.primary} 
+                  trackColor={colors.surfaceVariant}
+                  modifiers={[fillMaxWidth()]} 
+                />
+              ) : (
+                <LinearWavyProgressIndicator 
+                  color={colors.primary} 
+                  trackColor={colors.surfaceVariant}
+                  modifiers={[fillMaxWidth()]} 
+                />
+              )}
               
               <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, textAlign: 'center' }}>
-                {totalProcessed.toLocaleString()} of {totalJobs.toLocaleString()} processed
+                {totalJobs === 0 
+                  ? "Scanning your library..." 
+                  : `${totalProcessed.toLocaleString()} of ${totalJobs.toLocaleString()} processed`}
               </ComposeText>
             </Column>
 
@@ -211,7 +221,9 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
 
             <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }} modifiers={[padding(12, 0, 0, 0)]}>
               <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' }}>
-                Extracting text and making them searchable...
+                {totalJobs === 0 
+                  ? "Searching your gallery for screenshots..." 
+                  : "Extracting text and making them searchable..."}
               </ComposeText>
             </Column>
           </Column>
