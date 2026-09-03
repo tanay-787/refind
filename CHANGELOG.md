@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/tanay-787/refind/compare/refind-v1.5.0...refind-v1.6.0) (2026-09-03)
+
+
+### Features
+
+* **results:** indeterminate progress and scanning copy during initial discovery ([6e96680](https://github.com/tanay-787/refind/commit/6e96680c63db69c48fe4072e09e1019adf7909a5))
+
 ## [1.5.0](https://github.com/tanay-787/refind/compare/refind-v1.4.2...refind-v1.5.0) (2026-09-01)
 
 
