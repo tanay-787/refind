@@ -22,8 +22,30 @@ function LoadingState() {
   );
 }
 
+function DiscoveryStatus() {
+  const brandColors = useThemeColors();
+  return (
+    <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 4 }}>
+      <ComposeText 
+        color={brandColors.onSurfaceVariant} 
+        style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
+      >
+        Finding screenshots...
+      </ComposeText>
+      <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
+    </Row>
+  );
+}
+
 export function LiveStatusText() {
   const db = useJobJournalStore(state => state.db);
+  const phase = useJobJournalStore(state => state.phase);
+  const hasCompletedInitialIntake = useJobJournalStore(state => state.hasCompletedInitialIntake);
+
+  // During discovery and bulk ingestion on fresh install, render DiscoveryStatus with zero LiveQueries attached
+  if (!hasCompletedInitialIntake && (phase === 'source' || phase === 'intake')) {
+    return <DiscoveryStatus />;
+  }
   
   if (!db) {
     return <LoadingState />;
@@ -34,8 +56,6 @@ export function LiveStatusText() {
 
 function LiveStatusTracker({ db }: { db: any }) {
   const brandColors = useThemeColors();
-  
-  const isSyncing = useJobJournalStore(state => state.isSyncing);
   const storeIsProcessing = useJobJournalStore(state => state.isProcessing);
   
   const query = React.useMemo(() => {
@@ -46,7 +66,7 @@ function LiveStatusTracker({ db }: { db: any }) {
       })
       .from(jobJournalJobs)
       .groupBy(jobJournalJobs.status);
-  }, [db, isSyncing]);
+  }, [db]);
 
   const { data } = useLiveQuery(query);
   
@@ -66,7 +86,7 @@ function LiveStatusTracker({ db }: { db: any }) {
     totalJobs += row.count;
   }
 
-  const isProcessing = isSyncing || storeIsProcessing || pending > 0 || running > 0;
+  const isProcessing = storeIsProcessing || pending > 0 || running > 0;
   const processedCount = completed + failed;
   
   if (isProcessing && processedCount === 0) {
@@ -76,14 +96,14 @@ function LiveStatusTracker({ db }: { db: any }) {
           color={brandColors.onSurfaceVariant} 
           style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
         >
-          {totalJobs === 0 || isSyncing ? 'Finding screenshots...' : 'Reading your screenshots...'}
+          Reading your screenshots...
         </ComposeText>
         <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
       </Row>
     );
   }
 
-  if (totalJobs === 0 && !isSyncing) {
+  if (totalJobs === 0) {
     // True empty state, don't show a loader
     return null;
   }
@@ -115,7 +135,7 @@ function DefaultText({ count }: { count?: number }) {
   return (
     <Row verticalAlignment="center">
       <ComposeText 
-        color={brandColors.onSurfaceVariant}
+        color={brandColors.onSurfaceVariant} 
         style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
       >
         {count !== undefined ? `${count.toLocaleString()} screenshots · all searchable` : 'Your library is ready'}
@@ -123,3 +143,4 @@ function DefaultText({ count }: { count?: number }) {
     </Row>
   );
 }
+

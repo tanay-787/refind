@@ -19,16 +19,60 @@ interface IdleDashboardProps {
   columnCount: number;
 }
 
-export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: IdleDashboardProps) {
-  const db = useJobJournalStore(state => state.db);
-  const isSyncing = useJobJournalStore(state => state.isSyncing);
+/**
+ * Pure Compose view rendered during source and intake phases.
+ * Attaches ZERO database LiveQueries to prevent reactive thrashing during initial bulk ingestion.
+ */
+function DiscoveryView() {
+  const colors = useThemeColors();
+  return (
+    <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
+      <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }}>
+        <ComposeText color={colors.onSurface} style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 24, textAlign: 'center' }}>
+          Finding screenshots...
+        </ComposeText>
+
+        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(32, 0, 32, 0)]}>
+          <LinearWavyProgressIndicator 
+            color={colors.primary} 
+            trackColor={colors.surfaceVariant}
+            modifiers={[fillMaxWidth()]} 
+          />
+          
+          <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, textAlign: 'center' }}>
+            Scanning your library...
+          </ComposeText>
+        </Column>
+
+        <Box modifiers={[size(64, 96)]} />
+
+        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }} modifiers={[padding(12, 0, 0, 0)]}>
+          <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' }}>
+            Searching your gallery for screenshots...
+          </ComposeText>
+        </Column>
+      </Column>
+    </Column>
+  );
+}
+
+interface LiveDashboardProps {
+  db: any;
+  recentItems: SearchResult[];
+  itemSize: number;
+  spacing: number;
+  columnCount: number;
+}
+
+/**
+ * Reactive dashboard mounted ONLY during execution and idle phases after intake has completed.
+ */
+function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: LiveDashboardProps) {
   const storeIsProcessing = useJobJournalStore(state => state.isProcessing);
   const colors = useThemeColors();
   
   const [showCelebration, setShowCelebration] = React.useState(false);
   const wasProcessing = React.useRef(false);
-
-  if (!db) return <WelcomeState />;
 
   const query = React.useMemo(() => {
     return db
@@ -38,7 +82,7 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
       })
       .from(jobJournalJobs)
       .groupBy(jobJournalJobs.status);
-  }, [db, isSyncing]); // Depend on isSyncing so it forcefully refetches after sync completes
+  }, [db]);
 
   const { data } = useLiveQuery(query);
 
@@ -55,7 +99,7 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
       .where(eq(jobJournalJobs.status, 'completed'))
       .orderBy(desc(jobJournalJobs.createdAt))
       .limit(12);
-  }, [db, isSyncing]);
+  }, [db]);
 
   const { data: recentItemsData } = useLiveQuery(recentItemsQuery);
 
@@ -94,7 +138,7 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
     }
   }
 
-  const isProcessing = isSyncing || storeIsProcessing || pending > 0 || running > 0;
+  const isProcessing = storeIsProcessing || pending > 0 || running > 0;
   const totalProcessed = completed + failed;
   const totalJobs = pending + running + completed + failed;
 
@@ -258,3 +302,27 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
     </Column>
   );
 }
+
+export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: IdleDashboardProps) {
+  const db = useJobJournalStore(state => state.db);
+  const phase = useJobJournalStore(state => state.phase);
+  const hasCompletedInitialIntake = useJobJournalStore(state => state.hasCompletedInitialIntake);
+
+  // During discovery and initial bulk ingest on fresh install, render DiscoveryView with ZERO LiveQueries
+  if (!hasCompletedInitialIntake && (phase === 'source' || phase === 'intake')) {
+    return <DiscoveryView />;
+  }
+
+  if (!db) return <WelcomeState />;
+
+  return (
+    <LiveDashboard
+      db={db}
+      recentItems={recentItems}
+      itemSize={itemSize}
+      spacing={spacing}
+      columnCount={columnCount}
+    />
+  );
+}
+
