@@ -11,13 +11,21 @@ export {
   resetFailedExecutions
 } from './03-executor';
 export {
-  getExecutorStats, runNextStageExecution, runNextJobToCompletion
+  getExecutorStats, getJobQueueStats, runNextStageExecution, runNextJobToCompletion
 } from './05-runner';
 export {
   registerJobJournalBackgroundTask,
   scheduleJobJournalBackgroundTask,
-  unregisterJobJournalBackgroundTask
+  unregisterJobJournalBackgroundTask,
+  processUntilEmpty,
+  processJobJournalNow,
 } from './background-tasks';
+export {
+  setupNotificationChannel,
+  startSyncForegroundService,
+  updateSyncNotificationProgress,
+  stopSyncForegroundService,
+} from './utils/notifications';
 export { runKeywordsStage } from './stages/05-keywords.stage';
 export { getJobJournalDatabase, getJobJournalVecStatus, initializeJobJournalDatabase } from './storage/database';
 export { JOB_JOURNAL_SCHEMA, JOB_JOURNAL_VEC_SCHEMA } from './storage/schema';

@@ -9,11 +9,10 @@ import {
   claimNextStageForJob,
   completeStageExecution,
   failStageExecution,
-  recoveryExpiredLeases,
   renewExecutionLease,
   revokeExecutionLease,
 } from './03-executor';
-import { getDrizzleDb, getJobJournalDatabase } from './storage/database';
+import { getDrizzleDb } from './storage/database';
 import { 
   jobJournalJobs, 
   metadataStageResults, 
@@ -294,6 +293,32 @@ export async function getExecutorStats() {
     else if (row.status === 'running') result.running = row.count;
     else if (row.status === 'completed') result.completed = row.count;
     else if (row.status === 'failed') result.failed = row.count;
+  }
+
+  return result;
+}
+
+export async function getJobQueueStats() {
+  const db = await getDrizzleDb();
+  const rows = await db.select({ status: jobJournalJobs.status, count: count() })
+    .from(jobJournalJobs)
+    .groupBy(jobJournalJobs.status);
+
+  const result = {
+    pending: 0,
+    running: 0,
+    completed: 0,
+    failed: 0,
+    total: 0,
+  };
+
+  for (const row of rows) {
+    const c = row.count ?? 0;
+    if (row.status === 'pending') result.pending = c;
+    else if (row.status === 'running') result.running = c;
+    else if (row.status === 'completed') result.completed = c;
+    else if (row.status === 'failed') result.failed = c;
+    result.total += c;
   }
 
   return result;

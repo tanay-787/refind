@@ -14,11 +14,17 @@ import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
 
 export type EnginePhase = 'idle' | 'source' | 'intake' | 'execution';
 
+export interface JobProgress {
+  current: number;
+  total: number;
+}
+
 export interface JobJournalState {
   phase: EnginePhase;
   hasCompletedInitialIntake: boolean;
   isSyncing: boolean;
   isProcessing: boolean;
+  progress: JobProgress | null;
   lastError: string | null;
   lastErrorCode: JobJournalErrorCode | null;
   db: any | null;
@@ -38,6 +44,7 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
   hasCompletedInitialIntake: false,
   isSyncing: false,
   isProcessing: false,
+  progress: null,
   lastError: null,
   lastErrorCode: null,
   db: null,
@@ -108,10 +115,12 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
     engineLock = true;
     set({ isProcessing: true, phase: 'execution' });
     try {
-      return await processUntilEmpty(iterations, 10);
+      return await processUntilEmpty(iterations, 10, (current, total) => {
+        set({ progress: { current, total } });
+      });
     } finally {
       engineLock = false;
-      set({ isProcessing: false, phase: 'idle' });
+      set({ isProcessing: false, phase: 'idle', progress: null });
     }
   },
 
@@ -135,7 +144,7 @@ async function runEngine(set: any) {
   
   const stats = await getExecutorStats();
   if (stats.pending === 0) {
-    set({ phase: 'idle' });
+    set({ phase: 'idle', progress: null });
     return;
   }
 
@@ -144,11 +153,13 @@ async function runEngine(set: any) {
   
   try {
     console.log(`[JobJournalEngine] Waking up. Found ${stats.pending} pending tasks.`);
-    await processUntilEmpty(1000, 10); 
+    await processUntilEmpty(1000, 10, (current, total) => {
+      set({ progress: { current, total } });
+    }); 
   } catch (err) {
     console.error('[JobJournalEngine] Loop error:', err);
   } finally {
     engineLock = false;
-    set({ isProcessing: false, phase: 'idle' });
+    set({ isProcessing: false, phase: 'idle', progress: null });
   }
 }

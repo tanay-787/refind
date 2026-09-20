@@ -1,70 +1,103 @@
-/* Job Journal background task runner
- * - Defines a short-lived background task that claims and executes a small number
- *   of stage executions per invocation to respect OS background time budgets.
+/* Job Journal processing & task runner
+ * - Runs foreground processing using Android Foreground Service (dataSync)
+ *   via react-native-notify-kit.
  * - Optimized Sequential Flow: Processes one task at a time to minimize memory 
- *   pressure and native resource contention (best for ML Kit & ExecuTorch).
+ *   pressure and native resource contention (best for ML Kit).
  */
+import notifee from 'react-native-notify-kit';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
-import { runNextStageExecution, runNextJobToCompletion } from './05-runner';
+import { runNextStageExecution, runNextJobToCompletion, getJobQueueStats } from './05-runner';
 import { recoveryExpiredLeases } from './03-executor';
-import { updateSyncNotification, clearSyncNotification } from './utils/notifications';
+import { 
+  startSyncForegroundService, 
+  updateSyncNotificationProgress, 
+  stopSyncForegroundService 
+} from './utils/notifications';
 
 const JOB_JOURNAL_TASK_NAME = 'JOB_JOURNAL_RUNNER_TASK';
 
+export interface ProcessProgressCallback {
+  (current: number, total: number): void;
+}
+
+let isProcessingActive = false;
+
 /**
- * High-speed autonomous loop with hardware "breathing" pauses.
- * Designed for clearing large backlogs (3,000+ screenshots) in the foreground.
+ * Autonomous processing loop with hardware "breathing" pauses.
+ * Wrapped in an Android Foreground Service with an ongoing notification.
  */
-export async function processUntilEmpty(maxTotal = 1000, batchSize = 25) {
+export async function processUntilEmpty(
+  maxTotal = 1000,
+  batchSize = 25,
+  onProgress?: ProcessProgressCallback,
+) {
+  if (isProcessingActive) {
+    console.log('[backgroundTasks] processUntilEmpty already running, skipping duplicate invocation.');
+    return 0;
+  }
+  isProcessingActive = true;
+
   let totalProcessed = 0;
   
-  // 1. Recover any abandoned leases from crashes/background kills (once, not per-stage)
-  await recoveryExpiredLeases();
-  
-  // Channel should already be created natively or on app start.
-  void updateSyncNotification();
-
-  while (totalProcessed < maxTotal) {
-    let batchProcessed = 0;
+  try {
+    // 1. Recover any abandoned leases from previous crashes/kills
+    await recoveryExpiredLeases();
     
-    // Process a sub-batch using fused job execution
-    // Each runNextJobToCompletion() drives all stages for one job (~5 stages)
-    for (let i = 0; i < batchSize; i++) {
-      const didWork = await runNextJobToCompletion();
-      if (!didWork) {
-        void clearSyncNotification();
-        return totalProcessed; // Queue is fully empty
-      }
-      batchProcessed++;
-      totalProcessed++;
+    // 2. Fetch queue stats to calculate exact progress numbers
+    const initialStats = await getJobQueueStats();
+    const remaining = initialStats.pending + initialStats.running;
+    
+    if (remaining === 0) {
+      return 0;
     }
 
-    // 2. Hardware "Breath": Pause briefly after each batch 
-    // to let Native GC and the JS Event Loop catch up.
-    // With batchSize=25 and ~5 stages/job, this pauses every ~25 jobs.
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    console.log(`[backgroundTasks] Sub-batch complete. Total jobs processed: ${totalProcessed}`);
-  }
+    const totalTarget = initialStats.total;
+    let currentCompleted = initialStats.completed;
 
-  void clearSyncNotification();
-  return totalProcessed;
+    // 3. Start Android Foreground Service notification
+    await startSyncForegroundService(currentCompleted, totalTarget);
+    onProgress?.(currentCompleted, totalTarget);
+
+    while (totalProcessed < maxTotal) {
+      // Process a sub-batch using fused job execution
+      for (let i = 0; i < batchSize; i++) {
+        const didWork = await runNextJobToCompletion();
+        if (!didWork) {
+          // Queue is fully empty
+          void updateSyncNotificationProgress(currentCompleted, totalTarget, true);
+          onProgress?.(currentCompleted, totalTarget);
+          return totalProcessed;
+        }
+        totalProcessed++;
+        currentCompleted++;
+        
+        void updateSyncNotificationProgress(currentCompleted, totalTarget);
+        onProgress?.(currentCompleted, totalTarget);
+      }
+
+      // 4. Hardware "Breath": Pause briefly after each batch 
+      // to let Native GC and the JS Event Loop catch up.
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      console.log(`[backgroundTasks] Sub-batch complete. Processed: ${totalProcessed} (${currentCompleted}/${totalTarget})`);
+    }
+
+    return totalProcessed;
+  } finally {
+    isProcessingActive = false;
+    await stopSyncForegroundService();
+  }
 }
 
 /**
- * Standard background pass for short-lived OS-invocations.
- * Uses a time-budget instead of a strict iteration count to maximize
- * processing across different device speeds.
+ * Standard background pass for short-lived OS invocations.
  */
 async function processOnce() {
   let processed = 0;
-  
-  // The OS usually gives us ~30 seconds. We play it safe with 24 seconds.
   const MAX_EXECUTION_TIME_MS = 24 * 1000; 
   const startTime = Date.now();
 
-  // Recover expired leases once per background invocation
   await recoveryExpiredLeases();
 
   while (true) {
@@ -74,7 +107,6 @@ async function processOnce() {
       break;
     }
 
-    // Background mode uses per-stage execution for tighter time-budget control
     const didWork = await runNextStageExecution();
     if (!didWork) {
       console.log(`[backgroundTasks] Queue empty! Processed ${processed} items in ${elapsedMs}ms.`);
@@ -84,11 +116,30 @@ async function processOnce() {
     processed++;
   }
 
-  void clearSyncNotification();
+  await stopSyncForegroundService();
   return processed;
 }
 
-// Define task at top level for reliable registration
+// Register Android Foreground Service headless task runner
+try {
+  notifee.registerForegroundService(() => {
+    return new Promise(async (resolve) => {
+      try {
+        console.log('[backgroundTasks] Native Foreground Service task started.');
+        await processUntilEmpty(1000, 25);
+      } catch (err) {
+        console.error('[backgroundTasks] Native Foreground Service task error:', err);
+      } finally {
+        await stopSyncForegroundService();
+        resolve();
+      }
+    });
+  });
+} catch (err) {
+  console.warn('[backgroundTasks] Failed to register foreground service runner:', err);
+}
+
+// Background task definition for periodic sync
 try {
   TaskManager.defineTask(JOB_JOURNAL_TASK_NAME, async () => {
     try {
@@ -98,7 +149,7 @@ try {
       return BackgroundTask.BackgroundTaskResult.Success;
     } catch (err) {
       console.error('JobJournal background task failed:', err);
-      void clearSyncNotification();
+      await stopSyncForegroundService();
       return BackgroundTask.BackgroundTaskResult.Failed;
     }
   });
@@ -134,9 +185,6 @@ export async function unregisterJobJournalBackgroundTask() {
   }
 }
 
-/**
- * Run the runner loop immediately in-process (foreground). 
- */
 export async function processJobJournalNow(iterations = 128) {
   return await processUntilEmpty(iterations);
 }
