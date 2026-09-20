@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/tanay-787/refind/compare/refind-v1.6.0...refind-v1.7.0) (2026-09-20)
+
+
+### Features
+
+* **sync:** add android foreground service processing with live progress ([4ff4faa](https://github.com/tanay-787/refind/commit/4ff4faad2c8b06d6d6a4c468e9d70d6ac402ef36))
+
 ## [1.6.0](https://github.com/tanay-787/refind/compare/refind-v1.5.0...refind-v1.6.0) (2026-09-03)
 
 
