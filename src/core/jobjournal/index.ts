@@ -18,10 +18,12 @@ export {
   scheduleJobJournalBackgroundTask,
   unregisterJobJournalBackgroundTask,
   processUntilEmpty,
+  runForegroundProcessing,
   processJobJournalNow,
 } from './background-tasks';
 export {
   setupNotificationChannel,
+  ensureNotificationPermission,
   startSyncForegroundService,
   updateSyncNotificationProgress,
   stopSyncForegroundService,

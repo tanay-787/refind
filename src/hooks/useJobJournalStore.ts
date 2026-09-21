@@ -7,7 +7,7 @@ import {
   ingestJobJournalScreenshots,
   resetFailedExecutions,
 } from '@/core/jobjournal';
-import { processUntilEmpty } from '@/core/jobjournal/background-tasks';
+import { runForegroundProcessing } from '@/core/jobjournal/background-tasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
 import { getDrizzleDb } from '@/core/jobjournal/storage/database';
 import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
@@ -115,7 +115,7 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
     engineLock = true;
     set({ isProcessing: true, phase: 'execution' });
     try {
-      return await processUntilEmpty(iterations, 10, (current, total) => {
+      return await runForegroundProcessing(iterations, 10, (current, total) => {
         set({ progress: { current, total } });
       });
     } finally {
@@ -152,8 +152,8 @@ async function runEngine(set: any) {
   set({ isProcessing: true, phase: 'execution' });
   
   try {
-    console.log(`[JobJournalEngine] Waking up. Found ${stats.pending} pending tasks.`);
-    await processUntilEmpty(1000, 10, (current, total) => {
+    console.log(`[JobJournalEngine] Starting foreground processing for ${stats.pending} pending tasks.`);
+    await runForegroundProcessing(1000, 10, (current, total) => {
       set({ progress: { current, total } });
     }); 
   } catch (err) {
