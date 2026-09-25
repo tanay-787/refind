@@ -6,6 +6,8 @@ import {
   loadJobJournalScreenshotSource,
   ingestJobJournalScreenshots,
   resetFailedExecutions,
+  startDiscoveryNotification,
+  stopSyncForegroundService,
 } from '@/core/jobjournal';
 import { runForegroundProcessing } from '@/core/jobjournal/background-tasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
@@ -84,6 +86,7 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
     }
     
     try {
+      await startDiscoveryNotification();
       const assets = await loadJobJournalScreenshotSource();
       if (isInitial) {
         set({ phase: 'intake' });
@@ -96,6 +99,7 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
       void runEngine(set);
       return result;
     } catch (error) {
+      void stopSyncForegroundService();
       const message = error instanceof Error ? error.message : 'Sync failed';
       set({ 
         lastError: message, 
@@ -145,6 +149,7 @@ async function runEngine(set: any) {
   const stats = await getExecutorStats();
   if (stats.pending === 0) {
     set({ phase: 'idle', progress: null });
+    void stopSyncForegroundService();
     return;
   }
 

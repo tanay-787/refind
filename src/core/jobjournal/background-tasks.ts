@@ -13,6 +13,7 @@ import {
   startSyncForegroundService, 
   updateSyncNotificationProgress, 
   stopSyncForegroundService,
+  showIndexingCompleteNotification,
   setForegroundServiceResolver,
 } from './utils/notifications';
 
@@ -83,6 +84,9 @@ export async function runForegroundProcessing(
   }
   isProcessingActive = true;
 
+  let processedCount = 0;
+  let finalTargetTotal = 0;
+
   try {
     const stats = await getJobQueueStats();
     const remaining = stats.pending + stats.running;
@@ -92,22 +96,27 @@ export async function runForegroundProcessing(
       return 0;
     }
 
+    finalTargetTotal = stats.total;
     console.log(`[backgroundTasks] Starting foreground service for ${remaining} tasks (total: ${stats.total}).`);
     await startSyncForegroundService(stats.completed, stats.total);
     onProgress?.(stats.completed, stats.total);
 
-    const processed = await processUntilEmpty(maxTotal, batchSize, (current, total) => {
+    processedCount = await processUntilEmpty(maxTotal, batchSize, (current, total) => {
       void updateSyncNotificationProgress(current, total);
       onProgress?.(current, total);
     });
 
     // Final forced update to show completion before dismiss
-    void updateSyncNotificationProgress(stats.completed + processed, stats.total, true);
+    void updateSyncNotificationProgress(stats.completed + processedCount, stats.total, true);
 
-    return processed;
+    return processedCount;
   } finally {
     isProcessingActive = false;
-    await stopSyncForegroundService();
+    if (processedCount > 0) {
+      await showIndexingCompleteNotification(finalTargetTotal);
+    } else {
+      await stopSyncForegroundService();
+    }
   }
 }
 

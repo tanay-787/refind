@@ -24,8 +24,10 @@ export {
 export {
   setupNotificationChannel,
   ensureNotificationPermission,
+  startDiscoveryNotification,
   startSyncForegroundService,
   updateSyncNotificationProgress,
+  showIndexingCompleteNotification,
   stopSyncForegroundService,
 } from './utils/notifications';
 export { runKeywordsStage } from './stages/05-keywords.stage';

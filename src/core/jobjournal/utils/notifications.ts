@@ -8,7 +8,10 @@ import notifee, {
 } from 'react-native-notify-kit';
 
 export const NOTIFICATION_ID = 'job_journal_sync';
+export const COMPLETION_NOTIFICATION_ID = 'job_journal_completion';
 export const CHANNEL_ID = 'refind_indexing_channel';
+export const ALERTS_CHANNEL_ID = 'refind_alerts_channel';
+export const BRAND_COLOR = '#208AEF';
 
 let isChannelCreated = false;
 let isForegroundServiceRunning = false;
@@ -17,6 +20,7 @@ let lastProgressUpdateTime = 0;
 const MIN_UPDATE_INTERVAL_MS = 600;
 
 let foregroundServiceResolver: (() => void) | null = null;
+let completionDismissTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export async function setupNotificationChannel() {
   if (isChannelCreated) return;
@@ -29,6 +33,7 @@ export async function setupNotificationChannel() {
       // Ignore cleanup errors
     }
 
+    // Ongoing progress channel (silent in shade)
     await notifee.createChannel({
       id: CHANNEL_ID,
       name: 'Screenshot Indexing',
@@ -36,6 +41,16 @@ export async function setupNotificationChannel() {
       importance: AndroidImportance.DEFAULT,
       vibration: false,
     });
+
+    // Milestone and completion channel (heads-up notification alert without vibration)
+    await notifee.createChannel({
+      id: ALERTS_CHANNEL_ID,
+      name: 'Indexing Alerts & Completion',
+      description: 'Alerts when indexing or screenshot discovery completes',
+      importance: AndroidImportance.HIGH,
+      vibration: false,
+    });
+
     isChannelCreated = true;
     if (typeof notifee.prewarmForegroundService === 'function') {
       await notifee.prewarmForegroundService();
@@ -68,6 +83,45 @@ export async function ensureNotificationPermission(): Promise<boolean> {
 }
 
 /**
+ * Displays an indeterminate discovery notification during photo library intake.
+ */
+export async function startDiscoveryNotification(): Promise<boolean> {
+  try {
+    if (AppState.currentState !== 'active') return false;
+    const hasPermission = await ensureNotificationPermission();
+    if (!hasPermission) return false;
+
+    if (completionDismissTimeout) {
+      clearTimeout(completionDismissTimeout);
+      completionDismissTimeout = null;
+    }
+
+    await setupNotificationChannel();
+
+    await notifee.displayNotification({
+      id: NOTIFICATION_ID,
+      title: 'Discovering screenshots',
+      body: 'Scanning photo library for new screenshots…',
+      android: {
+        channelId: CHANNEL_ID,
+        category: AndroidCategory.PROGRESS,
+        ongoing: true,
+        onlyAlertOnce: true,
+        color: BRAND_COLOR,
+        progress: {
+          indeterminate: true,
+        },
+        pressAction: { id: 'default', launchActivity: 'default' },
+      },
+    });
+    return true;
+  } catch (err) {
+    console.error('[notifications] Failed to show discovery notification:', err);
+    return false;
+  }
+}
+
+/**
  * Starts an ongoing Android foreground service notification with native progress bar.
  */
 export async function startSyncForegroundService(current = 0, total = 0): Promise<boolean> {
@@ -84,17 +138,26 @@ export async function startSyncForegroundService(current = 0, total = 0): Promis
       return false;
     }
 
+    if (completionDismissTimeout) {
+      clearTimeout(completionDismissTimeout);
+      completionDismissTimeout = null;
+    }
+
     await setupNotificationChannel();
     lastProgressUpdateTime = Date.now();
 
     const hasTotal = total > 0;
+    const title = hasTotal
+      ? `Indexing ${total === 1 ? '1 screenshot' : `${total.toLocaleString()} screenshots`}`
+      : 'Indexing screenshots';
+    const percentage = hasTotal ? Math.round((current / total) * 100) : 0;
     const body = hasTotal
-      ? `Indexing ${current} of ${total} screenshots...`
-      : 'Indexing screenshots in background...';
+      ? `${percentage}% • ${current.toLocaleString()} of ${total.toLocaleString()} indexed`
+      : 'Indexing screenshots in background…';
 
     await notifee.displayNotification({
       id: NOTIFICATION_ID,
-      title: 'Indexing screenshots',
+      title,
       body,
       android: {
         channelId: CHANNEL_ID,
@@ -104,6 +167,7 @@ export async function startSyncForegroundService(current = 0, total = 0): Promis
         foregroundServiceBehavior: AndroidForegroundServiceBehavior.IMMEDIATE,
         ongoing: true,
         onlyAlertOnce: true,
+        color: BRAND_COLOR,
         progress: hasTotal
           ? {
               max: total,
@@ -113,6 +177,7 @@ export async function startSyncForegroundService(current = 0, total = 0): Promis
           : {
               indeterminate: true,
             },
+        pressAction: { id: 'default', launchActivity: 'default' },
       },
     });
     isForegroundServiceRunning = true;
@@ -144,19 +209,24 @@ export async function updateSyncNotificationProgress(
 
   try {
     const hasTotal = total > 0;
+    const title = hasTotal
+      ? `Indexing ${total === 1 ? '1 screenshot' : `${total.toLocaleString()} screenshots`}`
+      : 'Indexing screenshots';
+    const percentage = hasTotal ? Math.round((Math.min(current, total) / total) * 100) : 0;
     const body = hasTotal
-      ? `Indexed ${current} of ${total} screenshots`
-      : `Processed ${current} screenshots`;
+      ? `${percentage}% • ${current.toLocaleString()} of ${total.toLocaleString()} indexed`
+      : `Processed ${current.toLocaleString()} screenshots`;
 
     await notifee.displayNotification({
       id: NOTIFICATION_ID,
-      title: 'Indexing screenshots',
+      title,
       body,
       android: {
         channelId: CHANNEL_ID,
         category: AndroidCategory.PROGRESS,
         ongoing: true,
         onlyAlertOnce: true,
+        color: BRAND_COLOR,
         progress: hasTotal
           ? {
               max: total,
@@ -166,10 +236,69 @@ export async function updateSyncNotificationProgress(
           : {
               indeterminate: true,
             },
+        pressAction: { id: 'default', launchActivity: 'default' },
       },
     });
   } catch (err) {
     console.error('[notifications] Failed to update progress notification:', err);
+  }
+}
+
+/**
+ * Displays completion state on the exact same notification in-place.
+ * Stops the foreground service, clears the progress bar, marks ongoing: false,
+ * and auto-dismisses after 6 seconds.
+ */
+export async function showIndexingCompleteNotification(total: number): Promise<void> {
+  isForegroundServiceRunning = false;
+  if (foregroundServiceResolver) {
+    foregroundServiceResolver();
+    foregroundServiceResolver = null;
+  }
+  try {
+    await notifee.stopForegroundService();
+  } catch (err) {
+    console.error('[notifications] Failed to stop foreground service:', err);
+  }
+
+  try {
+    const hasPermission = await ensureNotificationPermission();
+    if (!hasPermission) return;
+
+    if (completionDismissTimeout) {
+      clearTimeout(completionDismissTimeout);
+      completionDismissTimeout = null;
+    }
+
+    const body = total === 1
+      ? 'Made 1 screenshot searchable'
+      : `Made ${total.toLocaleString()} screenshots searchable`;
+
+    await notifee.displayNotification({
+      id: NOTIFICATION_ID,
+      title: 'Indexing complete',
+      body,
+      android: {
+        channelId: CHANNEL_ID,
+        category: AndroidCategory.STATUS,
+        color: BRAND_COLOR,
+        ongoing: false,
+        autoCancel: true,
+        onlyAlertOnce: true,
+        pressAction: { id: 'default', launchActivity: 'default' },
+      },
+    });
+
+    // Automatically dismiss the completion banner after 6 seconds to keep tray tidy
+    completionDismissTimeout = setTimeout(async () => {
+      try {
+        await notifee.cancelNotification(NOTIFICATION_ID);
+      } catch {
+        // Ignore cancel errors
+      }
+    }, 6000);
+  } catch (err) {
+    console.error('[notifications] Failed to display completion notification:', err);
   }
 }
 
