@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.8.0](https://github.com/tanay-787/refind/compare/refind-v1.7.0...refind-v1.8.0) (2026-09-25)
+
+
+### Features
+
+* **sync:** morphing foreground notification with live count and completion dismiss ([04eca89](https://github.com/tanay-787/refind/commit/04eca8949eabc92d4004882bfdf9bbcfc338f351))
+
+
+### Bug Fixes
+
+* **sync:** resolve foreground service lifecycle and notification display deferral ([01c4953](https://github.com/tanay-787/refind/commit/01c4953eb901d76adca32ec3b18822f0dead9c34))
+* **viewer:** animate UI controls out together on dismiss and integrate back handler ([3ac3ed7](https://github.com/tanay-787/refind/commit/3ac3ed75f9c5bf16f87f12988adb5c5e755412b3))
+
 ## [1.7.0](https://github.com/tanay-787/refind/compare/refind-v1.6.0...refind-v1.7.0) (2026-09-20)
 
 
