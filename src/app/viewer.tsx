@@ -1,10 +1,11 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
   View,
-  AppState
+  AppState,
+  BackHandler,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -69,6 +70,8 @@ export default function ViewerScreen() {
   const boxW = useSharedValue(280);
   const boxH = useSharedValue(280);
 
+  const isDismissingRef = useRef(false);
+
   // Direct navigation back, bypassing Reanimated callbacks to prevent freeze bugs
   const navigateBack = useCallback((delayMs?: number) => {
     if (typeof delayMs === 'number' && delayMs > 0) {
@@ -87,11 +90,14 @@ export default function ViewerScreen() {
     navigateBack(220);
   }, [navigateBack]);
 
-  // Programmatic dismiss with backdrop fade-out and subtle scale-down
+  // Programmatic dismiss with backdrop fade-out, chrome fade-out, and subtle scale-down
   const dismiss = useCallback(() => {
+    if (isDismissingRef.current) return;
+    isDismissingRef.current = true;
     setSystemBarHidden(false);
     scale.value = withTiming(0.92, { duration: 180 });
     backdropOpacity.value = withTiming(0, { duration: 180 });
+    chromeVisible.value = withTiming(0, { duration: 180 });
     navigateBack(180);
   }, [navigateBack]);
 
@@ -116,6 +122,25 @@ export default function ViewerScreen() {
       setSystemBarHidden(false);
     }
   }, [isOcrMode]);
+
+  // Handle hardware / system back navigation
+  useEffect(() => {
+    const onBackPress = () => {
+      if (extractedText) {
+        setExtractedText(null);
+        return true;
+      }
+      if (isOcrMode) {
+        toggleOcrMode();
+        return true;
+      }
+      dismiss();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [extractedText, isOcrMode, toggleOcrMode, dismiss]);
 
   const handleScan = useCallback(async () => {
     if (!uri || !imgWStr || !imgHStr) {
@@ -290,6 +315,7 @@ export default function ViewerScreen() {
           const dir = translateY.value >= 0 ? 1 : -1;
           translateY.value = withTiming(dir * SCREEN_HEIGHT * 1.2, { duration: 220 });
           backdropOpacity.value = withTiming(0, { duration: 220 });
+          chromeVisible.value = withTiming(0, { duration: 180 });
           scheduleOnRN(navigateBackPanDismiss);
         } else {
           translateX.value = withSpring(0, SPRING);
@@ -309,6 +335,7 @@ export default function ViewerScreen() {
     .maxDuration(180)
     .onEnd((e) => {
       'worklet';
+      if (backdropOpacity.value < 0.99) return;
       if (scale.value > 1) {
         scale.value = withSpring(1, SPRING);
         translateX.value = withSpring(0, SPRING);
@@ -334,6 +361,7 @@ export default function ViewerScreen() {
     .maxDuration(180)
     .onEnd(() => {
       'worklet';
+      if (backdropOpacity.value < 0.99) return;
       if (chromeVisible.value === 1) {
         // Fade out chrome smoothly over 160ms, then hide native system bars without causing animation stutter
         chromeVisible.value = withTiming(0, { duration: 160 }, (finished) => {
