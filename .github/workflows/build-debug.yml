@@ -1,0 +1,64 @@
+name: Build Debug APK
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug-apk:
+    name: Compile Refind Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Expo Prebuild (Generate Android native project)
+        run: pnpm exec expo prebuild --platform android --clean
+
+      # Leverage centralized lean toolchain for Gradle caching, memory capping & single-ABI compilation
+      - name: Compile Debug APK via android-toolchain
+        uses: tanay-787/android-toolchain@main
+        with:
+          android-path: 'android'
+          java-version: '17'
+          target-abi: 'arm64-v8a'
+          gradle-task: 'assembleDebug'
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: refind-debug-${{ github.run_id }}
+          path: 'android/app/build/outputs/apk/debug/*.apk'
+          if-no-files-found: error
+          # 1-day retention protects your 2 GB monthly storage quota
+          retention-days: 1
