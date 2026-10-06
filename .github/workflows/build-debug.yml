@@ -2,6 +2,11 @@ name: Build Debug APK
 
 on:
   workflow_dispatch:
+    inputs:
+      side_by_side:
+        description: 'Configure package & name for side-by-side install with release app'
+        type: boolean
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,6 +46,31 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Configure App for Side-by-Side Debug
+        if: ${{ inputs.side_by_side != false }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const file = 'app.json';
+            if (fs.existsSync(file)) {
+              const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+              if (data.expo) {
+                data.expo.name = (data.expo.name || 'App') + ' (Debug)';
+                if (data.expo.android && data.expo.android.package) {
+                  data.expo.android.package = data.expo.android.package + '.debug';
+                }
+                if (data.expo.scheme) {
+                  data.expo.scheme = data.expo.scheme + '-debug';
+                }
+                fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+                console.log('✅ Configured for side-by-side debug install:');
+                console.log('   - Name: ' + data.expo.name);
+                console.log('   - Package: ' + data.expo.android?.package);
+                console.log('   - Scheme: ' + data.expo.scheme);
+              }
+            }
+          "
 
       - name: Expo Prebuild (Generate Android native project)
         run: pnpm exec expo prebuild --platform android --clean
