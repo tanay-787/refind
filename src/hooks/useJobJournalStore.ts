@@ -8,6 +8,7 @@ import {
   resetFailedExecutions,
   startDiscoveryNotification,
   stopSyncForegroundService,
+  engineControl,
 } from '@/core/jobjournal';
 import { runForegroundProcessing } from '@/core/jobjournal/background-tasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
@@ -26,6 +27,7 @@ export interface JobJournalState {
   hasCompletedInitialIntake: boolean;
   isSyncing: boolean;
   isProcessing: boolean;
+  isPaused: boolean;
   progress: JobProgress | null;
   lastError: string | null;
   lastErrorCode: JobJournalErrorCode | null;
@@ -33,6 +35,8 @@ export interface JobJournalState {
   
   sync: () => Promise<any | null>;
   process: (iterations?: number) => Promise<number>;
+  pause: () => void;
+  resume: () => void;
   retryFailed: () => Promise<number>;
   init: () => void;
 }
@@ -46,14 +50,28 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
   hasCompletedInitialIntake: false,
   isSyncing: false,
   isProcessing: false,
+  isPaused: false,
   progress: null,
   lastError: null,
   lastErrorCode: null,
   db: null,
 
+  pause: () => {
+    engineControl.pause();
+  },
+
+  resume: () => {
+    engineControl.resume();
+  },
+
   init: () => {
     if (isInitialized) return;
     isInitialized = true;
+
+    // Sync store state with engineControl
+    engineControl.addListener((isPaused) => {
+      set({ isPaused });
+    });
 
     getDrizzleDb().then(async db => {
       let hasCompletedInitialIntake = false;
@@ -69,6 +87,10 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
 
     AppState.addEventListener('change', (nextStatus) => {
       if (nextStatus === 'active') {
+        if (engineControl.isPaused()) {
+          console.log('[JobJournalStore] App active: auto-resuming paused engine.');
+          engineControl.resume();
+        }
         void runEngine(set);
       }
     });
@@ -86,6 +108,9 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
     }
     
     try {
+      if (engineControl.isPaused()) {
+        engineControl.resume();
+      }
       await startDiscoveryNotification();
       const assets = await loadJobJournalScreenshotSource();
       if (isInitial) {

@@ -27,9 +27,13 @@ export {
   startDiscoveryNotification,
   startSyncForegroundService,
   updateSyncNotificationProgress,
+  showPausedSyncNotification,
   showIndexingCompleteNotification,
   stopSyncForegroundService,
+  NOTIFICATION_ACTION_PAUSE,
+  NOTIFICATION_ACTION_RESUME,
 } from './utils/notifications';
+export { engineControl, EngineController } from './utils/engine-control';
 export { runKeywordsStage } from './stages/05-keywords.stage';
 export { getJobJournalDatabase, getJobJournalVecStatus, initializeJobJournalDatabase } from './storage/database';
 export { JOB_JOURNAL_SCHEMA, JOB_JOURNAL_VEC_SCHEMA } from './storage/schema';

@@ -13,6 +13,9 @@ export const CHANNEL_ID = 'refind_indexing_channel';
 export const ALERTS_CHANNEL_ID = 'refind_alerts_channel';
 export const BRAND_COLOR = '#208AEF';
 
+export const NOTIFICATION_ACTION_PAUSE = 'engine_pause';
+export const NOTIFICATION_ACTION_RESUME = 'engine_resume';
+
 let isChannelCreated = false;
 let isForegroundServiceRunning = false;
 let lastProgressUpdateTime = 0;
@@ -152,13 +155,14 @@ export async function startSyncForegroundService(current = 0, total = 0): Promis
       : 'Indexing screenshots';
     const percentage = hasTotal ? Math.round((current / total) * 100) : 0;
     const body = hasTotal
-      ? `${percentage}% • ${current.toLocaleString()} of ${total.toLocaleString()} indexed`
+      ? `${current.toLocaleString()} of ${total.toLocaleString()} indexed`
       : 'Indexing screenshots in background…';
 
     await notifee.displayNotification({
       id: NOTIFICATION_ID,
       title,
       body,
+      subtitle: hasTotal ? `${percentage}%` : undefined,
       android: {
         channelId: CHANNEL_ID,
         category: AndroidCategory.PROGRESS,
@@ -178,6 +182,12 @@ export async function startSyncForegroundService(current = 0, total = 0): Promis
               indeterminate: true,
             },
         pressAction: { id: 'default', launchActivity: 'default' },
+        actions: [
+          {
+            title: 'Pause',
+            pressAction: { id: NOTIFICATION_ACTION_PAUSE },
+          },
+        ],
       },
     });
     isForegroundServiceRunning = true;
@@ -199,7 +209,14 @@ export async function updateSyncNotificationProgress(
   total: number,
   force = false,
 ) {
-  if (!isForegroundServiceRunning) return;
+  if (!isForegroundServiceRunning) {
+    // If resuming from detached paused state, re-establish foreground service when active
+    if (AppState.currentState === 'active') {
+      await startSyncForegroundService(current, total);
+      return;
+    }
+    return;
+  }
 
   const now = Date.now();
   if (!force && now - lastProgressUpdateTime < MIN_UPDATE_INTERVAL_MS) {
@@ -214,13 +231,14 @@ export async function updateSyncNotificationProgress(
       : 'Indexing screenshots';
     const percentage = hasTotal ? Math.round((Math.min(current, total) / total) * 100) : 0;
     const body = hasTotal
-      ? `${percentage}% • ${current.toLocaleString()} of ${total.toLocaleString()} indexed`
+      ? `${current.toLocaleString()} of ${total.toLocaleString()} indexed`
       : `Processed ${current.toLocaleString()} screenshots`;
 
     await notifee.displayNotification({
       id: NOTIFICATION_ID,
       title,
       body,
+      subtitle: hasTotal ? `${percentage}%` : undefined,
       android: {
         channelId: CHANNEL_ID,
         category: AndroidCategory.PROGRESS,
@@ -237,10 +255,74 @@ export async function updateSyncNotificationProgress(
               indeterminate: true,
             },
         pressAction: { id: 'default', launchActivity: 'default' },
+        actions: [
+          {
+            title: 'Pause',
+            pressAction: { id: NOTIFICATION_ACTION_PAUSE },
+          },
+        ],
       },
     });
   } catch (err) {
     console.error('[notifications] Failed to update progress notification:', err);
+  }
+}
+
+/**
+ * Displays paused state on the notification in-place with a Resume action.
+ * Detaches the foreground service so the notification becomes swipable/dismissible.
+ */
+export async function showPausedSyncNotification(
+  current: number,
+  total: number,
+): Promise<void> {
+  // Detach foreground service so user can freely swipe/destroy the notification
+  if (isForegroundServiceRunning) {
+    isForegroundServiceRunning = false;
+    try {
+      await notifee.stopForegroundService();
+    } catch (err) {
+      console.warn('[notifications] Failed to stop foreground service on pause:', err);
+    }
+  }
+
+  try {
+    const hasTotal = total > 0;
+    const title = 'Indexing paused';
+    const body = hasTotal
+      ? `${current.toLocaleString()} of ${total.toLocaleString()} indexed`
+      : `Processed ${current.toLocaleString()} screenshots`;
+
+    await notifee.displayNotification({
+      id: NOTIFICATION_ID,
+      title,
+      body,
+      subtitle: undefined,
+      android: {
+        channelId: CHANNEL_ID,
+        category: AndroidCategory.PROGRESS,
+        ongoing: false, // <-- Swipable & destroyable by user
+        autoCancel: true,
+        onlyAlertOnce: true,
+        color: BRAND_COLOR,
+        progress: hasTotal
+          ? {
+              max: total,
+              current,
+              indeterminate: false,
+            }
+          : undefined,
+        pressAction: { id: 'default', launchActivity: 'default' },
+        actions: [
+          {
+            title: 'Resume',
+            pressAction: { id: NOTIFICATION_ACTION_RESUME, launchActivity: 'default' },
+          },
+        ],
+      },
+    });
+  } catch (err) {
+    console.error('[notifications] Failed to show paused notification:', err);
   }
 }
 

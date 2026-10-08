@@ -4,7 +4,7 @@
  * - Optimized Sequential Flow: Processes one task at a time to minimize memory 
  *   pressure and native resource contention (best for ML Kit).
  */
-import notifee from 'react-native-notify-kit';
+import notifee, { EventType } from 'react-native-notify-kit';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { runNextStageExecution, runNextJobToCompletion, getJobQueueStats } from './05-runner';
@@ -12,10 +12,15 @@ import { recoveryExpiredLeases } from './03-executor';
 import { 
   startSyncForegroundService, 
   updateSyncNotificationProgress, 
+  showPausedSyncNotification,
   stopSyncForegroundService,
   showIndexingCompleteNotification,
   setForegroundServiceResolver,
+  NOTIFICATION_ID,
+  NOTIFICATION_ACTION_PAUSE,
+  NOTIFICATION_ACTION_RESUME,
 } from './utils/notifications';
+import { engineControl } from './utils/engine-control';
 
 const JOB_JOURNAL_TASK_NAME = 'JOB_JOURNAL_RUNNER_TASK';
 
@@ -48,6 +53,18 @@ export async function processUntilEmpty(
   while (totalProcessed < maxTotal) {
     // Process a sub-batch using fused job execution
     for (let i = 0; i < batchSize; i++) {
+      if (engineControl.isPaused()) {
+        void showPausedSyncNotification(currentCompleted, totalTarget);
+        console.log('[backgroundTasks] Engine is paused, waiting for resume...');
+        const shouldContinue = await engineControl.waitForResume();
+        if (!shouldContinue) {
+          console.log('[backgroundTasks] Paused notification was dismissed by user. Exiting loop.');
+          onProgress?.(currentCompleted, totalTarget);
+          return totalProcessed;
+        }
+        console.log('[backgroundTasks] Engine resumed, continuing loop.');
+      }
+
       const didWork = await runNextJobToCompletion();
       if (!didWork) {
         // Queue is fully empty
@@ -85,7 +102,6 @@ export async function runForegroundProcessing(
   isProcessingActive = true;
 
   let processedCount = 0;
-  let finalTargetTotal = 0;
 
   try {
     const stats = await getJobQueueStats();
@@ -96,24 +112,34 @@ export async function runForegroundProcessing(
       return 0;
     }
 
-    finalTargetTotal = stats.total;
     console.log(`[backgroundTasks] Starting foreground service for ${remaining} tasks (total: ${stats.total}).`);
+    engineControl.setProgress(stats.completed, stats.total);
     await startSyncForegroundService(stats.completed, stats.total);
     onProgress?.(stats.completed, stats.total);
 
     processedCount = await processUntilEmpty(maxTotal, batchSize, (current, total) => {
-      void updateSyncNotificationProgress(current, total);
+      engineControl.setProgress(current, total);
+      if (engineControl.isPaused()) {
+        void showPausedSyncNotification(current, total);
+      } else {
+        void updateSyncNotificationProgress(current, total);
+      }
       onProgress?.(current, total);
     });
 
-    // Final forced update to show completion before dismiss
-    void updateSyncNotificationProgress(stats.completed + processedCount, stats.total, true);
+    // Final forced update to show completion before dismiss (if not dismissed by user)
+    if (!engineControl.wasDismissed()) {
+      engineControl.setProgress(stats.completed + processedCount, stats.total);
+      void updateSyncNotificationProgress(stats.completed + processedCount, stats.total, true);
+    }
 
     return processedCount;
   } finally {
     isProcessingActive = false;
-    if (processedCount > 0) {
-      await showIndexingCompleteNotification(finalTargetTotal);
+    const wasDismissed = engineControl.wasDismissed();
+    engineControl.reset();
+    if (!wasDismissed && processedCount > 0) {
+      await showIndexingCompleteNotification(processedCount);
     } else {
       await stopSyncForegroundService();
     }
@@ -124,6 +150,11 @@ export async function runForegroundProcessing(
  * Standard background pass for short-lived OS invocations.
  */
 async function processOnce() {
+  if (engineControl.isPaused()) {
+    console.log('[backgroundTasks] Engine is paused, skipping background pass.');
+    return 0;
+  }
+
   let processed = 0;
   const MAX_EXECUTION_TIME_MS = 24 * 1000; 
   const startTime = Date.now();
@@ -170,13 +201,42 @@ try {
   console.warn('[backgroundTasks] Failed to register foreground service runner:', err);
 }
 
-// Register background event handler to handle headless events and suppress warning
+// Register background event handler to handle headless events and action button presses
 try {
-  notifee.onBackgroundEvent(async () => {
-    // Background notification events (delivery, dismissal, press)
+  notifee.onBackgroundEvent(async ({ type, detail }) => {
+    if (type === EventType.ACTION_PRESS) {
+      const actionId = detail.pressAction?.id;
+      if (actionId === NOTIFICATION_ACTION_PAUSE) {
+        engineControl.pause();
+      } else if (actionId === NOTIFICATION_ACTION_RESUME) {
+        engineControl.resume();
+      }
+    } else if (type === EventType.DISMISSED && detail.notification?.id === NOTIFICATION_ID) {
+      console.log('[backgroundTasks] Background notification dismissed by user.');
+      engineControl.dismiss();
+    }
   });
 } catch (err) {
   console.warn('[backgroundTasks] Failed to register background event handler:', err);
+}
+
+// Register foreground event handler to handle action presses when the app is active
+try {
+  notifee.onForegroundEvent(({ type, detail }) => {
+    if (type === EventType.ACTION_PRESS) {
+      const actionId = detail.pressAction?.id;
+      if (actionId === NOTIFICATION_ACTION_PAUSE) {
+        engineControl.pause();
+      } else if (actionId === NOTIFICATION_ACTION_RESUME) {
+        engineControl.resume();
+      }
+    } else if (type === EventType.DISMISSED && detail.notification?.id === NOTIFICATION_ID) {
+      console.log('[backgroundTasks] Foreground notification dismissed by user.');
+      engineControl.dismiss();
+    }
+  });
+} catch (err) {
+  console.warn('[backgroundTasks] Failed to register foreground event handler:', err);
 }
 
 // Background task definition for periodic sync
