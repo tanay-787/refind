@@ -43,3 +43,6 @@ export const PrivacyIllustration = React.memo(({ size = 64 }: IllustrationProps)
     </Svg>
   );
 });
+
+PrivacyIllustration.displayName = 'PrivacyIllustration';
+

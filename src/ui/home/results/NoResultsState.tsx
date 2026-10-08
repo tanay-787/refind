@@ -1,9 +1,14 @@
 import React from 'react';
-import { Text as ComposeText } from '@expo/ui/jetpack-compose';
-import { Column, Row, Box, AnimatedVisibility, EnterTransition, SuggestionChip } from '@expo/ui/jetpack-compose';
-import { background, clip, Shapes, padding as paddingModifier, padding, clickable } from '@expo/ui/jetpack-compose/modifiers';
-import { IconView } from '@/ui/IconView';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import {
+  Text as ComposeText,
+  Column,
+  Row,
+  AnimatedVisibility,
+  EnterTransition,
+  SuggestionChip,
+  useMaterialColors,
+} from '@expo/ui/jetpack-compose';
+import { clip, Shapes, padding } from '@expo/ui/jetpack-compose/modifiers';
 import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
@@ -142,3 +147,5 @@ export const NoResultsState = React.memo(({ query, onSuggestionTap }: NoResultsS
     </Column>
   );
 });
+
+NoResultsState.displayName = 'NoResultsState';

@@ -38,6 +38,14 @@ export default function HomeScreen() {
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const { results, search, loading } = useSearch();
   const [delayedLoading, setDelayedLoading] = useState(false);
+  const [prevLoading, setPrevLoading] = useState(loading);
+
+  if (prevLoading !== loading) {
+    setPrevLoading(loading);
+    if (!loading) {
+      setDelayedLoading(false);
+    }
+  }
 
   const sync = useJobJournalStore(state => state.sync);
   const { hasMediaPermission, hasNotificationPermission, requestPermissions } = usePermissionContext();
@@ -51,14 +59,10 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    if (loading) {
-      timeout = setTimeout(() => {
-        setDelayedLoading(true);
-      }, 300);
-    } else {
-      setDelayedLoading(false);
-    }
+    if (!loading) return;
+    const timeout = setTimeout(() => {
+      setDelayedLoading(true);
+    }, 300);
     return () => clearTimeout(timeout);
   }, [loading]);
 

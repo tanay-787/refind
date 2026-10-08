@@ -1,5 +1,4 @@
 import React from 'react';
-import { Linking } from 'react-native';
 import { AlertDialog, TextButton, Text } from '@expo/ui/jetpack-compose';
 import { useThemeColors } from '@/theme';
 
@@ -30,7 +29,7 @@ export function SettingsAlertDialog({ visible, onDismiss, onConfirm }: SettingsA
       </AlertDialog.Title>
       <AlertDialog.Text>
         <Text color={colors.onSurfaceVariant} style={{ fontFamily: 'Inter_400Regular', fontSize: 14 }}>
-          Refind needs 'Allow All' photo access to search your screenshots. Please enable this in your device settings.
+          Refind needs &apos;Allow All&apos; photo access to search your screenshots. Please enable this in your device settings.
         </Text>
       </AlertDialog.Text>
       <AlertDialog.ConfirmButton>

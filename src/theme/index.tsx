@@ -1,5 +1,5 @@
 import React from 'react';
-import { ColorSchemeName, useColorScheme } from 'react-native';
+import { ColorSchemeName } from 'react-native';
 import { Host, useMaterialColors } from '@expo/ui/jetpack-compose';
 
 export const DEFAULT_SEED_COLOR = '#208AEF';
@@ -26,14 +26,12 @@ export type ThemeColorsOptions = {
 };
 
 export const useThemeColors = (options?: string | ThemeColorsOptions) => {
-  if (!options) {
-    return useMaterialColors();
-  }
-  if (typeof options === 'string') {
-    return useMaterialColors({ seedColor: options });
-  }
-  return useMaterialColors({
-    seedColor: options.seedColor,
-    colorScheme: options.colorScheme,
-  });
+  const seedColor = typeof options === 'string' ? options : options?.seedColor;
+  const colorScheme = typeof options === 'object' ? options?.colorScheme : undefined;
+
+  return useMaterialColors(
+    seedColor !== undefined || colorScheme !== undefined
+      ? { seedColor, colorScheme }
+      : undefined
+  );
 };

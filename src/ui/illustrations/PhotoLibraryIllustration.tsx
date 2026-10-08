@@ -44,3 +44,6 @@ export const PhotoLibraryIllustration = React.memo(({ size = 64 }: IllustrationP
     </Svg>
   );
 });
+
+PhotoLibraryIllustration.displayName = 'PhotoLibraryIllustration';
+

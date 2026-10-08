@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from '@expo/ui';
-import { Column, Box, RNHostView, FilledTonalButton, Spacer, Row, Surface, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Column, Box, RNHostView, FilledTonalButton, Spacer, Surface, useMaterialColors } from '@expo/ui/jetpack-compose';
 import {
   fillMaxSize,
   fillMaxWidth,
@@ -68,7 +68,7 @@ export const GrantPermissionScreen = React.memo(({ onGrantPermission }: GrantPer
 
       {/* Disclaimer / Hint below CTA */}
       <Text textStyle={{ fontFamily: 'Inter_400Regular', color: colors.onSurfaceVariant, fontSize: 14, textAlign: 'center' }}>
-        Select "Allow All" to enable search
+        Select &quot;Allow All&quot; to enable search
       </Text>
     </Column>
 
@@ -76,3 +76,6 @@ export const GrantPermissionScreen = React.memo(({ onGrantPermission }: GrantPer
     </Surface>
   );
 });
+
+GrantPermissionScreen.displayName = 'GrantPermissionScreen';
+

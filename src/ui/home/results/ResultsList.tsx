@@ -57,7 +57,7 @@ export const ResultsList = React.memo(({ results, spacing, isRAF = false }: Resu
         </Text>
       </View>
     );
-  }, [isRAF, results.length, colors.onSurface, spacing]);
+  }, [isRAF, results.length, colors.onSurfaceVariant, spacing]);
 
   const renderItem = useCallback(({ item: row }: { item: GridRow }) => {
     if (row.type === 'landscape') {
@@ -131,3 +131,6 @@ export const ResultsList = React.memo(({ results, spacing, isRAF = false }: Resu
     </>
   );
 });
+
+ResultsList.displayName = 'ResultsList';
+

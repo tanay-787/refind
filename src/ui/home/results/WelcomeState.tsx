@@ -1,8 +1,7 @@
 import React from 'react';
 import { Text } from '@expo/ui';
-import { Column, Box, RNHostView, Row, FlowRow } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, size, background, clip, Shapes, padding as paddingModifier, padding } from '@expo/ui/jetpack-compose/modifiers';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Column, RNHostView, FlowRow } from '@expo/ui/jetpack-compose';
+import { padding as paddingModifier, padding } from '@expo/ui/jetpack-compose/modifiers';
 import EmptySearch from '@/ui/illustrations/EmptySearchIllustration';
 import { useThemeColors } from '@/theme';
 
@@ -44,3 +43,5 @@ export const WelcomeState = React.memo(() => {
     </Column>
   );
 });
+
+WelcomeState.displayName = 'WelcomeState';

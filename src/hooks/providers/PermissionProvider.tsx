@@ -1,11 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { Linking, AppState, Alert } from 'react-native';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { Linking, AppState } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import notifee, { AuthorizationStatus } from 'react-native-notify-kit';
 import { SettingsAlertDialog } from '@/ui/SettingsAlertDialog';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { ThemedHost } from '@/theme';
 
 interface PermissionContextValue {
   hasMediaPermission: boolean | null; // null means checking
@@ -34,19 +33,33 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     return res.granted && rawRes.accessPrivileges !== 'limited';
   };
 
-  const checkNotifStatus = async () => {
-    const settings = await notifee.getNotificationSettings();
-    setHasNotificationPermission(settings.authorizationStatus === AuthorizationStatus.AUTHORIZED);
-  };
-
-  useEffect(() => {
+  const [prevPermissionResponse, setPrevPermissionResponse] = useState(permissionResponse);
+  if (permissionResponse !== prevPermissionResponse) {
+    setPrevPermissionResponse(permissionResponse);
     if (permissionResponse) {
       setHasMediaPermission(checkIsFullyGranted(permissionResponse));
     }
-  }, [permissionResponse]);
+  }
+
+  const checkNotifStatus = useCallback(async () => {
+    const settings = await notifee.getNotificationSettings();
+    setHasNotificationPermission(settings.authorizationStatus === AuthorizationStatus.AUTHORIZED);
+  }, []);
 
   useEffect(() => {
-    checkNotifStatus();
+    let isMounted = true;
+    notifee.getNotificationSettings().then((settings) => {
+      if (isMounted) {
+        setHasNotificationPermission(settings.authorizationStatus === AuthorizationStatus.AUTHORIZED);
+      }
+    }).catch(() => {
+      if (isMounted) {
+        setHasNotificationPermission(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -61,9 +74,9 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [checkNotifStatus]);
 
-  const requestNotificationPermission = async () => {
+  const requestNotificationPermission = useCallback(async () => {
     try {
       const notifSettings = await notifee.requestPermission();
       const granted = notifSettings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
@@ -74,9 +87,9 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
       setHasNotificationPermission(false);
       return false;
     }
-  };
+  }, []);
 
-  const checkAndRequestNotificationPermission = async () => {
+  const checkAndRequestNotificationPermission = useCallback(async () => {
     const settings = await notifee.getNotificationSettings();
     if (settings.authorizationStatus === AuthorizationStatus.NOT_DETERMINED) {
       return await requestNotificationPermission();
@@ -85,9 +98,9 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
       return false;
     }
     return settings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
-  };
+  }, [requestNotificationPermission]);
 
-  const requestPermissions = async (): Promise<{ media: 'granted' | 'denied' | 'settings_prompted'; notifications: boolean }> => {
+  const requestPermissions = useCallback(async (): Promise<{ media: 'granted' | 'denied' | 'settings_prompted'; notifications: boolean }> => {
     let mediaGranted = false;
 
     // Handle Media Permission
@@ -111,7 +124,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     }
 
     return { media: mediaGranted ? 'granted' : 'denied', notifications: notifGranted };
-  };
+  }, [hasNotificationPermission, permissionResponse, requestNotificationPermission, requestPermissionHook]);
 
   const value = useMemo(() => ({
     hasMediaPermission,
@@ -120,7 +133,14 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     requestPermissions,
     requestNotificationPermission,
     checkAndRequestNotificationPermission,
-  }), [hasMediaPermission, hasNotificationPermission, permissionResponse]);
+  }), [
+    hasMediaPermission,
+    hasNotificationPermission,
+    permissionResponse,
+    requestPermissions,
+    requestNotificationPermission,
+    checkAndRequestNotificationPermission,
+  ]);
 
   return (
     <PermissionContext.Provider value={value}>

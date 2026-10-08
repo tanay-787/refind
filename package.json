@@ -18,6 +18,7 @@
     "lint": "expo lint",
     "lint:fix": "expo lint --fix",
     "prepare": "husky",
+    "prepare:termux": "husky && (command -v termux-fix-shebang >/dev/null 2>&1 && termux-fix-shebang .husky/* .husky/_/* 2>/dev/null || true)",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

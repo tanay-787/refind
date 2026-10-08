@@ -29,3 +29,6 @@ export const SearchBar = React.memo(({ onQueryChange }: SearchBarProps) => {
     </Box>
   );
 });
+
+SearchBar.displayName = 'SearchBar';
+

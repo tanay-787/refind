@@ -124,7 +124,7 @@ export default function OnboardingScreen() {
               color={colors.outline}
               style={{ fontFamily: 'Inter_400Regular', fontSize: 12, textAlign: 'center' }}
             >
-              You'll be asked to allow photo access next
+              You&apos;ll be asked to allow photo access next
             </Text>
           </Column>
         </Column>

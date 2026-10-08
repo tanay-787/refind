@@ -33,3 +33,6 @@ export const SearchIllustration = React.memo(({ size = 64 }: IllustrationProps) 
     </Svg>
   );
 });
+
+SearchIllustration.displayName = 'SearchIllustration';
+

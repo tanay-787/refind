@@ -21,3 +21,5 @@ export const Header = React.memo(({ insets }: { insets: EdgeInsets }) => {
     </Column>
   );
 });
+
+Header.displayName = 'Header';
