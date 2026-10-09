@@ -2,6 +2,7 @@
   "name": "refind",
   "main": "expo-router/entry",
   "version": "1.8.0",
+  "license": "Apache-2.0",
   "scripts": {
     "start": "expo start",
     "run:dev": "./scripts/run-dev.sh",
