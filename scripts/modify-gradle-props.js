@@ -6,7 +6,6 @@ const wrapperPath = path.join(rootDir, 'android', 'gradle', 'wrapper', 'gradle-w
 const gradlePropsPath = path.join(rootDir, 'android', 'gradle.properties');
 
 const gradleDistributionUrl = 'distributionUrl=https\\://services.gradle.org/distributions/gradle-9.0.0-bin.zip';
-const javaHomeLine = 'org.gradle.java.home=/home/tanay/opt/jdks/jdk17';
 
 function updateFile(filePath, replacements) {
   if (!fs.existsSync(filePath)) {
@@ -39,11 +38,17 @@ const wrapperChanged = updateFile(wrapperPath, [
   },
 ]);
 
+const javaHomeReplacements = process.env.JAVA_HOME
+  ? [
+      {
+        pattern: /^org\.gradle\.java\.home=.*$/m,
+        value: `org.gradle.java.home=${process.env.JAVA_HOME}`,
+      },
+    ]
+  : [];
+
 const gradlePropsChanged = updateFile(gradlePropsPath, [
-  {
-    pattern: /^org\.gradle\.java\.home=.*$/m,
-    value: javaHomeLine,
-  },
+  ...javaHomeReplacements,
   {
     pattern: /^reactNativeArchitectures=.*$/m,
     value: 'reactNativeArchitectures=arm64-v8a',

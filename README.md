@@ -128,7 +128,10 @@ cd refind
 pnpm install
 
 # Start development bundler
-pnpm run:dev
+pnpm start
+
+# Or start with tunnel (subdomain: refind)
+pnpm dev:tunnel
 
 # Run type check & linter
 pnpm type-check

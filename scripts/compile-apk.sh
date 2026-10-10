@@ -1,13 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-export JAVA_HOME="${JAVA_HOME:-/home/tanay/opt/jdks/jdk17}"
-export GRADLE_USER_HOME="${GRADLE_USER_HOME:-/home/tanay/.gradle}"
-export PATH="$JAVA_HOME/bin:$PATH"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if [[ -n "${JAVA_HOME:-}" ]]; then
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
 
 # Limit C++ parallel compilation jobs (Ninja/CMake) to prevent NDK clang++ exit code 134 (OOM / SIGABRT)
-export MAKEFLAGS="-j2"
-export CMAKE_BUILD_PARALLEL_LEVEL=2
+export MAKEFLAGS="${MAKEFLAGS:--j2}"
+export CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
 
 TARGET_BUILD=""
 
@@ -37,7 +40,7 @@ if [[ -z "$TARGET_BUILD" ]]; then
   fi
 fi
 
-cd /devspace/projects/ss-search/android
+cd "$PROJECT_ROOT/android"
 
 if [[ "$TARGET_BUILD" == "release" ]]; then
   echo "🚀 Compiling Release APK (assembleRelease)..."

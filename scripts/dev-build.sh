@@ -1,10 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-export JAVA_HOME="${JAVA_HOME:-/home/tanay/opt/jdks/jdk17}"
-export GRADLE_USER_HOME="${GRADLE_USER_HOME:-/home/tanay/.gradle}"
-export PATH="$JAVA_HOME/bin:$PATH"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-cd /devspace/projects/ss-search
+if [[ -n "${JAVA_HOME:-}" ]]; then
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
+
+cd "$PROJECT_ROOT"
 
 pnpm android:dev

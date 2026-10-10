@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "start": "expo start",
-    "run:dev": "./scripts/run-dev.sh",
+    "dev:tunnel": "./scripts/run-dev-tunnel.sh",
     "dev:tmux": "./scripts/run-dev-termux.sh",
     "build:local": "./scripts/dev-build.sh",
     "compile:apk": "./scripts/compile-apk.sh",
