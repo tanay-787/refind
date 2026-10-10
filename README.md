@@ -152,6 +152,8 @@ pnpm compile:apk --release
 
 ## 🤝 For Contributors
 
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines on setup, branch workflows, and privacy principles.
+
 ### Commit Convention
 
 This project follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification, enforced locally via `husky` and `commitlint`.
