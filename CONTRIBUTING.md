@@ -51,6 +51,13 @@ Every feature, stage, and improvement **must process data locally on the user's 
    pnpm compile:apk --debug
    ```
 
+### 🏗️ Local Builds vs. EAS Cloud Builds
+
+* **Local Builds (Recommended)**: You do **not** need an Expo account or EAS credentials to build and test Refind. Running `pnpm compile:apk --debug` or `pnpm android:dev` generates the native Android project via `expo prebuild` and compiles the APK locally with Gradle.
+* **EAS Cloud Builds (For Forks)**: The `owner` (`"tanay22"`) and `extra.eas.projectId` in [`app.json`](app.json) belong to the upstream Refind deployment. If you wish to run cloud builds using EAS on your personal fork:
+  1. Install EAS CLI: `pnpm add -g eas-cli`
+  2. Run `eas init` to link your personal Expo account and generate a new project ID.
+
 ---
 
 ## 📝 Commit Convention

@@ -24,7 +24,7 @@ jobs:
   build-android:
     name: Build Android APK (EAS)
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: github.repository == 'tanay-787/refind' && needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
