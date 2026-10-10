@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.9.0](https://github.com/tanay-787/refind/compare/refind-v1.8.0...refind-v1.9.0) (2026-10-10)
+
+
+### Features
+
+* **ci:** add on-the-fly debug config suffix for side-by-side install ([8245529](https://github.com/tanay-787/refind/commit/82455298a70df3e76ad1cd2697f8b54cef7c247e))
+* **jobjournal:** add notification pause and resume actions with auto-resume ([e66fc02](https://github.com/tanay-787/refind/commit/e66fc0256fb77e376e5e134a172af2494b853b2b))
+
+
+### Bug Fixes
+
+* **scripts:** make build scripts portable and replace run:dev with dev:tunnel ([5a5f21a](https://github.com/tanay-787/refind/commit/5a5f21a1484f8c10e6828898b611a03967d68c44))
+
 ## [1.8.0](https://github.com/tanay-787/refind/compare/refind-v1.7.0...refind-v1.8.0) (2026-09-25)
 
 
