@@ -1,9 +1,5 @@
 allowBuilds:
-  dtrace-provider: true
   esbuild: true
-  msgpackr-extract: set this to true or false
-  react-native-litert-lm: true
-  react-native-siglip: true
   unrs-resolver: true
 overrides:
   '@expo/dom-webview': 56.0.5

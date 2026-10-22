@@ -18,7 +18,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "lint:fix": "expo lint --fix",
-    "prepare": "husky",
+    "prepare": "husky && chmod +x .husky/* 2>/dev/null || true",
     "prepare:termux": "husky && (command -v termux-fix-shebang >/dev/null 2>&1 && termux-fix-shebang .husky/* .husky/_/* 2>/dev/null || true)",
     "type-check": "tsc --noEmit"
   },
@@ -80,7 +80,6 @@
     "babel-plugin-inline-import": "^3.0.0",
     "babel-preset-expo": "^57.0.3",
     "drizzle-kit": "^0.31.10",
-    "eas-cli": "^18.11.0",
     "eslint": "^9.39.4",
     "eslint-config-expo": "~56.0.4",
     "husky": "^9.1.7",
