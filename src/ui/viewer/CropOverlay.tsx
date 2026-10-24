@@ -30,7 +30,7 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH }: CropOverlayPro
 
   React.useEffect(() => {
     opacity.value = withTiming(isActive ? 1 : 0, { duration: 250 });
-  }, [isActive]);
+  }, [isActive, opacity]);
 
   const panCrop = Gesture.Pan()
     .onStart((e) => {

@@ -1,11 +1,9 @@
 import React from 'react';
-import { StyleSheet, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { IconView } from '@/ui/IconView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Host, Row, Column, Text, LoadingIndicator } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, clickable, padding as paddingModifier, weight } from '@expo/ui/jetpack-compose/modifiers';
-import { useThemeColors, ThemedHost } from '@/theme';
+import { useThemeColors } from '@/theme';
 
 interface ViewerBottomBarProps {
   onOcrPress: () => void;
@@ -25,62 +23,48 @@ export function ViewerBottomBar({ onOcrPress, onSharePress, isSharing = false, s
         styles.bottomBar, 
         { 
           paddingBottom: Math.max(insets.bottom, 16),
-          backgroundColor: 'rgba(0, 0, 0, 0.85)'
         }, 
         style
       ]}
       pointerEvents={pointerEvents}
     >
-      <ThemedHost>
-        <Row modifiers={[fillMaxWidth()]} verticalAlignment="center" horizontalArrangement="spaceEvenly">
-          
-          <Column 
-            modifiers={[
-              weight(1), 
-              paddingModifier(0, 12, 0, 12), 
-              clickable(isSharing ? () => {} : onSharePress)
-            ]} 
-            horizontalAlignment="center" 
-            verticalArrangement={{ spacedBy: 2 }}
-          >
-            <IconView name="share" size={26} tintColor={colors.onSurface} inNative={true} />
-            <Text color={colors.onSurface} style={{ fontFamily: 'Inter_400Regular', fontSize: 12}}>
-              {'Share'}
-            </Text>
-          </Column>
-          
-          <Column 
-            modifiers={[
-              weight(1), 
-              paddingModifier(0, 12, 0, 12), 
-              clickable(onOcrPress)
-            ]} 
-            horizontalAlignment="center" 
-            verticalArrangement={{ spacedBy: 2 }}
-          >
-            <IconView name="scan" size={26} tintColor={colors.primary} inNative={true} />
-            <Text color={colors.primary} style={{ fontFamily: 'Inter_500Medium', fontSize: 12}}>
-              {'Extract Text'}
-            </Text>
-          </Column>
-          
-          <Column 
-            modifiers={[
-              weight(1), 
-              paddingModifier(0, 12, 0, 12), 
-              clickable(() => console.log('Info clicked'))
-            ]} 
-            horizontalAlignment="center" 
-            verticalArrangement={{ spacedBy: 2 }}
-          >
-            <IconView name="info" size={26} tintColor={colors.onSurface} inNative={true} />
-            <Text color={colors.onSurface} style={{ fontFamily: 'Inter_400Regular', fontSize: 12}}>
-              {'Info'}
-            </Text>
-          </Column>
+      <View style={styles.row}>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          activeOpacity={0.7}
+          disabled={isSharing}
+          onPress={onSharePress}
+        >
+          <IconView name="share" size={26} tintColor={colors.onSurface} />
+          <Text style={[styles.label, { color: colors.onSurface }]}>
+            Share
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          activeOpacity={0.7}
+          onPress={onOcrPress}
+        >
+          <IconView name="scan" size={26} tintColor={colors.primary} />
+          <Text style={[styles.activeLabel, { color: colors.primary }]}>
+            Extract Text
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          activeOpacity={0.7}
+          onPress={() => console.log('Info clicked')}
+        >
+          <IconView name="info" size={26} tintColor={colors.onSurface} />
+          <Text style={[styles.label, { color: colors.onSurface }]}>
+            Info
+          </Text>
+        </TouchableOpacity>
 
-        </Row>
-      </ThemedHost>
+      </View>
     </Animated.View>
   );
 }
@@ -92,5 +76,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingTop: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+    gap: 4,
+  },
+  label: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+  },
+  activeLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
   },
 });

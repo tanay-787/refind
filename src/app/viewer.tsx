@@ -1,10 +1,8 @@
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Dimensions,
-  TouchableOpacity,
   View,
-  AppState,
   BackHandler,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -17,13 +15,11 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSpring,
-  Easing,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SystemBars } from 'react-native-edge-to-edge';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CropOverlay } from '@/ui/viewer/CropOverlay';
 import { ViewerTopBar } from '@/ui/viewer/TopBar';
 import { ViewerBottomBar } from '@/ui/viewer/BottomBar';
@@ -38,17 +34,14 @@ const DISMISS_THRESHOLD = SCREEN_HEIGHT * 0.18;
 const DISMISS_VELOCITY = 1200;
 
 export default function ViewerScreen() {
-  const { uri, jobId, width: imgWStr, height: imgHStr } = useLocalSearchParams<{ uri: string; jobId: string; width?: string; height?: string }>();
+  const { uri, width: imgWStr, height: imgHStr } = useLocalSearchParams<{ uri: string; jobId?: string; width?: string; height?: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const [isSystemBarHidden, setSystemBarHidden] = useState(false);
   const [isOcrMode, setIsOcrMode] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [extractedText, setExtractedText] = useState<string | null>(null);
-
-  const [resumeKey, setResumeKey] = useState(0);
 
   // ─── Shared values ────────────────────────────────────────────────────────
   const backdropOpacity = useSharedValue(1);
@@ -99,7 +92,7 @@ export default function ViewerScreen() {
     backdropOpacity.value = withTiming(0, { duration: 180 });
     chromeVisible.value = withTiming(0, { duration: 180 });
     navigateBack(180);
-  }, [navigateBack]);
+  }, [navigateBack, backdropOpacity, chromeVisible, scale]);
 
   const toggleOcrMode = useCallback(() => {
     if (!isOcrMode) {
@@ -121,7 +114,7 @@ export default function ViewerScreen() {
       chromeVisible.value = withTiming(1, { duration: 180 });
       setSystemBarHidden(false);
     }
-  }, [isOcrMode]);
+  }, [isOcrMode, baseScale, baseX, baseY, chromeVisible, scale, translateX, translateY]);
 
   // Handle hardware / system back navigation
   useEffect(() => {
@@ -218,6 +211,8 @@ export default function ViewerScreen() {
     } finally {
       setIsScanning(false);
     }
+    // Reanimated SharedValues (boxX, boxY, boxW, boxH) are read dynamically at scan trigger time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uri, imgWStr, imgHStr]);
 
   const handleShare = useCallback(async () => {
@@ -258,7 +253,7 @@ export default function ViewerScreen() {
   }, [uri, isSharing]);
 
   // ─── Pinch ────────────────────────────────────────────────────────────────
-  const pinch = Gesture.Pinch()
+  const pinch = useMemo(() => Gesture.Pinch()
     .onStart(() => {
       'worklet';
       baseScale.value = scale.value;
@@ -280,10 +275,10 @@ export default function ViewerScreen() {
       } else {
         baseScale.value = scale.value;
       }
-    });
+    }), [baseScale, scale, translateX, translateY, baseX, baseY]);
 
   // ─── Pan ─────────────────────────────────────────────────────────────────
-  const pan = Gesture.Pan()
+  const pan = useMemo(() => Gesture.Pan()
     .averageTouches(true)
     .onStart(() => {
       'worklet';
@@ -327,10 +322,10 @@ export default function ViewerScreen() {
         baseX.value = translateX.value;
         baseY.value = translateY.value;
       }
-    });
+    }), [baseX, baseY, translateX, translateY, scale, backdropOpacity, chromeVisible, navigateBackPanDismiss]);
 
   // ─── Double-tap ───────────────────────────────────────────────────────────
-  const doubleTap = Gesture.Tap()
+  const doubleTap = useMemo(() => Gesture.Tap()
     .numberOfTaps(2)
     .maxDuration(180)
     .onEnd((e) => {
@@ -354,10 +349,10 @@ export default function ViewerScreen() {
         baseX.value = offsetX;
         baseY.value = offsetY;
       }
-    });
+    }), [backdropOpacity, scale, translateX, translateY, baseScale, baseX, baseY]);
 
   // ─── Single-tap (Toggle Chrome) ───────────────────────────────────────────
-  const singleTap = Gesture.Tap()
+  const singleTap = useMemo(() => Gesture.Tap()
     .maxDuration(180)
     .onEnd(() => {
       'worklet';
@@ -374,12 +369,14 @@ export default function ViewerScreen() {
         scheduleOnRN(setSystemBarHidden, false);
         chromeVisible.value = withTiming(1, { duration: 160 });
       }
-    });
+    }), [backdropOpacity, chromeVisible]);
 
   // ─── Compose Gestures ─────────────────────────────────────────────────────
   // Exclusive ensures singleTap only fires if doubleTap FAILS.
-  const taps = Gesture.Exclusive(doubleTap, singleTap);
-  const composed = Gesture.Simultaneous(pinch, pan, taps);
+  const composed = useMemo(() => {
+    const taps = Gesture.Exclusive(doubleTap, singleTap);
+    return Gesture.Simultaneous(pinch, pan, taps);
+  }, [doubleTap, singleTap, pinch, pan]);
 
   // ─── Animated styles ──────────────────────────────────────────────────────
   const backdropStyle = useAnimatedStyle(() => {
@@ -415,7 +412,7 @@ export default function ViewerScreen() {
 
   return (
     <View style={styles.root}>
-      <SystemBars style='light' hidden={isSystemBarHidden} />
+      <SystemBars style='light' hidden={isSystemBarHidden ? true : { navigationBar: true }} />
 
       {/* Scrim */}
       <Animated.View style={[styles.backdrop, backdropStyle]} />
@@ -424,7 +421,6 @@ export default function ViewerScreen() {
       <GestureDetector gesture={composed}>
         <Animated.View style={[styles.imageContainer, imageStyle]}>
           <Image
-            key={`img-${resumeKey}`}
             source={{ uri }}
             style={styles.image}
             contentFit="contain"
@@ -449,7 +445,6 @@ export default function ViewerScreen() {
       />
 
       <ViewerBottomBar 
-        key={`bottom-${resumeKey}`}
         onOcrPress={toggleOcrMode} 
         onSharePress={handleShare}
         isSharing={isSharing}

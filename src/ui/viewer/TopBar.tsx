@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View, Button } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { IconView } from '@/ui/IconView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
