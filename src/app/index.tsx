@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { usePermissionContext } from '@/hooks';
 import * as SecureStore from 'expo-secure-store';
 import { 

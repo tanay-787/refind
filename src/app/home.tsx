@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Keyboard,
   Dimensions,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef, LoadingIndicator, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, align, padding as paddingModifier, size, background } from '@expo/ui/jetpack-compose/modifiers';
+import { fillMaxSize, align, padding as paddingModifier, size } from '@expo/ui/jetpack-compose/modifiers';
 import { useSearch, useJobJournalStore, usePermissionContext } from '@/hooks';
 import { ThemedHost } from '@/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,7 +20,6 @@ import {
   Header, 
   SearchBar, 
   ResultsList, 
-  WelcomeState, 
   NoResultsState,
   GrantPermissionScreen,
   IdleDashboard,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { SystemBars } from 'react-native-edge-to-edge';
 import { useColorScheme } from 'react-native';
@@ -13,7 +13,6 @@ import { useFonts, Newsreader_400Regular, Newsreader_600SemiBold } from '@expo-g
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 import * as SplashScreen from 'expo-splash-screen';
-import { Asset } from 'expo-asset';
 import { Image } from 'expo-image';
 import { setupNotificationChannel } from '@/core/jobjournal/utils/notifications';
 

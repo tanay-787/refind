@@ -1,10 +1,9 @@
-import { eq, and, inArray, sql, count, asc, desc, notInArray } from 'drizzle-orm';
+import { eq, and, inArray, sql, count, asc, desc } from 'drizzle-orm';
 import { getJobJournalDatabase, getDrizzleDb } from './storage/database';
 import { 
   jobJournalJobs, 
   stageExecutions, 
   stageCheckpoints, 
-  metadataStageResults,
   ocrStageResults,
   ocrPostprocessStageResults,
 } from './storage/drizzle-schema';
@@ -28,10 +27,6 @@ const STAGE_CHILDREN: Record<JobJournalStage, JobJournalStage[]> = {
 
 function getExecutionId(jobId: string, stage: JobJournalStage) {
   return `${jobId}_${stage}`;
-}
-
-function placeholders(count: number) {
-  return new Array(count).fill('?').join(', ');
 }
 
 /**

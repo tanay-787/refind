@@ -1,5 +1,4 @@
 import * as MediaLibrary from 'expo-media-library/legacy';
-import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { eq, and, inArray } from 'drizzle-orm';
 

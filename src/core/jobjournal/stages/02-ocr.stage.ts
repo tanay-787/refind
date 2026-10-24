@@ -14,8 +14,7 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { getJobJournalDatabase } from '../storage/database';
-import { getMetadata } from '../storage/database';
+import { getJobJournalDatabase, getMetadata } from '../storage/database';
 import type { JobJournalJob } from '../types';
 
 // Re-export types so callers can still import them from here without

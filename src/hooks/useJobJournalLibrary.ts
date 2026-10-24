@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
-import { eq, desc, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import { useJobJournalStore } from './useJobJournalStore';
 import { getDrizzleDb } from '@/core/jobjournal/storage/database';
-import { jobJournalJobs, stageExecutions, metadataStageResults } from '@/core/jobjournal/storage/drizzle-schema';
 
 export type JobJournalLibraryItem = {
   id: string;
