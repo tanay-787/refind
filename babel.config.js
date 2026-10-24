@@ -1,8 +1,14 @@
 module.exports = function (api) {
-  api.cache(true);
+  const isProd = api.env('production');
+
+  const plugins = [
+    ['inline-import', { extensions: ['.sql'] }],
+    ...(isProd ? [['transform-remove-console', { exclude: ['error', 'warn'] }]] : []),
+    'react-native-reanimated/plugin',
+  ];
 
   return {
     presets: ['babel-preset-expo'],
-    plugins: [['inline-import', { extensions: ['.sql'] }], 'react-native-reanimated/plugin'],
+    plugins,
   };
 };

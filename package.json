@@ -78,10 +78,12 @@
     "@commitlint/config-conventional": "^21.0.2",
     "@types/react": "~19.2.2",
     "babel-plugin-inline-import": "^3.0.0",
+    "babel-plugin-transform-remove-console": "^6.9.4",
     "babel-preset-expo": "^57.0.3",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.4",
     "eslint-config-expo": "~56.0.4",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "husky": "^9.1.7",
     "typescript": "~6.0.3"
   },
