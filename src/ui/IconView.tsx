@@ -1,11 +1,13 @@
 import React from 'react';
 import { SymbolView, SymbolViewProps, AndroidSymbol } from 'expo-symbols';
 import androidThin from 'expo-symbols/androidWeights/thin';
-import { RNHostView } from '@expo/ui/jetpack-compose';
 import { useThemeColors } from '@/theme';
 
 export interface IconViewProps extends Omit<SymbolViewProps, 'name' | 'weight'> {
   name: AndroidSymbol;
+  /**
+   * @deprecated No longer needed. All components now render directly in pure React Native.
+   */
   inNative?: boolean;
 }
 
@@ -13,12 +15,12 @@ export function IconView({
   name, 
   size = 28, 
   tintColor, 
-  inNative = false,
+  inNative: _inNative,
   ...rest 
 }: IconViewProps) {
   const colors = useThemeColors();
   
-  const symbol = (
+  return (
     <SymbolView
       name={{ android: name }}
       size={size}
@@ -27,10 +29,4 @@ export function IconView({
       {...rest}
     />
   );
-
-  if (inNative) {
-    return <RNHostView matchContents={true}>{symbol}</RNHostView>;
-  }
-
-  return symbol;
 }
