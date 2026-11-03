@@ -1,33 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Pressable,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { usePermissionContext } from '@/hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { Image } from 'expo-image';
-import { ThemedHost, useThemeColors } from '@/theme';
-import { Column, Box, RNHostView, Spacer, Text, LoadingIndicator, ElevatedButton } from '@expo/ui/jetpack-compose';
-import { 
-  fillMaxSize, 
-  fillMaxWidth, 
-  background, 
-  padding as paddingModifier, 
-  weight,
-  size
-} from '@expo/ui/jetpack-compose/modifiers';
+import { useThemeColors } from '@/theme';
 import { SystemBars } from 'react-native-edge-to-edge';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { requestPermissions } = usePermissionContext();
-  const colors = useThemeColors({ colorScheme: 'dark'});
+  const colors = useThemeColors({ colorScheme: 'dark' });
   
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // We delay hiding the splash screen until the OnboardingScreen has fully mounted.
-    // This prevents the user from seeing any intermediate routing states from index.tsx.
+    // Delay hiding the splash screen until OnboardingScreen has fully mounted.
     SplashScreen.hideAsync();
   }, []);
 
@@ -51,84 +48,131 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <ThemedHost style={{ flex: 1 }}>
-      <SystemBars style='light'/>
-      <Box modifiers={[fillMaxSize(), background(colors.background)]}>
-        
-        {/* Background Image */}
-        <Box modifiers={[fillMaxSize()]}>
-          <RNHostView matchContents={false}>
-            {/* 
-              Transition is set to 0 to bypass the default fade-in.
-              The image is aggressively preloaded in _layout.tsx, ensuring an instant render.
-            */}
-            <Image 
-              source={require('../../../assets/images/onboarding-bg.jpg')} 
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-              contentFit="cover"
-              transition={0}
-              onLoad={() => SplashScreen.hideAsync()}
-            />
-          </RNHostView>
-        </Box>
-        
-        {/* Overlay to ensure text readability */}
-        <Box modifiers={[fillMaxSize(), background('rgba(0, 0, 0, 0.7)')]} />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <SystemBars style="light" />
+      
+      {/* Background Image */}
+      <Image 
+        source={require('../../../assets/images/onboarding-bg.jpg')} 
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        transition={0}
+        onLoad={() => SplashScreen.hideAsync()}
+      />
+      
+      {/* Overlay for text readability */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 0, 0, 0.7)' }]} />
 
-        {/* Content */}
-        <Column 
-          modifiers={[
-            fillMaxSize(), 
-            paddingModifier(32, insets.top + 60, 32, Math.max(insets.bottom + 12, 24))
-          ]}
-        >
-          {/* Text Container centered vertically */}
-          <Column modifiers={[weight(1)]} verticalArrangement="center">
-            <Text 
-              color={colors.onSurface} 
-              style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 56, letterSpacing: -1 }}
-            >
-              Refind.
-            </Text>
-            <Spacer modifiers={[size(0, 16)]} />
-            <Text 
-              color={colors.onSurfaceVariant}
-              style={{ fontFamily: 'JetBrainsMono_400Regular', fontSize: 18, lineHeight: 28 }}
-            >
-              Refind meets you at that moment, the one where the memory is clear but the screenshot is buried, and it gives you back the thing you came for. Instantly.
-            </Text>
-          </Column>
+      {/* Content */}
+      <View 
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top + 60,
+            paddingBottom: Math.max(insets.bottom + 12, 24),
+          }
+        ]}
+      >
+        {/* Text Container centered vertically */}
+        <View style={styles.textContainer}>
+          <Text 
+            style={[
+              styles.title,
+              { color: colors.onSurface }
+            ]}
+          >
+            Refind.
+          </Text>
+          <Text 
+            style={[
+              styles.body,
+              { color: colors.onSurfaceVariant }
+            ]}
+          >
+            Refind meets you at that moment, the one where the memory is clear but the screenshot is buried, and it gives you back the thing you came for. Instantly.
+          </Text>
+        </View>
 
-          {/* Button at the bottom */}
-          <Column modifiers={[fillMaxWidth()]} horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
-            <ElevatedButton
-              onClick={handleContinue}
-              enabled={!loading}
-              colors={{ 
-                containerColor: colors.background, 
-                contentColor: colors.onBackground, 
-                disabledContainerColor: colors.surfaceVariant 
-              }}
-              modifiers={[fillMaxWidth()]}
-              contentPadding={{ top: 18, bottom: 18 }}
-            >
-              {loading ? (
-                <LoadingIndicator color={colors.onSurface} modifiers={[size(32, 32)]} />
-              ) : (
-                <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, letterSpacing: 0.3 }}>
-                  Get Started
-                </Text>
-              )}
-            </ElevatedButton>
-            <Text 
-              color={colors.outline}
-              style={{ fontFamily: 'Inter_400Regular', fontSize: 12, textAlign: 'center' }}
-            >
-              You&apos;ll be asked to allow photo access next
-            </Text>
-          </Column>
-        </Column>
-      </Box>
-    </ThemedHost>
+        {/* Action Button at the bottom */}
+        <View style={styles.actionContainer}>
+          <Pressable
+            onPress={handleContinue}
+            disabled={loading}
+            android_ripple={{ color: colors.primaryContainer }}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                backgroundColor: loading ? colors.surfaceVariant : colors.background,
+                opacity: pressed ? 0.9 : 1,
+              }
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.onSurface} />
+            ) : (
+              <Text style={[styles.buttonText, { color: colors.onBackground }]}>
+                Get Started
+              </Text>
+            )}
+          </Pressable>
+          <Text 
+            style={[
+              styles.hint,
+              { color: colors.outline }
+            ]}
+          >
+            You&apos;ll be asked to allow photo access next
+          </Text>
+        </View>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 32,
+    justifyContent: 'space-between',
+  },
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 56,
+    letterSpacing: -1,
+  },
+  body: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 18,
+    lineHeight: 28,
+    marginTop: 16,
+  },
+  actionContainer: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 8,
+  },
+  button: {
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    letterSpacing: 0.3,
+  },
+  hint: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+});
