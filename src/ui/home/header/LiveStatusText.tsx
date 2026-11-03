@@ -1,39 +1,32 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
 import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
-import { Row, LoadingIndicator, Text as ComposeText } from '@expo/ui/jetpack-compose';
-import { size } from '@expo/ui/jetpack-compose/modifiers';
 
 function LoadingState() {
-  const brandColors = useThemeColors();
+  const colors = useThemeColors();
   return (
-    <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 4 }}>
-      <ComposeText 
-        color={brandColors.onSurfaceVariant} 
-        style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
-      >
+    <View style={styles.row}>
+      <Text style={[styles.monoText, { color: colors.onSurfaceVariant }]}>
         Initializing...
-      </ComposeText>
-      <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
-    </Row>
+      </Text>
+      <ActivityIndicator size={14} color={colors.primary} />
+    </View>
   );
 }
 
 function DiscoveryStatus() {
-  const brandColors = useThemeColors();
+  const colors = useThemeColors();
   return (
-    <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 4 }}>
-      <ComposeText 
-        color={brandColors.onSurfaceVariant} 
-        style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
-      >
+    <View style={styles.row}>
+      <Text style={[styles.monoText, { color: colors.onSurfaceVariant }]}>
         Finding screenshots...
-      </ComposeText>
-      <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
-    </Row>
+      </Text>
+      <ActivityIndicator size={14} color={colors.primary} />
+    </View>
   );
 }
 
@@ -55,10 +48,10 @@ export function LiveStatusText() {
 }
 
 function LiveStatusTracker({ db }: { db: any }) {
-  const brandColors = useThemeColors();
+  const colors = useThemeColors();
   const storeIsProcessing = useJobJournalStore(state => state.isProcessing);
   
-  const query = React.useMemo(() => {
+  const query = useMemo(() => {
     return db
       .select({
         status: jobJournalJobs.status,
@@ -91,15 +84,12 @@ function LiveStatusTracker({ db }: { db: any }) {
   
   if (isProcessing && processedCount === 0) {
     return (
-      <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 4 }}>
-        <ComposeText 
-          color={brandColors.onSurfaceVariant} 
-          style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
-        >
+      <View style={styles.row}>
+        <Text style={[styles.monoText, { color: colors.onSurfaceVariant }]}>
           Reading your screenshots...
-        </ComposeText>
-        <LoadingIndicator color={brandColors.primary} modifiers={[size(17, 17)]} />
-      </Row>
+        </Text>
+        <ActivityIndicator size={14} color={colors.primary} />
+      </View>
     );
   }
 
@@ -113,34 +103,40 @@ function LiveStatusTracker({ db }: { db: any }) {
   }
 
   return (
-    <Row verticalAlignment="center">
-      <ComposeText 
-        color={brandColors.primary}
-        style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
-      >
+    <View style={styles.rowInline}>
+      <Text style={[styles.monoText, { color: colors.primary }]}>
         {processedCount.toLocaleString()}
-      </ComposeText>
-      <ComposeText 
-        color={brandColors.onSurfaceVariant}
-        style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
-      >
+      </Text>
+      <Text style={[styles.monoText, { color: colors.onSurfaceVariant }]}>
         {` searchable · ${(pending + running).toLocaleString()} remaining`}
-      </ComposeText>
-    </Row>
+      </Text>
+    </View>
   );
 }
 
 function DefaultText({ count }: { count?: number }) {
-  const brandColors = useThemeColors();
+  const colors = useThemeColors();
   return (
-    <Row verticalAlignment="center">
-      <ComposeText 
-        color={brandColors.onSurfaceVariant} 
-        style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 14 }}
-      >
+    <View style={styles.rowInline}>
+      <Text style={[styles.monoText, { color: colors.onSurfaceVariant }]}>
         {count !== undefined ? `${count.toLocaleString()} screenshots · all searchable` : 'Your library is ready'}
-      </ComposeText>
-    </Row>
+      </Text>
+    </View>
   );
 }
 
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rowInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  monoText: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 14,
+  },
+});

@@ -1,7 +1,7 @@
 import React, { memo, forwardRef } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { useThemeColors } from '@/theme';
 import type { SearchResult } from '@/core/jobjournal/search/hybrid';
 
 interface ResultItemProps {
@@ -10,7 +10,7 @@ interface ResultItemProps {
 }
 
 export const ResultItem = memo(forwardRef<View, ResultItemProps>(({ item, onPress }, ref) => {
-  const colors = useMaterialColors();
+  const colors = useThemeColors();
   
   return (
     <Pressable

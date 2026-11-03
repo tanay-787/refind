@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { RNHostView } from '@expo/ui/jetpack-compose';
 import { ResultItem } from './ResultItem';
 import { Link } from 'expo-router';
 import type { SearchResult } from '@/core/jobjournal/search/hybrid';
@@ -115,20 +114,18 @@ export const ResultsList = React.memo(({ results, spacing, isRAF = false }: Resu
   }, [results.length]);
 
   return (
-    <>
-      <RNHostView matchContents={false}>
-        <FlashList
-          data={chunkedData}
-          keyExtractor={(row) => row.items.map(i => i.jobId).join('-')}
-          numColumns={1}
-          contentContainerStyle={{ padding: spacing, paddingBottom: 100 }}
-          keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={renderHeader}
-          renderItem={renderItem}
-          ListFooterComponent={renderFooter}
-        />
-      </RNHostView>
-    </>
+    <View style={{ flex: 1 }}>
+      <FlashList
+        data={chunkedData}
+        keyExtractor={(row) => row.items.map(i => i.jobId).join('-')}
+        numColumns={1}
+        contentContainerStyle={{ padding: spacing, paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={renderHeader}
+        renderItem={renderItem}
+        ListFooterComponent={renderFooter}
+      />
+    </View>
   );
 });
 

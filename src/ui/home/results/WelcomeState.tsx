@@ -1,7 +1,5 @@
 import React from 'react';
-import { Text } from '@expo/ui';
-import { Column, RNHostView, FlowRow } from '@expo/ui/jetpack-compose';
-import { padding as paddingModifier, padding } from '@expo/ui/jetpack-compose/modifiers';
+import { View, Text, StyleSheet } from 'react-native';
 import EmptySearch from '@/ui/illustrations/EmptySearchIllustration';
 import { useThemeColors } from '@/theme';
 
@@ -9,39 +7,77 @@ export const WelcomeState = React.memo(() => {
   const colors = useThemeColors();
   
   return (
-    <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[paddingModifier(0, 32, 0, 32)]}>
-      <RNHostView matchContents={true}>
-        <EmptySearch width={300} height={300} />
-      </RNHostView>
+    <View style={styles.container}>
+      <EmptySearch width={280} height={280} />
 
-      <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }} modifiers={[ padding(24, 0, 24, 0)]}>
-        <Text textStyle={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 20, textAlign: 'center', lineHeight: 22 }}>
+      <View style={styles.content}>
+        <Text 
+          style={[
+            styles.title, 
+            { color: colors.onSurface }
+          ]}
+        >
           If the Screenshot exists, we will find it for you.
         </Text>
         
-        <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.onSurfaceVariant, textAlign: 'center', fontSize: 14 }}>
+        <Text 
+          style={[
+            styles.subtitle, 
+            { color: colors.onSurfaceVariant }
+          ]}
+        >
           You can search for things like:
         </Text>
-        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 4 }}>
-            <FlowRow modifiers={[paddingModifier(8, 4, 8, 4)]}>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.onSurfaceVariant, fontSize: 13 }}>{`"a `}</Text>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.primary, fontSize: 13 }}>product</Text>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.onSurfaceVariant, fontSize: 13 }}>{` you liked on Amazon"`}</Text>
-            </FlowRow>
-            <FlowRow modifiers={[paddingModifier(8, 4, 8, 4)]}>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.onSurfaceVariant, fontSize: 13 }}>{`"a `}</Text>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.primary, fontSize: 13 }}>username</Text>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.onSurfaceVariant, fontSize: 13 }}>{` to find Whatsapp chats"`}</Text>
-            </FlowRow>
-            <FlowRow modifiers={[paddingModifier(8, 4, 8, 4)]}>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.onSurfaceVariant, fontSize: 13 }}>{`"some `}</Text>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.primary, fontSize: 13 }}>text</Text>
-               <Text textStyle={{ fontFamily: 'Inter_500Medium', color: colors.onSurfaceVariant, fontSize: 13 }}>{` you read in a Medium article"`}</Text>
-            </FlowRow>
-        </Column>
-      </Column>
-    </Column>
+
+        <View style={styles.suggestions}>
+          <Text style={[styles.suggestionText, { color: colors.onSurfaceVariant }]}>
+            &quot;a <Text style={{ color: colors.primary }}>product</Text> you liked on Amazon&quot;
+          </Text>
+          <Text style={[styles.suggestionText, { color: colors.onSurfaceVariant }]}>
+            &quot;a <Text style={{ color: colors.primary }}>username</Text> to find Whatsapp chats&quot;
+          </Text>
+          <Text style={[styles.suggestionText, { color: colors.onSurfaceVariant }]}>
+            &quot;some <Text style={{ color: colors.primary }}>text</Text> you read in a Medium article&quot;
+          </Text>
+        </View>
+      </View>
+    </View>
   );
 });
 
 WelcomeState.displayName = 'WelcomeState';
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  content: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  title: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 20,
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  subtitle: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  suggestions: {
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  suggestionText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+});

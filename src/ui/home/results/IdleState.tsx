@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count, eq, desc } from 'drizzle-orm';
 import { jobJournalJobs, metadataStageResults } from '@/core/jobjournal/storage/drizzle-schema';
-import { Column, Row, Text as ComposeText, Box, LinearWavyProgressIndicator, AnimatedVisibility, EnterTransition } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, fillMaxWidth, size, padding, clip, Shapes, background, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useThemeColors } from '@/theme';
 import { ResultsList } from './ResultsList';
 import { ResultItem } from './ResultItem';
@@ -20,39 +19,35 @@ interface IdleDashboardProps {
 }
 
 /**
- * Pure Compose view rendered during source and intake phases.
+ * Pure React Native view rendered during source and intake phases.
  * Attaches ZERO database LiveQueries to prevent reactive thrashing during initial bulk ingestion.
  */
 function DiscoveryView() {
   const colors = useThemeColors();
   return (
-    <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-      <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }}>
-        <ComposeText color={colors.onSurface} style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 24, textAlign: 'center' }}>
+    <View style={styles.centeredContainer}>
+      <View style={styles.discoveryContent}>
+        <Text style={[styles.headline, { color: colors.onSurface }]}>
           Finding screenshots...
-        </ComposeText>
+        </Text>
 
-        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(32, 0, 32, 0)]}>
-          <LinearWavyProgressIndicator 
-            color={colors.primary} 
-            trackColor={colors.surfaceVariant}
-            modifiers={[fillMaxWidth()]} 
-          />
+        <View style={styles.progressSection}>
+          <View style={[styles.progressBarTrack, { backgroundColor: colors.surfaceVariant }]}>
+            <View style={[styles.progressBarIndeterminate, { backgroundColor: colors.primary }]} />
+          </View>
           
-          <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, textAlign: 'center' }}>
+          <Text style={[styles.statusMono, { color: colors.onSurfaceVariant }]}>
             Scanning your library...
-          </ComposeText>
-        </Column>
+          </Text>
+        </View>
 
-        <Box modifiers={[size(64, 96)]} />
+        <View style={styles.thumbnailSpacer} />
 
-        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }} modifiers={[padding(12, 0, 0, 0)]}>
-          <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' }}>
-            Searching your gallery for screenshots...
-          </ComposeText>
-        </Column>
-      </Column>
-    </Column>
+        <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>
+          Searching your gallery for screenshots...
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -71,10 +66,10 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
   const storeIsProcessing = useJobJournalStore(state => state.isProcessing);
   const colors = useThemeColors();
   
-  const [showCelebration, setShowCelebration] = React.useState(false);
-  const wasProcessing = React.useRef(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const wasProcessing = useRef(false);
 
-  const query = React.useMemo(() => {
+  const query = useMemo(() => {
     return db
       .select({
         status: jobJournalJobs.status,
@@ -86,7 +81,7 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
 
   const { data } = useLiveQuery(query);
 
-  const recentItemsQuery = React.useMemo(() => {
+  const recentItemsQuery = useMemo(() => {
     return db
       .select({
         jobId: jobJournalJobs.id,
@@ -103,7 +98,7 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
 
   const { data: recentItemsData } = useLiveQuery(recentItemsQuery);
 
-  const liveRecentItems: SearchResult[] = React.useMemo(() => {
+  const liveRecentItems: SearchResult[] = useMemo(() => {
     if (!recentItemsData) return [];
     return recentItemsData.map((row: { width: number; height: number; jobId: any; uri: any; }) => {
       const w = row.width || 1;
@@ -142,7 +137,7 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
   const totalProcessed = completed + failed;
   const totalJobs = pending + running + completed + failed;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (wasProcessing.current && !isProcessing && totalProcessed > 0) {
       setShowCelebration(true);
       const timer = setTimeout(() => {
@@ -153,126 +148,101 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
     wasProcessing.current = isProcessing;
   }, [isProcessing, totalProcessed]);
 
-  // Phase 1: Heavy Lifting (Processing)
+  // Phase 1: Heavy Lifting (Processing) or Celebration
   if ((isProcessing && totalProcessed < 12) || showCelebration) {
-    const progress = totalJobs > 0 ? totalProcessed / totalJobs : 0;
+    const progress = totalJobs > 0 ? Math.min(Math.max(totalProcessed / totalJobs, 0), 1) : 0;
 
     return (
-      <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
+      <View style={styles.centeredContainer}>
         {showCelebration ? (
-          <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }} modifiers={[padding(32, 0, 32, 0)]}>
-
-            {/* Thumbnail row — carried over from the processing view for visual continuity */}
-            <AnimatedVisibility
-              visible={showCelebration}
-              enterTransition={EnterTransition.fadeIn({ initialAlpha: 0 }).plus(EnterTransition.slideInVertically({ initialOffsetY: 0.15 }))}
-            >
-              <Row horizontalArrangement={{ spacedBy: 8 }}>
-                {liveRecentItems.slice(0, 3).map((item, idx) => (
-                  <Box key={idx} modifiers={[size(72, 108), clip(Shapes.RoundedCorner(4)), background(colors.surfaceVariant)]}>
-                    <ResultItem item={item} />
-                  </Box>
-                ))}
-              </Row>
-            </AnimatedVisibility>
-
-            {/* Badge + headline */}
-            <AnimatedVisibility
-              visible={showCelebration}
-              enterTransition={EnterTransition.scaleIn({ initialScale: 0.7 }).plus(EnterTransition.fadeIn({ initialAlpha: 0 }))}
-            >
-              <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }}>
-                {/* Bordered check badge — borders over shadows per design system */}
-                <Box
-                  modifiers={[size(56, 56), clip(Shapes.RoundedCorner(4)), background(colors.primaryContainer)]}
-                  contentAlignment="center"
+          <View style={styles.celebrationContent}>
+            {/* Thumbnail row */}
+            <View style={styles.thumbnailRow}>
+              {liveRecentItems.slice(0, 3).map((item, idx) => (
+                <View 
+                  key={idx} 
+                  style={[styles.thumbnailBox, { backgroundColor: colors.surfaceVariant }]}
                 >
-                  <IconView name="check" size={28} tintColor={colors.onPrimaryContainer} inNative={true} />
-                </Box>
+                  <ResultItem item={item} />
+                </View>
+              ))}
+            </View>
 
-                <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 6 }}>
-                  <ComposeText
-                    color={colors.onSurface}
-                    style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 28, textAlign: 'center' }}
-                  >
-                    All done.
-                  </ComposeText>
-                  {/* JetBrainsMono for data — per design system "Technical Meta" */}
-                  <ComposeText
-                    color={colors.onSurfaceVariant}
-                    style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, textAlign: 'center' }}
-                  >
-                    {`${totalProcessed.toLocaleString()} screenshots indexed`}
-                  </ComposeText>
-                </Column>
-              </Column>
-            </AnimatedVisibility>
-
-            {/* Action prompt — fades in last, uses primary blue */}
-            <AnimatedVisibility
-              visible={showCelebration}
-              enterTransition={EnterTransition.fadeIn({ initialAlpha: 0 })}
-            >
-              <ComposeText
-                color={colors.primary}
-                style={{ fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' }}
+            {/* Check badge & headline */}
+            <View style={styles.celebrationBadgeSection}>
+              <View 
+                style={[
+                  styles.checkBadge, 
+                  { backgroundColor: colors.primaryContainer }
+                ]}
               >
-                Start searching above ↑
-              </ComposeText>
-            </AnimatedVisibility>
+                <IconView name="check" size={28} tintColor={colors.onPrimaryContainer} />
+              </View>
 
-          </Column>
+              <View style={styles.headlineGroup}>
+                <Text style={[styles.celebrationTitle, { color: colors.onSurface }]}>
+                  All done.
+                </Text>
+                <Text style={[styles.statusMono, { color: colors.onSurfaceVariant }]}>
+                  {`${totalProcessed.toLocaleString()} screenshots indexed`}
+                </Text>
+              </View>
+            </View>
+
+            {/* Action prompt */}
+            <Text style={[styles.promptText, { color: colors.primary }]}>
+              Start searching above ↑
+            </Text>
+          </View>
         ) : (
-          <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 24 }}>
-            <ComposeText color={colors.onSurface} style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 24, textAlign: 'center' }}>
-              {totalJobs === 0 ? "Finding screenshots..." : `Found ${totalJobs.toLocaleString()} screenshots`}
-            </ComposeText>
+          <View style={styles.processingContent}>
+            <Text style={[styles.headline, { color: colors.onSurface }]}>
+              {totalJobs === 0 ? 'Finding screenshots...' : `Found ${totalJobs.toLocaleString()} screenshots`}
+            </Text>
 
-            <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), padding(32, 0, 32, 0)]}>
-              {totalJobs > 0 ? (
-                <LinearWavyProgressIndicator 
-                  progress={progress} 
-                  color={colors.primary} 
-                  trackColor={colors.surfaceVariant}
-                  modifiers={[fillMaxWidth()]} 
+            <View style={styles.progressSection}>
+              <View style={[styles.progressBarTrack, { backgroundColor: colors.surfaceVariant }]}>
+                <View 
+                  style={[
+                    styles.progressBarFill, 
+                    { 
+                      backgroundColor: colors.primary,
+                      width: totalJobs > 0 ? `${progress * 100}%` : '40%',
+                    }
+                  ]} 
                 />
-              ) : (
-                <LinearWavyProgressIndicator 
-                  color={colors.primary} 
-                  trackColor={colors.surfaceVariant}
-                  modifiers={[fillMaxWidth()]} 
-                />
-              )}
+              </View>
               
-              <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, textAlign: 'center' }}>
+              <Text style={[styles.statusMono, { color: colors.onSurfaceVariant }]}>
                 {totalJobs === 0 
-                  ? "Scanning your library..." 
+                  ? 'Scanning your library...' 
                   : `${totalProcessed.toLocaleString()} of ${totalJobs.toLocaleString()} processed`}
-              </ComposeText>
-            </Column>
+              </Text>
+            </View>
 
             {liveRecentItems.length > 0 ? (
-              <Row horizontalArrangement={{ spacedBy: 8 }}>
+              <View style={styles.thumbnailRow}>
                 {liveRecentItems.slice(0, 3).map((item, idx) => (
-                  <Box key={idx} modifiers={[size(64, 96), clip(Shapes.RoundedCorner(8)), background(colors.surfaceVariant)]}>
+                  <View 
+                    key={idx} 
+                    style={[styles.thumbnailBox, { backgroundColor: colors.surfaceVariant }]}
+                  >
                     <ResultItem item={item} />
-                  </Box>
+                  </View>
                 ))}
-              </Row>
+              </View>
             ) : (
-              <Box modifiers={[size(64, 96)]} />
+              <View style={styles.thumbnailSpacer} />
             )}
 
-            <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }} modifiers={[padding(12, 0, 0, 0)]}>
-              <ComposeText color={colors.onSurfaceVariant} style={{ fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' }}>
-                {totalJobs === 0 
-                  ? "Searching your gallery for screenshots..." 
-                  : "Extracting text and making them searchable..."}
-              </ComposeText>
-            </Column>
-          </Column>
+            <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>
+              {totalJobs === 0 
+                ? 'Searching your gallery for screenshots...' 
+                : 'Extracting text and making them searchable...'}
+            </Text>
+          </View>
         )}
-      </Column>
+      </View>
     );
   }
 
@@ -281,25 +251,23 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
 
   if (displayItems.length > 0) {
     return (
-      <Column modifiers={[fillMaxSize()]}>
-        <Box modifiers={[weight(1)]}>
-          <ResultsList 
-            results={displayItems}
-            itemSize={itemSize}
-            spacing={spacing}
-            columnCount={columnCount}
-            isRAF={true}
-          />
-        </Box>
-      </Column>
+      <View style={styles.flexOne}>
+        <ResultsList 
+          results={displayItems}
+          itemSize={itemSize}
+          spacing={spacing}
+          columnCount={columnCount}
+          isRAF={true}
+        />
+      </View>
     );
   }
 
   // Phase 3: True Empty State (No processing, no items found)
   return (
-    <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
+    <View style={styles.centeredContainer}>
       <WelcomeState />
-    </Column>
+    </View>
   );
 }
 
@@ -326,3 +294,104 @@ export function IdleDashboard({ recentItems, itemSize, spacing, columnCount }: I
   );
 }
 
+const styles = StyleSheet.create({
+  flexOne: {
+    flex: 1,
+  },
+  centeredContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discoveryContent: {
+    alignItems: 'center',
+    gap: 24,
+    width: '100%',
+    paddingHorizontal: 32,
+  },
+  processingContent: {
+    alignItems: 'center',
+    gap: 24,
+    width: '100%',
+    paddingHorizontal: 32,
+  },
+  celebrationContent: {
+    alignItems: 'center',
+    gap: 24,
+    width: '100%',
+    paddingHorizontal: 32,
+  },
+  headline: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 24,
+    textAlign: 'center',
+  },
+  celebrationTitle: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 28,
+    textAlign: 'center',
+  },
+  headlineGroup: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  celebrationBadgeSection: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressSection: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressBarTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressBarIndeterminate: {
+    width: '50%',
+    height: '100%',
+    borderRadius: 3,
+  },
+  statusMono: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  caption: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  promptText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  thumbnailRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  thumbnailBox: {
+    width: 64,
+    height: 96,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  thumbnailSpacer: {
+    height: 96,
+  },
+});

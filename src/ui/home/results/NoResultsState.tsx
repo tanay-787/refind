@@ -1,14 +1,6 @@
-import React from 'react';
-import {
-  Text as ComposeText,
-  Column,
-  Row,
-  AnimatedVisibility,
-  EnterTransition,
-  SuggestionChip,
-  useMaterialColors,
-} from '@expo/ui/jetpack-compose';
-import { clip, Shapes, padding } from '@expo/ui/jetpack-compose/modifiers';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
@@ -38,10 +30,10 @@ interface NoResultsStateProps {
 }
 
 export const NoResultsState = React.memo(({ query, onSuggestionTap }: NoResultsStateProps) => {
-  const colors = useMaterialColors();
+  const colors = useThemeColors();
   const db = useJobJournalStore(state => state.db);
 
-  const statusQuery = React.useMemo(() => {
+  const statusQuery = useMemo(() => {
     if (!db) return null;
     return db
       .select({ status: jobJournalJobs.status, count: count(jobJournalJobs.id) })
@@ -62,90 +54,113 @@ export const NoResultsState = React.memo(({ query, onSuggestionTap }: NoResultsS
   const hasChips = chips.length > 0;
 
   return (
-    <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 32 }} modifiers={[padding(32, 0, 32, 0)]}>
-
+    <View style={styles.container}>
       {/* Primary no-results message */}
-      <AnimatedVisibility
-        visible={true}
-        enterTransition={EnterTransition.fadeIn({ initialAlpha: 0 }).plus(EnterTransition.slideInVertically({ initialOffsetY: -0.1 }))}
-      >
-        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
-          <ComposeText color={colors.onSurface} style={{ fontFamily: 'Newsreader_600SemiBold', fontSize: 24, textAlign: 'center' }}>
-            Nothing found.
-          </ComposeText>
-          <ComposeText color={colors.onSurfaceVariant} style={{
-            fontFamily: 'Inter_400Regular',
-            textAlign: 'center',
-            fontSize: 14,
-          }}>
-            {hasChips
-              ? 'Try one of these simpler terms from your search:'
-              : 'Try a shorter or more general search.'}
-          </ComposeText>
-        </Column>
-      </AnimatedVisibility>
+      <View style={styles.messageContainer}>
+        <Text style={[styles.title, { color: colors.onSurface }]}>
+          Nothing found.
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+          {hasChips
+            ? 'Try one of these simpler terms from your search:'
+            : 'Try a shorter or more general search.'}
+        </Text>
+      </View>
 
-      {/* Query-derived chips — only shown when we can extract meaningful tokens */}
+      {/* Query-derived chips */}
       {hasChips && (
-        <AnimatedVisibility
-          visible={true}
-          enterTransition={EnterTransition.scaleIn({ initialScale: 0.85 }).plus(EnterTransition.fadeIn({ initialAlpha: 0 }))}
-        >
-          <Row horizontalArrangement={{ spacedBy: 8 }}>
-            {chips.map((chip) => (
-              <SuggestionChip 
-                key={chip} 
-                onClick={() => onSuggestionTap(chip)}
-                colors={{ containerColor: colors.surfaceVariant }}
-                border={{ width: 0 }}
-                modifiers={[clip(Shapes.RoundedCorner(4))]}
-              >
-                <SuggestionChip.Label>
-                  <ComposeText color={colors.onSurface} style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13 }}>
-                    {chip}
-                  </ComposeText>
-                </SuggestionChip.Label>
-              </SuggestionChip>
-            ))}
-          </Row>
-        </AnimatedVisibility>
+        <View style={styles.chipsRow}>
+          {chips.map((chip) => (
+            <Pressable
+              key={chip}
+              onPress={() => onSuggestionTap(chip)}
+              android_ripple={{ color: colors.primaryContainer }}
+              style={({ pressed }) => [
+                styles.chip,
+                {
+                  backgroundColor: colors.surfaceVariant,
+                  opacity: pressed ? 0.8 : 1,
+                }
+              ]}
+            >
+              <Text style={[styles.chipText, { color: colors.onSurface }]}>
+                {chip}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       )}
 
-      {/* Pending context — secondary note, only shown when relevant */}
+      {/* Pending context (indexing notice) */}
       {pendingCount > 0 && (
-        <AnimatedVisibility
-          visible={true}
-          enterTransition={EnterTransition.fadeIn({ initialAlpha: 0 })}
-        >
-          <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 8 }}>
-            <ComposeText color={colors.outline} style={{
-              fontFamily: 'JetBrainsMono_400Regular',
-              fontSize: 11,
-              letterSpacing: 3,
-              textAlign: 'center',
-            }}>
-              ─── STILL INDEXING ───
-            </ComposeText>
-            <ComposeText color={colors.onSurfaceVariant} style={{
-              fontFamily: 'Inter_400Regular',
-              fontSize: 13,
-              textAlign: 'center',
-            }}>
-              {`${pendingCount.toLocaleString()} screenshots are still being processed.`}
-            </ComposeText>
-            <ComposeText color={colors.onSurfaceVariant} style={{
-              fontFamily: 'Inter_400Regular',
-              fontSize: 13,
-              textAlign: 'center',
-            }}>
-              Your results will improve as indexing completes.
-            </ComposeText>
-          </Column>
-        </AnimatedVisibility>
+        <View style={styles.indexingContainer}>
+          <Text style={[styles.indexingDivider, { color: colors.outline }]}>
+            ─── STILL INDEXING ───
+          </Text>
+          <Text style={[styles.indexingText, { color: colors.onSurfaceVariant }]}>
+            {`${pendingCount.toLocaleString()} screenshots are still being processed.`}
+          </Text>
+          <Text style={[styles.indexingText, { color: colors.onSurfaceVariant }]}>
+            Your results will improve as indexing completes.
+          </Text>
+        </View>
       )}
-
-    </Column>
+    </View>
   );
 });
 
 NoResultsState.displayName = 'NoResultsState';
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 28,
+  },
+  messageContainer: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  title: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 24,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  chipText: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 13,
+  },
+  indexingContainer: {
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  indexingDivider: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 11,
+    letterSpacing: 3,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  indexingText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+});

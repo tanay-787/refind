@@ -6,3 +6,4 @@ export * from './results/NoResultsState';
 export * from './results/ResultsList';
 export * from './results/IdleState';
 export * from './results/ResultItem';
+export * from './AboutCommunitySheet';

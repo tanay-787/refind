@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
+  View,
+  Text,
   Dimensions,
+  ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
-
-import { Column, Box, Surface, SnackbarHost, type SnackbarHostRef, LoadingIndicator, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, align, padding as paddingModifier, size } from '@expo/ui/jetpack-compose/modifiers';
-import { useSearch, useJobJournalStore, usePermissionContext } from '@/hooks';
-import { ThemedHost } from '@/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SystemBars } from 'react-native-edge-to-edge';
 
+import { useSearch, useJobJournalStore, usePermissionContext } from '@/hooks';
+import { useThemeColors } from '@/theme';
 import { 
   registerJobJournalBackgroundTask, 
   scheduleJobJournalBackgroundTask 
@@ -23,6 +24,7 @@ import {
   NoResultsState,
   GrantPermissionScreen,
   IdleDashboard,
+  AboutCommunitySheet,
 } from '@/ui/home';
 import { NotificationPromptDialog } from '@/ui/NotificationPromptDialog';
 
@@ -34,6 +36,9 @@ const ITEM_SIZE = (SCREEN_WIDTH - (SPACING * (COLUMN_COUNT + 1))) / COLUMN_COUNT
 export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+
   const { results, search, loading } = useSearch();
   const [delayedLoading, setDelayedLoading] = useState(false);
   const [prevLoading, setPrevLoading] = useState(loading);
@@ -47,9 +52,8 @@ export default function HomeScreen() {
 
   const sync = useJobJournalStore(state => state.sync);
   const { hasMediaPermission, hasNotificationPermission, requestPermissions } = usePermissionContext();
-  const snackbarRef = React.useRef<SnackbarHostRef>(null);
   const insets = useSafeAreaInsets();
-  const colors = useMaterialColors();
+  const colors = useThemeColors();
 
   useEffect(() => {
     // Hide splash screen only when this screen mounts
@@ -84,9 +88,16 @@ export default function HomeScreen() {
             setShowNotifPrompt(true);
           }
         }
-      }).catch((err) => console.error("Error during background sync on home mount:", err));
+      }).catch((err) => console.error('Error during background sync on home mount:', err));
     }
   }, [sync, hasMediaPermission, hasNotificationPermission]);
+
+  const showToast = useCallback((msg: string) => {
+    setSnackbarMessage(msg);
+    setTimeout(() => {
+      setSnackbarMessage(null);
+    }, 3500);
+  }, []);
 
   const handleGrantPermission = async () => {
     const { media } = await requestPermissions();
@@ -95,84 +106,124 @@ export default function HomeScreen() {
       await scheduleJobJournalBackgroundTask();
       sync();
     } else if (media === 'denied') {
-      snackbarRef.current?.showSnackbar({
-        message: 'Refind requires "Allow All" access to search your library',
-        duration: 'short',
-      });
+      showToast('Refind requires "Allow All" access to search your library');
     }
-    // If 'settings_prompted', do nothing (the alert dialog is already visible)
   };
 
-  // Permission gate: render nothing else until the user grants full access.
+  // Permission gate: render permission screen until the user grants full access
   if (!hasMediaPermission) {
     return (
-      <ThemedHost style={{ flex: 1 }}>
-        <Box modifiers={[fillMaxSize()]}>
-          <GrantPermissionScreen
-            onGrantPermission={handleGrantPermission}
-          />
-          <SnackbarHost 
-            ref={snackbarRef} 
-            modifiers={[align('topCenter'), paddingModifier(16, insets.top + 16, 16, Math.max(insets.bottom, 16) + 16)]} 
-          />
-        </Box>
-      </ThemedHost>
+      <View style={[styles.root, { backgroundColor: colors.surface }]}>
+        <GrantPermissionScreen
+          onGrantPermission={handleGrantPermission}
+        />
+        {snackbarMessage && (
+          <View 
+            style={[
+              styles.snackbar, 
+              { 
+                backgroundColor: colors.inverseSurface,
+                bottom: insets.bottom + 16,
+              }
+            ]}
+          >
+            <Text style={[styles.snackbarText, { color: colors.inverseOnSurface }]}>
+              {snackbarMessage}
+            </Text>
+          </View>
+        )}
+      </View>
     );
   }
 
   return (
-    <ThemedHost style={{ flex: 1 }}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <SystemBars hidden={{ navigationBar: true }} />
-      <Surface modifiers={[fillMaxSize()]}>
-        <Column modifiers={[fillMaxSize()]}>
-        <Header insets={insets} />
-        
-        <SearchBar 
-          onQueryChange={setQuery} 
-        />
+      
+      <Header 
+        insets={insets} 
+        onOpenAbout={() => setShowAbout(true)}
+      />
+      
+      <SearchBar 
+        onQueryChange={setQuery} 
+      />
 
-        <Box modifiers={[fillMaxSize()]}>
-          {query ? (
-            // ACTIVE SEARCH BRANCH
-            delayedLoading ? (
-              <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-                <LoadingIndicator color={colors.primary} modifiers={[size(40, 40)]} />
-              </Column>
-            ) : results.length > 0 ? (
-              <ResultsList 
-                results={results}
-                itemSize={ITEM_SIZE}
-                spacing={SPACING}
-                columnCount={COLUMN_COUNT}
-              />
-            ) : (
-              <Column modifiers={[fillMaxSize()]} horizontalAlignment="center" verticalArrangement="center">
-                <NoResultsState 
-                  query={query} 
-                  onSuggestionTap={(suggestion) => {
-                    setQuery(suggestion);
-                    search(suggestion);
-                  }} 
-                />
-              </Column>
-            )
-          ) : (
-            // IDLE DASHBOARD BRANCH (The Catch-all)
-            <IdleDashboard 
-              recentItems={results}
+      <View style={styles.mainContainer}>
+        {query ? (
+          // ACTIVE SEARCH BRANCH
+          delayedLoading ? (
+            <View style={styles.centeredContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : results.length > 0 ? (
+            <ResultsList 
+              results={results}
               itemSize={ITEM_SIZE}
               spacing={SPACING}
               columnCount={COLUMN_COUNT}
             />
-          )}
-        </Box>
-        </Column>
-      </Surface>
+          ) : (
+            <View style={styles.centeredContainer}>
+              <NoResultsState 
+                query={query} 
+                onSuggestionTap={(suggestion) => {
+                  setQuery(suggestion);
+                  search(suggestion);
+                }} 
+              />
+            </View>
+          )
+        ) : (
+          // IDLE DASHBOARD BRANCH
+          <IdleDashboard 
+            recentItems={results}
+            itemSize={ITEM_SIZE}
+            spacing={SPACING}
+            columnCount={COLUMN_COUNT}
+          />
+        )}
+      </View>
       
       <NotificationPromptDialog 
         visible={showNotifPrompt} 
         onDismiss={() => setShowNotifPrompt(false)} 
       />
-    </ThemedHost>
+
+      <AboutCommunitySheet
+        visible={showAbout}
+        onDismiss={() => setShowAbout(false)}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  mainContainer: {
+    flex: 1,
+  },
+  centeredContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  snackbar: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+  },
+  snackbarText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+});
