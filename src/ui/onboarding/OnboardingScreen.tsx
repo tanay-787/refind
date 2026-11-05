@@ -96,15 +96,15 @@ export default function OnboardingScreen() {
         <View style={styles.actionContainer}>
           <Button
             size="lg"
-            variant="primary"
             onPress={handleContinue}
             isDisabled={loading}
-            className="w-full rounded-full py-4"
+            style={{ backgroundColor: '#060607' }}
+            className="w-full rounded-full py-4 bg-[oklch(0.12_0.005_285.8228)]"
           >
             {loading ? (
-              <Spinner size="sm" color="default" />
+              <Spinner size="sm" color="#FFFFFF" />
             ) : (
-              <Button.Label style={styles.buttonText}>
+              <Button.Label style={[styles.buttonText, { color: '#FFFFFF' }]}>
                 Get Started
               </Button.Label>
             )}

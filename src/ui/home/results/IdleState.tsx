@@ -4,9 +4,9 @@ import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count, eq, desc } from 'drizzle-orm';
 import { jobJournalJobs, metadataStageResults } from '@/core/jobjournal/storage/drizzle-schema';
+import { Image } from 'expo-image';
 import { useThemeColors } from '@/theme';
 import { ResultsList } from './ResultsList';
-import { ResultItem } from './ResultItem';
 import { WelcomeState } from './WelcomeState';
 import { SearchResult } from '@/core/jobjournal/search/hybrid';
 import { IconView } from '@/ui/IconView';
@@ -161,9 +161,20 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
               {liveRecentItems.slice(0, 3).map((item, idx) => (
                 <View 
                   key={idx} 
-                  style={[styles.thumbnailBox, { backgroundColor: colors.surfaceVariant }]}
+                  style={[
+                    styles.thumbnailCard, 
+                    { 
+                      backgroundColor: colors.surfaceVariant,
+                      borderColor: colors.outlineVariant,
+                    }
+                  ]}
                 >
-                  <ResultItem item={item} />
+                  <Image
+                    source={{ uri: item.uri }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    transition={200}
+                  />
                 </View>
               ))}
             </View>
@@ -225,9 +236,20 @@ function LiveDashboard({ db, recentItems, itemSize, spacing, columnCount }: Live
                 {liveRecentItems.slice(0, 3).map((item, idx) => (
                   <View 
                     key={idx} 
-                    style={[styles.thumbnailBox, { backgroundColor: colors.surfaceVariant }]}
+                    style={[
+                      styles.thumbnailCard, 
+                      { 
+                        backgroundColor: colors.surfaceVariant,
+                        borderColor: colors.outlineVariant,
+                      }
+                    ]}
                   >
-                    <ResultItem item={item} />
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      transition={200}
+                    />
                   </View>
                 ))}
               </View>
@@ -383,15 +405,17 @@ const styles = StyleSheet.create({
   },
   thumbnailRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
+    justifyContent: 'center',
   },
-  thumbnailBox: {
-    width: 64,
-    height: 96,
-    borderRadius: 8,
+  thumbnailCard: {
+    width: 68,
+    height: 104,
+    borderRadius: 12,
     overflow: 'hidden',
+    borderWidth: 1,
   },
   thumbnailSpacer: {
-    height: 96,
+    height: 104,
   },
 });
