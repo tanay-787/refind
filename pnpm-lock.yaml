@@ -115,7 +115,7 @@ importers:
         version: 56.0.5(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))
       heroui-native:
         specifier: ^1.0.11
-        version: 1.0.11(57b139a96bee6c1212f799038a6a00f0)
+        version: 1.0.11(bde98275a71d5313fab04d3c74259449)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -159,11 +159,11 @@ importers:
         specifier: ^0.3.1
         version: 0.3.1(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       tailwind-merge:
-        specifier: ^3.7.0
-        version: 3.7.0
+        specifier: 3.4.0
+        version: 3.4.0
       tailwind-variants:
-        specifier: ^4.0.1
-        version: 4.0.1
+        specifier: 3.2.2
+        version: 3.2.2(tailwind-merge@3.4.0)(tailwindcss@4.3.4)
       tailwindcss:
         specifier: ^4.3.4
         version: 4.3.4
@@ -5070,12 +5070,18 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  tailwind-merge@3.7.0:
-    resolution: {integrity: sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA==}
+  tailwind-merge@3.4.0:
+    resolution: {integrity: sha512-uSaO4gnW+b3Y2aWoWfFpX62vn2sR3skfhbjsEnaBI81WD1wBLlHZe5sWf0AqjksNdYTbGBEd0UasQMT3SNV15g==}
 
-  tailwind-variants@4.0.1:
-    resolution: {integrity: sha512-VumzgPklIwpneDWtskGuhEqPlfZZ2DeN1nIb2um9DRhk9XBX580s4N84A533j+oHN+dLz274HkKvSjr+64fggA==}
-    engines: {node: '>=16.9.x', pnpm: '>=7.x'}
+  tailwind-variants@3.2.2:
+    resolution: {integrity: sha512-Mi4kHeMTLvKlM98XPnK+7HoBPmf4gygdFmqQPaDivc3DpYS6aIY6KiG/PgThrGvii5YZJqRsPz0aPyhoFzmZgg==}
+    engines: {node: '>=16.x', pnpm: '>=7.x'}
+    peerDependencies:
+      tailwind-merge: '>=3.0.0'
+      tailwindcss: '*'
+    peerDependenciesMeta:
+      tailwind-merge:
+        optional: true
 
   tailwindcss@4.3.3:
     resolution: {integrity: sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==}
@@ -9336,7 +9342,7 @@ snapshots:
     dependencies:
       hermes-estree: 0.36.1
 
-  heroui-native@1.0.11(57b139a96bee6c1212f799038a6a00f0):
+  heroui-native@1.0.11(bde98275a71d5313fab04d3c74259449):
     dependencies:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1)
@@ -9345,8 +9351,8 @@ snapshots:
       react-native-safe-area-context: 5.7.0(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       react-native-svg: 15.15.4(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       react-native-worklets: 0.8.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)
-      tailwind-merge: 3.7.0
-      tailwind-variants: 4.0.1
+      tailwind-merge: 3.4.0
+      tailwind-variants: 3.2.2(tailwind-merge@3.4.0)(tailwindcss@4.3.4)
     optionalDependencies:
       react-native-screens: 4.25.2(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
 
@@ -10857,9 +10863,13 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  tailwind-merge@3.7.0: {}
+  tailwind-merge@3.4.0: {}
 
-  tailwind-variants@4.0.1: {}
+  tailwind-variants@3.2.2(tailwind-merge@3.4.0)(tailwindcss@4.3.4):
+    dependencies:
+      tailwindcss: 4.3.4
+    optionalDependencies:
+      tailwind-merge: 3.4.0
 
   tailwindcss@4.3.3: {}
 
