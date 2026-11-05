@@ -11,6 +11,7 @@ import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
+import { Card, Button } from 'heroui-native';
 
 import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
@@ -123,45 +124,40 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
             </View>
 
             {/* Section 1: Library & On-Device Storage */}
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Card variant="secondary" className="rounded-2xl p-4">
               <View style={styles.cardHeader}>
                 <View style={styles.libraryStatus}>
-                  <Text style={[styles.cardTitle, { color: colors.onSurface }]}>
+                  <Card.Title style={[styles.cardTitle, { color: colors.onSurface }]}>
                     On-Device Library
-                  </Text>
-                  <Text style={[styles.libraryCount, { color: colors.onSurfaceVariant }]}>
+                  </Card.Title>
+                  <Card.Description style={[styles.libraryCount, { color: colors.onSurfaceVariant }]}>
                     {pendingCount > 0
                       ? `${completedCount} indexed \u2022 ${pendingCount} pending`
                       : `${completedCount} screenshots indexed`}
-                  </Text>
+                  </Card.Description>
                 </View>
 
-                <Pressable
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onPress={handleRescan}
-                  disabled={isSyncing}
-                  android_ripple={{ color: colors.secondary }}
-                  style={({ pressed }) => [
-                    styles.rescanButton,
-                    { 
-                      backgroundColor: colors.secondaryContainer,
-                      opacity: isSyncing || pressed ? 0.75 : 1,
-                    }
-                  ]}
+                  isDisabled={isSyncing}
+                  className="rounded-full px-3 py-1.5"
                 >
                   <IconView 
                     name="sync" 
                     size={16} 
                     tintColor={colors.onSecondaryContainer} 
                   />
-                  <Text style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
+                  <Button.Label style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
                     {isSyncing ? 'Scanning...' : 'Rescan'}
-                  </Text>
-                </Pressable>
+                  </Button.Label>
+                </Button>
               </View>
-            </View>
+            </Card>
 
             {/* Section 2: Community & Open Source */}
-            <View style={[styles.card, { backgroundColor: colors.surface, paddingVertical: 4, paddingHorizontal: 4 }]}>
+            <Card variant="secondary" className="rounded-2xl p-2 gap-1">
               {/* Star on GitHub */}
               <Pressable
                 onPress={() => openUrl('https://github.com/tanay-787/refind')}
@@ -173,12 +169,12 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
               >
                 <IconView name="star" size={22} tintColor={colors.primary} />
                 <View style={styles.itemTextGroup}>
-                  <Text style={[styles.itemTitle, { color: colors.onSurface }]}>
+                  <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
                     Star on GitHub
-                  </Text>
-                  <Text style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  </Card.Title>
+                  <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
                     Support the project &amp; help others discover Refind
-                  </Text>
+                  </Card.Description>
                 </View>
               </Pressable>
 
@@ -193,12 +189,12 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
               >
                 <IconView name="bug_report" size={22} tintColor={colors.onSurfaceVariant} />
                 <View style={styles.itemTextGroup}>
-                  <Text style={[styles.itemTitle, { color: colors.onSurface }]}>
+                  <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
                     Report an Issue or Suggestion
-                  </Text>
-                  <Text style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  </Card.Title>
+                  <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
                     Encountered a bug or have an idea? Let us know
-                  </Text>
+                  </Card.Description>
                 </View>
               </Pressable>
 
@@ -213,15 +209,15 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
               >
                 <IconView name="code" size={22} tintColor={colors.onSurfaceVariant} />
                 <View style={styles.itemTextGroup}>
-                  <Text style={[styles.itemTitle, { color: colors.onSurface }]}>
+                  <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
                     Contribute Code
-                  </Text>
-                  <Text style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  </Card.Title>
+                  <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
                     View our roadmap and good first issues
-                  </Text>
+                  </Card.Description>
                 </View>
               </Pressable>
-            </View>
+            </Card>
 
             {/* Footer */}
             <Text style={[styles.footerText, { color: colors.onSurfaceVariant }]}>
@@ -284,10 +280,6 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 12,
   },
-  card: {
-    borderRadius: 16,
-    padding: 16,
-  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -303,14 +295,6 @@ const styles = StyleSheet.create({
   libraryCount: {
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 13,
-  },
-  rescanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
   },
   rescanText: {
     fontFamily: 'Inter_500Medium',

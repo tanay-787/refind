@@ -3,8 +3,6 @@ import {
   StyleSheet,
   View,
   Text,
-  Pressable,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { usePermissionContext } from '@/hooks';
@@ -12,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { Image } from 'expo-image';
+import { Button, Spinner } from 'heroui-native';
 import { useThemeColors } from '@/theme';
 import { SystemBars } from 'react-native-edge-to-edge';
 
@@ -95,26 +94,21 @@ export default function OnboardingScreen() {
 
         {/* Action Button at the bottom */}
         <View style={styles.actionContainer}>
-          <Pressable
+          <Button
+            size="lg"
+            variant="primary"
             onPress={handleContinue}
-            disabled={loading}
-            android_ripple={{ color: colors.primaryContainer }}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: loading ? colors.surfaceVariant : colors.background,
-                opacity: pressed ? 0.9 : 1,
-              }
-            ]}
+            isDisabled={loading}
+            className="w-full rounded-full py-4"
           >
             {loading ? (
-              <ActivityIndicator size="small" color={colors.onSurface} />
+              <Spinner size="sm" color="default" />
             ) : (
-              <Text style={[styles.buttonText, { color: colors.onBackground }]}>
+              <Button.Label style={styles.buttonText}>
                 Get Started
-              </Text>
+              </Button.Label>
             )}
-          </Pressable>
+          </Button>
           <Text 
             style={[
               styles.hint,

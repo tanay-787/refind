@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
+import '../../global.css';
 import { Stack } from 'expo-router';
 import { SystemBars } from 'react-native-edge-to-edge';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { HeroUINativeProvider } from 'heroui-native';
 import { ThemedHost } from '@/theme';
 import {
   PermissionProvider,
@@ -60,25 +62,27 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemedHost style={{ flex: 1 }}>
-          <PermissionProvider>
-            <SystemBars style={isDark ? 'light' : 'dark'} />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen name="home" />
-              <Stack.Screen
-                name="viewer"
-                options={{
-                  presentation: 'transparentModal',
-                  animation: 'fade'
-                }}
-              />
-            </Stack>
-          </PermissionProvider>
-        </ThemedHost>
-      </SafeAreaProvider>
+      <HeroUINativeProvider>
+        <SafeAreaProvider>
+          <ThemedHost style={{ flex: 1 }}>
+            <PermissionProvider>
+              <SystemBars style={isDark ? 'light' : 'dark'} />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="onboarding" />
+                <Stack.Screen name="home" />
+                <Stack.Screen
+                  name="viewer"
+                  options={{
+                    presentation: 'transparentModal',
+                    animation: 'fade'
+                  }}
+                />
+              </Stack>
+            </PermissionProvider>
+          </ThemedHost>
+        </SafeAreaProvider>
+      </HeroUINativeProvider>
     </GestureHandlerRootView>
   );
 }

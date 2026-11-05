@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { SearchField } from 'heroui-native';
 import { useThemeColors } from '@/theme';
 import { IconView } from '@/ui/IconView';
 
@@ -16,57 +17,38 @@ export const SearchBar = React.memo(({ onQueryChange }: SearchBarProps) => {
     onQueryChange(val);
   }, [onQueryChange]);
 
-  const handleClear = useCallback(() => {
-    setText('');
-    onQueryChange('');
-  }, [onQueryChange]);
-
   return (
     <View style={styles.container}>
-      <View 
-        style={[
-          styles.inputWrapper, 
-          { backgroundColor: colors.surfaceContainerHigh }
-        ]}
-      >
-        <IconView 
-          name="search" 
-          size={22} 
-          tintColor={colors.onSurfaceVariant} 
-        />
-        
-        <TextInput
-          value={text}
-          onChangeText={handleChangeText}
-          placeholder="Search screenshots..."
-          placeholderTextColor={colors.onSurfaceVariant}
+      <SearchField value={text} onChange={handleChangeText}>
+        <SearchField.Group 
           style={[
-            styles.input,
-            { color: colors.onSurface }
+            styles.inputWrapper, 
+            { backgroundColor: colors.surfaceContainerHigh }
           ]}
-          returnKeyType="search"
-          autoCapitalize="none"
-          autoCorrect={false}
-          clearButtonMode="never"
-        />
-
-        {text.length > 0 && (
-          <Pressable 
-            onPress={handleClear}
-            hitSlop={8}
-            android_ripple={{ color: colors.surfaceVariant, borderless: true, radius: 16 }}
-            style={styles.clearButton}
-            accessibilityRole="button"
-            accessibilityLabel="Clear search"
-          >
+        >
+          <SearchField.SearchIcon>
             <IconView 
-              name="close" 
-              size={18} 
+              name="search" 
+              size={22} 
               tintColor={colors.onSurfaceVariant} 
             />
-          </Pressable>
-        )}
-      </View>
+          </SearchField.SearchIcon>
+          
+          <SearchField.Input
+            placeholder="Search screenshots..."
+            placeholderTextColor={colors.onSurfaceVariant}
+            style={[
+              styles.input,
+              { color: colors.onSurface }
+            ]}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          
+          <SearchField.ClearButton />
+        </SearchField.Group>
+      </SearchField>
     </View>
   );
 });
@@ -96,12 +78,5 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     marginLeft: 12,
     marginRight: 8,
-  },
-  clearButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

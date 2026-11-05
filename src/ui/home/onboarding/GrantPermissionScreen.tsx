@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from 'heroui-native';
 import { PhotoLibraryIllustration } from '@/ui/illustrations';
 import { useThemeColors } from '@/theme';
 
@@ -57,26 +58,16 @@ export const GrantPermissionScreen = React.memo(({ onGrantPermission }: GrantPer
 
         {/* Footer CTA & Disclaimer */}
         <View style={styles.footer}>
-          <Pressable
+          <Button
+            size="lg"
+            variant="secondary"
             onPress={onGrantPermission}
-            android_ripple={{ color: colors.secondary }}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: colors.secondaryContainer,
-                opacity: pressed ? 0.9 : 1,
-              }
-            ]}
+            className="w-full rounded-full py-4"
           >
-            <Text 
-              style={[
-                styles.buttonText, 
-                { color: colors.onSecondaryContainer }
-              ]}
-            >
+            <Button.Label style={styles.buttonText}>
               Enable Search
-            </Text>
-          </Pressable>
+            </Button.Label>
+          </Button>
 
           <Text 
             style={[

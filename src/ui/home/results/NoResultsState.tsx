@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Chip } from 'heroui-native';
 import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
@@ -71,22 +72,16 @@ export const NoResultsState = React.memo(({ query, onSuggestionTap }: NoResultsS
       {hasChips && (
         <View style={styles.chipsRow}>
           {chips.map((chip) => (
-            <Pressable
+            <Chip
               key={chip}
+              size="sm"
+              variant="secondary"
               onPress={() => onSuggestionTap(chip)}
-              android_ripple={{ color: colors.primaryContainer }}
-              style={({ pressed }) => [
-                styles.chip,
-                {
-                  backgroundColor: colors.surfaceVariant,
-                  opacity: pressed ? 0.8 : 1,
-                }
-              ]}
             >
-              <Text style={[styles.chipText, { color: colors.onSurface }]}>
+              <Chip.Label style={styles.chipText}>
                 {chip}
-              </Text>
-            </Pressable>
+              </Chip.Label>
+            </Chip>
           ))}
         </View>
       )}
@@ -136,11 +131,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
   },
   chipText: {
     fontFamily: 'JetBrainsMono_500Medium',
