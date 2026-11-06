@@ -1,11 +1,18 @@
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
-import { BottomSheet, Card, Button, Chip, Separator } from 'heroui-native';
+import { 
+  BottomSheet, 
+  Card, 
+  Button, 
+  Chip, 
+  Separator, 
+  PressableFeedback 
+} from 'heroui-native';
 
 import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
@@ -115,26 +122,19 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
             </Chip>
           </View>
 
-          {/* Card 1: On-Device Engine & Library Status */}
+          {/* Card 1: Discovery Engine & Library Status */}
           <Card variant="secondary" className="rounded-2xl p-4 gap-3 border border-border">
-            {/* Header: Status badge & Tag */}
-            <View style={styles.engineHeader}>
-              <View style={styles.engineTag}>
-                <IconView 
-                  name="database" 
-                  size={15} 
-                  weight="medium" 
-                  tintColor={colors.primary} 
-                />
-                <Text style={[styles.sectionCaption, { color: colors.onSurfaceVariant }]}>
-                  ON-DEVICE ENGINE
-                </Text>
-              </View>
-              <Chip size="sm" variant="soft">
-                <Chip.Label style={[styles.chipText, { color: colors.onSurfaceVariant }]}>
-                  100% Offline
-                </Chip.Label>
-              </Chip>
+            {/* Header: Tag */}
+            <View style={styles.engineTag}>
+              <IconView 
+                name="database" 
+                size={15} 
+                weight="medium" 
+                tintColor={colors.primary} 
+              />
+              <Text style={[styles.sectionCaption, { color: colors.onSurfaceVariant }]}>
+                DISCOVERY ENGINE
+              </Text>
             </View>
 
             {/* Body: Metric Counter + Rescan Button */}
@@ -179,14 +179,11 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
           {/* Card 2: Community & Open Source Hub */}
           <Card variant="secondary" className="rounded-2xl p-3 gap-3 border border-border">
             {/* Top: Star on GitHub Spotlight Row */}
-            <Pressable
+            <PressableFeedback
               onPress={() => openUrl('https://github.com/tanay-787/refind')}
-              android_ripple={{ color: colors.surfaceVariant }}
-              style={({ pressed }) => [
-                styles.githubHeroRow,
-                { opacity: pressed ? 0.75 : 1 }
-              ]}
+              style={styles.githubHeroRow}
             >
+              <PressableFeedback.Highlight />
               <View style={[styles.githubLogoBox, { backgroundColor: tileBg }]}>
                 <GitHubIcon size={24} color={colors.onSurface} />
               </View>
@@ -199,30 +196,18 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
                   Support Refind &amp; help others discover local AI
                 </Text>
               </View>
-
-              <Chip size="sm" variant="soft">
-                <Chip.Label style={[styles.starChipText, { color: colors.onSurface }]}>
-                  ★ Star
-                </Chip.Label>
-              </Chip>
-            </Pressable>
+            </PressableFeedback>
 
             <Separator variant="thin" />
 
             {/* Bottom: Dual Side-by-Side Action Tiles */}
             <View style={styles.actionTilesRow}>
               {/* Left Tile: Report Issue */}
-              <Pressable
+              <PressableFeedback
                 onPress={() => openUrl('https://github.com/tanay-787/refind/issues')}
-                android_ripple={{ color: colors.surfaceVariant }}
-                style={({ pressed }) => [
-                  styles.actionTile,
-                  { 
-                    backgroundColor: tileBg,
-                    opacity: pressed ? 0.75 : 1 
-                  }
-                ]}
+                style={[styles.actionTile, { backgroundColor: tileBg }]}
               >
+                <PressableFeedback.Highlight />
                 <View style={styles.tileHeader}>
                   <IconView 
                     name="bug_report" 
@@ -243,20 +228,14 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
                 <Text style={[styles.tileSubtitle, { color: colors.onSurfaceVariant }]}>
                   Bugs &amp; feedback
                 </Text>
-              </Pressable>
+              </PressableFeedback>
 
               {/* Right Tile: Contribute Code */}
-              <Pressable
+              <PressableFeedback
                 onPress={() => openUrl('https://github.com/tanay-787/refind/blob/master/CONTRIBUTING.md')}
-                android_ripple={{ color: colors.surfaceVariant }}
-                style={({ pressed }) => [
-                  styles.actionTile,
-                  { 
-                    backgroundColor: tileBg,
-                    opacity: pressed ? 0.75 : 1 
-                  }
-                ]}
+                style={[styles.actionTile, { backgroundColor: tileBg }]}
               >
+                <PressableFeedback.Highlight />
                 <View style={styles.tileHeader}>
                   <IconView 
                     name="code" 
@@ -277,7 +256,7 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
                 <Text style={[styles.tileSubtitle, { color: colors.onSurfaceVariant }]}>
                   Roadmap &amp; PRs
                 </Text>
-              </Pressable>
+              </PressableFeedback>
             </View>
           </Card>
 
@@ -315,19 +294,6 @@ const styles = StyleSheet.create({
   versionText: {
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 12,
-  },
-  chipText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 11,
-  },
-  starChipText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
-  },
-  engineHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   engineTag: {
     flexDirection: 'row',
@@ -380,8 +346,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 6,
+    padding: 8,
     borderRadius: 12,
+    overflow: 'hidden',
   },
   githubLogoBox: {
     width: 42,
@@ -411,6 +378,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderRadius: 12,
+    overflow: 'hidden',
     gap: 4,
   },
   tileHeader: {
