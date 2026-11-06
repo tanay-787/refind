@@ -5,12 +5,13 @@ import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
-import { BottomSheet, Card, Button, Chip } from 'heroui-native';
+import { BottomSheet, Card, Button, Chip, Separator } from 'heroui-native';
 
 import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
 import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
 import { IconView } from '@/ui/IconView';
+import { GitHubIcon } from '@/ui/icons';
 
 interface AboutCommunitySheetProps {
   visible: boolean;
@@ -64,6 +65,8 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
     }
   }, []);
 
+  const tileBg = colors.surfaceContainerHighest ?? colors.surfaceVariant;
+
   return (
     <BottomSheet
       isOpen={visible}
@@ -77,7 +80,7 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
         <BottomSheet.Overlay />
         <BottomSheet.Content
           backgroundClassName="rounded-t-[28px]"
-          contentContainerClassName="px-5 pt-1 pb-6 gap-4"
+          contentContainerClassName="px-5 pt-1 pb-6 gap-3.5"
           contentContainerProps={{
             style: {
               paddingBottom: Math.max(insets.bottom + 16, 28),
@@ -112,18 +115,45 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
             </Chip>
           </View>
 
-          {/* Section 1: Library & On-Device Storage */}
-          <Card variant="secondary" className="rounded-2xl p-4 border border-border">
-            <View style={styles.cardHeader}>
-              <View style={styles.libraryStatus}>
-                <Card.Title style={[styles.cardTitle, { color: colors.onSurface }]}>
-                  On-Device Library
-                </Card.Title>
-                <Card.Description style={[styles.libraryCount, { color: colors.onSurfaceVariant }]}>
-                  {pendingCount > 0
-                    ? `${completedCount} indexed \u2022 ${pendingCount} pending`
-                    : `${completedCount} screenshots indexed`}
-                </Card.Description>
+          {/* Card 1: On-Device Engine & Library Status */}
+          <Card variant="secondary" className="rounded-2xl p-4 gap-3 border border-border">
+            {/* Header: Status badge & Tag */}
+            <View style={styles.engineHeader}>
+              <View style={styles.engineTag}>
+                <IconView 
+                  name="database" 
+                  size={15} 
+                  weight="medium" 
+                  tintColor={colors.primary} 
+                />
+                <Text style={[styles.sectionCaption, { color: colors.onSurfaceVariant }]}>
+                  ON-DEVICE ENGINE
+                </Text>
+              </View>
+              <Chip size="sm" variant="soft">
+                <Chip.Label style={[styles.chipText, { color: colors.onSurfaceVariant }]}>
+                  100% Offline
+                </Chip.Label>
+              </Chip>
+            </View>
+
+            {/* Body: Metric Counter + Rescan Button */}
+            <View style={styles.engineBody}>
+              <View style={styles.metricGroup}>
+                <Text style={[styles.metricNumber, { color: colors.onSurface }]}>
+                  {completedCount.toLocaleString()}
+                </Text>
+                <Text style={[styles.metricLabel, { color: colors.onSurfaceVariant }]}>
+                  screenshots indexed locally
+                </Text>
+                {pendingCount > 0 && (
+                  <View style={styles.pendingRow}>
+                    <View style={[styles.pendingDot, { backgroundColor: colors.primary }]} />
+                    <Text style={[styles.pendingText, { color: colors.primary }]}>
+                      {`${pendingCount} pending analysis`}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <Button
@@ -131,11 +161,12 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
                 variant="secondary"
                 onPress={handleRescan}
                 isDisabled={isSyncing}
-                className="rounded-full px-3 py-1.5"
+                className="rounded-full px-3.5 py-1.5 self-center"
               >
                 <IconView 
                   name="sync" 
-                  size={15} 
+                  size={14} 
+                  weight="medium"
                   tintColor={colors.onSecondaryContainer} 
                 />
                 <Button.Label style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
@@ -145,70 +176,109 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
             </View>
           </Card>
 
-          {/* Section 2: Community & Open Source */}
-          <Card variant="secondary" className="rounded-2xl p-2 border border-border">
-            {/* Star on GitHub */}
+          {/* Card 2: Community & Open Source Hub */}
+          <Card variant="secondary" className="rounded-2xl p-3 gap-3 border border-border">
+            {/* Top: Star on GitHub Spotlight Row */}
             <Pressable
               onPress={() => openUrl('https://github.com/tanay-787/refind')}
               android_ripple={{ color: colors.surfaceVariant }}
               style={({ pressed }) => [
-                styles.communityItem,
+                styles.githubHeroRow,
                 { opacity: pressed ? 0.75 : 1 }
               ]}
             >
-              <IconView name="star" size={22} tintColor={colors.primary} />
-              <View style={styles.itemTextGroup}>
-                <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
+              <View style={[styles.githubLogoBox, { backgroundColor: tileBg }]}>
+                <GitHubIcon size={24} color={colors.onSurface} />
+              </View>
+
+              <View style={styles.githubTextGroup}>
+                <Text style={[styles.itemTitle, { color: colors.onSurface }]}>
                   Star on GitHub
-                </Card.Title>
-                <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
-                  Support the project &amp; help others discover Refind
-                </Card.Description>
+                </Text>
+                <Text style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  Support Refind &amp; help others discover local AI
+                </Text>
               </View>
-              <IconView name="chevron_right" size={16} tintColor={colors.outline} />
+
+              <Chip size="sm" variant="soft">
+                <Chip.Label style={[styles.starChipText, { color: colors.onSurface }]}>
+                  ★ Star
+                </Chip.Label>
+              </Chip>
             </Pressable>
 
-            {/* Report an Issue */}
-            <Pressable
-              onPress={() => openUrl('https://github.com/tanay-787/refind/issues')}
-              android_ripple={{ color: colors.surfaceVariant }}
-              style={({ pressed }) => [
-                styles.communityItem,
-                { opacity: pressed ? 0.75 : 1 }
-              ]}
-            >
-              <IconView name="bug_report" size={22} tintColor={colors.onSurfaceVariant} />
-              <View style={styles.itemTextGroup}>
-                <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
-                  Report an Issue or Suggestion
-                </Card.Title>
-                <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
-                  Encountered a bug or have an idea? Let us know
-                </Card.Description>
-              </View>
-              <IconView name="chevron_right" size={16} tintColor={colors.outline} />
-            </Pressable>
+            <Separator variant="thin" />
 
-            {/* Contribute Code */}
-            <Pressable
-              onPress={() => openUrl('https://github.com/tanay-787/refind/blob/master/CONTRIBUTING.md')}
-              android_ripple={{ color: colors.surfaceVariant }}
-              style={({ pressed }) => [
-                styles.communityItem,
-                { opacity: pressed ? 0.75 : 1 }
-              ]}
-            >
-              <IconView name="code" size={22} tintColor={colors.onSurfaceVariant} />
-              <View style={styles.itemTextGroup}>
-                <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
-                  Contribute Code
-                </Card.Title>
-                <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
-                  View our roadmap and good first issues
-                </Card.Description>
-              </View>
-              <IconView name="chevron_right" size={16} tintColor={colors.outline} />
-            </Pressable>
+            {/* Bottom: Dual Side-by-Side Action Tiles */}
+            <View style={styles.actionTilesRow}>
+              {/* Left Tile: Report Issue */}
+              <Pressable
+                onPress={() => openUrl('https://github.com/tanay-787/refind/issues')}
+                android_ripple={{ color: colors.surfaceVariant }}
+                style={({ pressed }) => [
+                  styles.actionTile,
+                  { 
+                    backgroundColor: tileBg,
+                    opacity: pressed ? 0.75 : 1 
+                  }
+                ]}
+              >
+                <View style={styles.tileHeader}>
+                  <IconView 
+                    name="bug_report" 
+                    size={20} 
+                    weight="medium" 
+                    tintColor={colors.onSurface} 
+                  />
+                  <IconView 
+                    name="arrow_outward" 
+                    size={14} 
+                    weight="regular" 
+                    tintColor={colors.outline} 
+                  />
+                </View>
+                <Text style={[styles.tileTitle, { color: colors.onSurface }]}>
+                  Report Issue
+                </Text>
+                <Text style={[styles.tileSubtitle, { color: colors.onSurfaceVariant }]}>
+                  Bugs &amp; feedback
+                </Text>
+              </Pressable>
+
+              {/* Right Tile: Contribute Code */}
+              <Pressable
+                onPress={() => openUrl('https://github.com/tanay-787/refind/blob/master/CONTRIBUTING.md')}
+                android_ripple={{ color: colors.surfaceVariant }}
+                style={({ pressed }) => [
+                  styles.actionTile,
+                  { 
+                    backgroundColor: tileBg,
+                    opacity: pressed ? 0.75 : 1 
+                  }
+                ]}
+              >
+                <View style={styles.tileHeader}>
+                  <IconView 
+                    name="code" 
+                    size={20} 
+                    weight="medium" 
+                    tintColor={colors.onSurface} 
+                  />
+                  <IconView 
+                    name="arrow_outward" 
+                    size={14} 
+                    weight="regular" 
+                    tintColor={colors.outline} 
+                  />
+                </View>
+                <Text style={[styles.tileTitle, { color: colors.onSurface }]}>
+                  Contribute
+                </Text>
+                <Text style={[styles.tileSubtitle, { color: colors.onSurfaceVariant }]}>
+                  Roadmap &amp; PRs
+                </Text>
+              </Pressable>
+            </View>
           </Card>
 
           {/* Footer */}
@@ -246,50 +316,121 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 12,
   },
-  cardHeader: {
+  chipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+  },
+  starChipText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+  },
+  engineHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  libraryStatus: {
-    gap: 2,
+  engineTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  cardTitle: {
+  sectionCaption: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 15,
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
-  libraryCount: {
-    fontFamily: 'JetBrainsMono_500Medium',
-    fontSize: 13,
+  engineBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metricGroup: {
+    gap: 1,
+  },
+  metricNumber: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 28,
+    letterSpacing: -0.5,
+    lineHeight: 32,
+  },
+  metricLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+  },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  pendingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  pendingText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
   },
   rescanText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 13,
+    fontSize: 12,
   },
-  communityItem: {
+  githubHeroRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    padding: 6,
     borderRadius: 12,
   },
-  itemTextGroup: {
+  githubLogoBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  githubTextGroup: {
     flex: 1,
     gap: 2,
   },
   itemTitle: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 15,
   },
   itemSubtitle: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
+    lineHeight: 16,
+  },
+  actionTilesRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionTile: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    gap: 4,
+  },
+  tileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  tileTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+  },
+  tileSubtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
   },
   footerText: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
 });
