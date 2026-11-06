@@ -1,17 +1,11 @@
 import React, { useMemo, useCallback } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
-import { Card, Button } from 'heroui-native';
+import { BottomSheet, Card, Button, Chip } from 'heroui-native';
 
 import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
@@ -70,194 +64,171 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
     }
   }, []);
 
-  if (!visible) return null;
-
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="slide"
-      onRequestClose={onDismiss}
+    <BottomSheet
+      isOpen={visible}
+      onOpenChange={(open) => {
+        if (!open) {
+          onDismiss();
+        }
+      }}
     >
-      <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
-
-        <View 
-          style={[
-            styles.sheet, 
-            { 
-              backgroundColor: colors.surfaceContainerLow,
+      <BottomSheet.Portal>
+        <BottomSheet.Overlay />
+        <BottomSheet.Content
+          backgroundClassName="rounded-t-[28px]"
+          contentContainerClassName="px-5 pt-1 pb-6 gap-4"
+          contentContainerProps={{
+            style: {
               paddingBottom: Math.max(insets.bottom + 16, 28),
             }
-          ]}
+          }}
         >
-          {/* Drag Handle */}
-          <View style={[styles.dragHandle, { backgroundColor: colors.outlineVariant }]} />
-
-          <View style={styles.content}>
-            {/* Header Branding & Version */}
-            <View style={styles.headerRow}>
-              <View style={styles.brandingGroup}>
-                <Text 
-                  style={[
-                    styles.title, 
-                    { color: colors.onSurface }
-                  ]}
-                >
-                  Refind
-                </Text>
-                <Text 
-                  style={[
-                    styles.tagline, 
-                    { color: colors.onSurfaceVariant }
-                  ]}
-                >
-                  100% on-device &bull; Zero cloud &bull; Private
-                </Text>
-              </View>
-
-              <View style={[styles.versionBadge, { backgroundColor: colors.surfaceVariant }]}>
-                <Text style={[styles.versionText, { color: colors.onSurfaceVariant }]}>
-                  {`v${appVersion}`}
-                </Text>
-              </View>
+          {/* Header Branding & Version */}
+          <View style={styles.headerRow}>
+            <View style={styles.brandingGroup}>
+              <Text 
+                style={[
+                  styles.title, 
+                  { color: colors.onSurface }
+                ]}
+              >
+                Refind
+              </Text>
+              <Text 
+                style={[
+                  styles.tagline, 
+                  { color: colors.onSurfaceVariant }
+                ]}
+              >
+                100% on-device &bull; Zero cloud &bull; Private
+              </Text>
             </View>
 
-            {/* Section 1: Library & On-Device Storage */}
-            <Card variant="secondary" className="rounded-2xl p-4">
-              <View style={styles.cardHeader}>
-                <View style={styles.libraryStatus}>
-                  <Card.Title style={[styles.cardTitle, { color: colors.onSurface }]}>
-                    On-Device Library
-                  </Card.Title>
-                  <Card.Description style={[styles.libraryCount, { color: colors.onSurfaceVariant }]}>
-                    {pendingCount > 0
-                      ? `${completedCount} indexed \u2022 ${pendingCount} pending`
-                      : `${completedCount} screenshots indexed`}
-                  </Card.Description>
-                </View>
-
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onPress={handleRescan}
-                  isDisabled={isSyncing}
-                  className="rounded-full px-3 py-1.5"
-                >
-                  <IconView 
-                    name="sync" 
-                    size={16} 
-                    tintColor={colors.onSecondaryContainer} 
-                  />
-                  <Button.Label style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
-                    {isSyncing ? 'Scanning...' : 'Rescan'}
-                  </Button.Label>
-                </Button>
-              </View>
-            </Card>
-
-            {/* Section 2: Community & Open Source */}
-            <Card variant="secondary" className="rounded-2xl p-2 gap-1">
-              {/* Star on GitHub */}
-              <Pressable
-                onPress={() => openUrl('https://github.com/tanay-787/refind')}
-                android_ripple={{ color: colors.surfaceVariant }}
-                style={({ pressed }) => [
-                  styles.communityItem,
-                  { opacity: pressed ? 0.8 : 1 }
-                ]}
-              >
-                <IconView name="star" size={22} tintColor={colors.primary} />
-                <View style={styles.itemTextGroup}>
-                  <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
-                    Star on GitHub
-                  </Card.Title>
-                  <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
-                    Support the project &amp; help others discover Refind
-                  </Card.Description>
-                </View>
-              </Pressable>
-
-              {/* Report an Issue */}
-              <Pressable
-                onPress={() => openUrl('https://github.com/tanay-787/refind/issues')}
-                android_ripple={{ color: colors.surfaceVariant }}
-                style={({ pressed }) => [
-                  styles.communityItem,
-                  { opacity: pressed ? 0.8 : 1 }
-                ]}
-              >
-                <IconView name="bug_report" size={22} tintColor={colors.onSurfaceVariant} />
-                <View style={styles.itemTextGroup}>
-                  <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
-                    Report an Issue or Suggestion
-                  </Card.Title>
-                  <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
-                    Encountered a bug or have an idea? Let us know
-                  </Card.Description>
-                </View>
-              </Pressable>
-
-              {/* Contribute Code */}
-              <Pressable
-                onPress={() => openUrl('https://github.com/tanay-787/refind/blob/master/CONTRIBUTING.md')}
-                android_ripple={{ color: colors.surfaceVariant }}
-                style={({ pressed }) => [
-                  styles.communityItem,
-                  { opacity: pressed ? 0.8 : 1 }
-                ]}
-              >
-                <IconView name="code" size={22} tintColor={colors.onSurfaceVariant} />
-                <View style={styles.itemTextGroup}>
-                  <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
-                    Contribute Code
-                  </Card.Title>
-                  <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
-                    View our roadmap and good first issues
-                  </Card.Description>
-                </View>
-              </Pressable>
-            </Card>
-
-            {/* Footer */}
-            <Text style={[styles.footerText, { color: colors.onSurfaceVariant }]}>
-              Licensed under Apache 2.0 &bull; 100% Local-First
-            </Text>
+            <Chip size="sm" variant="soft">
+              <Chip.Label style={[styles.versionText, { color: colors.onSurfaceVariant }]}>
+                {`v${appVersion}`}
+              </Chip.Label>
+            </Chip>
           </View>
-        </View>
-      </View>
-    </Modal>
+
+          {/* Section 1: Library & On-Device Storage */}
+          <Card variant="secondary" className="rounded-2xl p-4 border border-border">
+            <View style={styles.cardHeader}>
+              <View style={styles.libraryStatus}>
+                <Card.Title style={[styles.cardTitle, { color: colors.onSurface }]}>
+                  On-Device Library
+                </Card.Title>
+                <Card.Description style={[styles.libraryCount, { color: colors.onSurfaceVariant }]}>
+                  {pendingCount > 0
+                    ? `${completedCount} indexed \u2022 ${pendingCount} pending`
+                    : `${completedCount} screenshots indexed`}
+                </Card.Description>
+              </View>
+
+              <Button
+                size="sm"
+                variant="secondary"
+                onPress={handleRescan}
+                isDisabled={isSyncing}
+                className="rounded-full px-3 py-1.5"
+              >
+                <IconView 
+                  name="sync" 
+                  size={15} 
+                  tintColor={colors.onSecondaryContainer} 
+                />
+                <Button.Label style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
+                  {isSyncing ? 'Scanning...' : 'Rescan'}
+                </Button.Label>
+              </Button>
+            </View>
+          </Card>
+
+          {/* Section 2: Community & Open Source */}
+          <Card variant="secondary" className="rounded-2xl p-2 border border-border">
+            {/* Star on GitHub */}
+            <Pressable
+              onPress={() => openUrl('https://github.com/tanay-787/refind')}
+              android_ripple={{ color: colors.surfaceVariant }}
+              style={({ pressed }) => [
+                styles.communityItem,
+                { opacity: pressed ? 0.75 : 1 }
+              ]}
+            >
+              <IconView name="star" size={22} tintColor={colors.primary} />
+              <View style={styles.itemTextGroup}>
+                <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
+                  Star on GitHub
+                </Card.Title>
+                <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  Support the project &amp; help others discover Refind
+                </Card.Description>
+              </View>
+              <IconView name="chevron_right" size={16} tintColor={colors.outline} />
+            </Pressable>
+
+            {/* Report an Issue */}
+            <Pressable
+              onPress={() => openUrl('https://github.com/tanay-787/refind/issues')}
+              android_ripple={{ color: colors.surfaceVariant }}
+              style={({ pressed }) => [
+                styles.communityItem,
+                { opacity: pressed ? 0.75 : 1 }
+              ]}
+            >
+              <IconView name="bug_report" size={22} tintColor={colors.onSurfaceVariant} />
+              <View style={styles.itemTextGroup}>
+                <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
+                  Report an Issue or Suggestion
+                </Card.Title>
+                <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  Encountered a bug or have an idea? Let us know
+                </Card.Description>
+              </View>
+              <IconView name="chevron_right" size={16} tintColor={colors.outline} />
+            </Pressable>
+
+            {/* Contribute Code */}
+            <Pressable
+              onPress={() => openUrl('https://github.com/tanay-787/refind/blob/master/CONTRIBUTING.md')}
+              android_ripple={{ color: colors.surfaceVariant }}
+              style={({ pressed }) => [
+                styles.communityItem,
+                { opacity: pressed ? 0.75 : 1 }
+              ]}
+            >
+              <IconView name="code" size={22} tintColor={colors.onSurfaceVariant} />
+              <View style={styles.itemTextGroup}>
+                <Card.Title style={[styles.itemTitle, { color: colors.onSurface }]}>
+                  Contribute Code
+                </Card.Title>
+                <Card.Description style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  View our roadmap and good first issues
+                </Card.Description>
+              </View>
+              <IconView name="chevron_right" size={16} tintColor={colors.outline} />
+            </Pressable>
+          </Card>
+
+          {/* Footer */}
+          <Text style={[styles.footerText, { color: colors.onSurfaceVariant }]}>
+            Licensed under Apache 2.0 &bull; 100% Local-First
+          </Text>
+        </BottomSheet.Content>
+      </BottomSheet.Portal>
+    </BottomSheet>
   );
 });
 
 AboutCommunitySheet.displayName = 'AboutCommunitySheet';
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  dragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  content: {
-    gap: 16,
-  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 4,
   },
   brandingGroup: {
     gap: 2,
@@ -270,11 +241,6 @@ const styles = StyleSheet.create({
   tagline: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
-  },
-  versionBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
   },
   versionText: {
     fontFamily: 'JetBrainsMono_500Medium',
@@ -303,7 +269,7 @@ const styles = StyleSheet.create({
   communityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
