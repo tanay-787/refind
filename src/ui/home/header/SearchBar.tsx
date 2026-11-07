@@ -24,7 +24,7 @@ export const SearchBar = React.memo(({ onQueryChange }: SearchBarProps) => {
           <SearchField.Input
             placeholder="Search screenshots..."
             variant="secondary"
-            className="rounded-full h-12 text-base android:border-0 android:focus:border-transparent ios:focus:outline-transparent focus:border-transparent focus:outline-none"
+            className="rounded-full h-12 text-base"
             style={styles.input}
             selectionColorClassName="accent-field-placeholder"
             selectionColor={colors.onSurfaceVariant}
@@ -47,6 +47,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   input: {
-    borderWidth: 0,
+    borderColor: 'transparent',
   },
 });
