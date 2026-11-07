@@ -96,10 +96,17 @@ export default function OnboardingScreen() {
         <View style={styles.actionContainer}>
           <Button
             size="lg"
+            variant="secondary"
             onPress={handleContinue}
             isDisabled={loading}
             style={{ backgroundColor: '#060607' }}
-            className="w-full rounded-full py-4 bg-[oklch(0.12_0.005_285.8228)]"
+            className="w-full rounded-full py-4 bg-[#060607]"
+            feedbackVariant="scale-highlight"
+            animation={{
+              highlight: {
+                backgroundColor: { value: 'rgba(255, 255, 255, 0.15)' },
+              },
+            }}
           >
             {loading ? (
               <Spinner size="sm" color="#FFFFFF" />
