@@ -1,5 +1,6 @@
 export * from './header/Header';
 export * from './header/SearchBar';
+export * from './header/EngineStatusTrigger';
 export * from './results/WelcomeState';
 export * from './onboarding/GrantPermissionScreen';
 export * from './results/NoResultsState';

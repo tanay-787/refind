@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/theme';
-import { IconView } from '@/ui/IconView';
 import { LiveStatusText } from './LiveStatusText';
+import { EngineStatusTrigger } from './EngineStatusTrigger';
 
 export interface HeaderProps {
   insets: EdgeInsets;
@@ -37,19 +37,7 @@ export const Header = React.memo(({ insets, onOpenAbout }: HeaderProps) => {
       </View>
 
       {onOpenAbout && (
-        <Pressable 
-          onPress={onOpenAbout}
-          android_ripple={{ color: colors.surfaceVariant, borderless: true, radius: 20 }}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.aboutButton,
-            { opacity: pressed ? 0.7 : 1 }
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="About Refind and Community"
-        >
-          <IconView name="info" size={24} tintColor={colors.onSurfaceVariant} />
-        </Pressable>
+        <EngineStatusTrigger onPress={onOpenAbout} />
       )}
     </View>
   );
@@ -72,12 +60,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Newsreader_600SemiBold',
     fontSize: 32,
     letterSpacing: -0.5,
-  },
-  aboutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
