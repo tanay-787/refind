@@ -574,7 +574,7 @@ const RadialChartLabel: React.FC<IRadialChartLabel> = ({
     0,
   );
   const maxWidth = Math.max(hole * 1.6, 88);
-  const offsetY = variant === 'semicircle' ? -hole * 0.45 : -20;
+  const offsetY = variant === 'semicircle' ? -(hole * 0.5) - 10 : -20;
 
   return (
     <View

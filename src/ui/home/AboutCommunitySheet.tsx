@@ -1,5 +1,5 @@
-import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
@@ -19,7 +19,7 @@ import { useJobJournalStore } from '@/hooks';
 import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
 import { IconView } from '@/ui/IconView';
 import { GitHubIcon } from '@/ui/icons';
-import { RadialChart, type TRadialChartVariant } from '@/ui/charts/radial-chart';
+import { RadialChart } from '@/ui/charts/radial-chart';
 
 interface AboutCommunitySheetProps {
   visible: boolean;
@@ -32,8 +32,6 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
   const db = useJobJournalStore(state => state.db);
   const sync = useJobJournalStore(state => state.sync);
   const isSyncing = useJobJournalStore(state => state.isSyncing);
-
-  const [chartVariant, setChartVariant] = useState<TRadialChartVariant>('circle');
 
   const appVersion = Constants.expoConfig?.version ?? '1.8.0';
 
@@ -49,24 +47,27 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
 
   let completedCount = 0;
   let pendingCount = 0;
+  let failedCount = 0;
   if (data) {
     for (const row of data) {
       if (row.status === 'completed') {
         completedCount += row.count;
       } else if (row.status === 'pending' || row.status === 'running') {
         pendingCount += row.count;
+      } else if (row.status === 'failed') {
+        failedCount += row.count;
       }
     }
   }
 
-  const totalJobs = Math.max(completedCount + pendingCount, 1);
+  const totalJobs = Math.max(completedCount + pendingCount + failedCount, 1);
   const readyPercentage = Math.round((completedCount / totalJobs) * 100);
 
   const chartData = useMemo(() => [
-    { label: 'Intake', value: completedCount + pendingCount, max: totalJobs, color: '#38BDF8' },
-    { label: 'OCR Vision', value: completedCount, max: totalJobs, color: '#A78BFA' },
-    { label: 'Search Ready', value: completedCount, max: totalJobs, color: '#34D399' },
-  ], [completedCount, pendingCount, totalJobs]);
+    { label: 'Search Ready', value: completedCount, max: totalJobs, color: '#10B981' },
+    { label: 'Pending', value: pendingCount, max: totalJobs, color: '#F59E0B' },
+    { label: 'Failed', value: failedCount, max: totalJobs, color: '#EF4444' },
+  ], [completedCount, pendingCount, failedCount, totalJobs]);
 
   const handleRescan = useCallback(async () => {
     try {
@@ -137,181 +138,83 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
 
           {/* Card 1: Discovery Engine & Library Status */}
           <Card variant="secondary" className="rounded-2xl p-4 gap-3.5 border border-border">
-            {/* Header: Tag + Variant Toggle */}
+            {/* Header: Title + Rescan Button */}
             <View style={styles.engineHeaderRow}>
-              <View style={styles.engineTag}>
-                <IconView 
-                  name="database" 
-                  size={15} 
-                  weight="medium" 
-                  tintColor={colors.primary} 
-                />
-                <Text style={[styles.sectionCaption, { color: colors.onSurfaceVariant }]}>
-                  DISCOVERY ENGINE
-                </Text>
-              </View>
+              <Text style={[styles.sectionCaption, { color: colors.onSurface }]}>
+                DISCOVERY ENGINE
+              </Text>
 
-              <View style={[styles.toggleContainer, { backgroundColor: tileBg }]}>
-                <Pressable
-                  onPress={() => setChartVariant('circle')}
-                  style={[
-                    styles.toggleOption,
-                    chartVariant === 'circle' && [styles.toggleOptionActive, { backgroundColor: colors.surface }]
-                  ]}
-                >
-                  <Text style={[
-                    styles.toggleText,
-                    { color: chartVariant === 'circle' ? colors.onSurface : colors.onSurfaceVariant }
-                  ]}>
-                    Circle
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setChartVariant('semicircle')}
-                  style={[
-                    styles.toggleOption,
-                    chartVariant === 'semicircle' && [styles.toggleOptionActive, { backgroundColor: colors.surface }]
-                  ]}
-                >
-                  <Text style={[
-                    styles.toggleText,
-                    { color: chartVariant === 'semicircle' ? colors.onSurface : colors.onSurfaceVariant }
-                  ]}>
-                    Semicircle
-                  </Text>
-                </Pressable>
-              </View>
+              <Button
+                size="sm"
+                variant="secondary"
+                onPress={handleRescan}
+                isDisabled={isSyncing}
+                className="rounded-full px-2.5 py-1"
+                style={styles.headerRescanBtn}
+              >
+                <IconView 
+                  name="sync" 
+                  size={13} 
+                  weight="medium"
+                  tintColor={colors.onSecondaryContainer} 
+                />
+                <Button.Label style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
+                  {isSyncing ? 'Scanning...' : 'Rescan'}
+                </Button.Label>
+              </Button>
             </View>
 
-            {/* Dynamic Chart Display based on selected variant */}
-            {chartVariant === 'circle' ? (
-              <View style={styles.circleChartRow}>
-                <View style={styles.circleChartWrapper}>
-                  <RadialChart.Root
-                    data={chartData}
-                    variant="circle"
-                    barWidth={7}
-                    gap={4}
-                    style={{ width: 104, height: 104 }}
-                  >
-                    <RadialChart.Tracks color={trackColor} />
-                    <RadialChart.Bars />
-                    <RadialChart.Label
-                      placeholder="Ready"
-                      placeholderValue={`${readyPercentage}%`}
-                      valueStyle={[styles.chartCenterValue, { color: colors.onSurface }]}
-                      labelStyle={[styles.chartCenterLabel, { color: colors.onSurfaceVariant }]}
-                    />
-                  </RadialChart.Root>
-                </View>
+            {/* Semicircle Radial Chart */}
+            <View style={styles.semicircleWrapper}>
+              <View style={styles.semicircleChartContainer}>
+                <RadialChart.Root
+                  data={chartData}
+                  variant="semicircle"
+                  barWidth={8}
+                  gap={4}
+                  style={{ width: '100%', height: 112 }}
+                >
+                  <RadialChart.Tracks color={trackColor} />
+                  <RadialChart.Bars />
+                  <RadialChart.Label
+                    placeholder=""
+                    placeholderValue={`${readyPercentage}%`}
+                    formatValue={(point) => `${point.value.toLocaleString()}`}
+                    valueStyle={[styles.semiCenterValue, { color: colors.onSurface }]}
+                  />
+                </RadialChart.Root>
+              </View>
 
-                <View style={styles.chartDetailsCol}>
-                  <View style={styles.metricGroup}>
-                    <Text style={[styles.metricNumber, { color: colors.onSurface }]}>
-                      {completedCount.toLocaleString()}
-                    </Text>
-                    <Text style={[styles.metricLabel, { color: colors.onSurfaceVariant }]}>
-                      screenshots indexed locally
+              {/* Semantic Legend Dots (Centered) */}
+              <View style={styles.semiFooterRow}>
+                <View style={styles.stageDotsRow}>
+                  <View style={styles.stageDotItem}>
+                    <View style={[styles.stageDot, { backgroundColor: '#10B981' }]} />
+                    <Text style={[styles.stageDotLabel, { color: colors.onSurface }]}>
+                      {`${completedCount.toLocaleString()} Ready`}
                     </Text>
                   </View>
-
-                  {/* Stage legend indicators */}
-                  <View style={styles.stageDotsRow}>
-                    <View style={styles.stageDotItem}>
-                      <View style={[styles.stageDot, { backgroundColor: '#38BDF8' }]} />
-                      <Text style={[styles.stageDotLabel, { color: colors.onSurfaceVariant }]}>Intake</Text>
-                    </View>
-                    <View style={styles.stageDotItem}>
-                      <View style={[styles.stageDot, { backgroundColor: '#A78BFA' }]} />
-                      <Text style={[styles.stageDotLabel, { color: colors.onSurfaceVariant }]}>OCR</Text>
-                    </View>
-                    <View style={styles.stageDotItem}>
-                      <View style={[styles.stageDot, { backgroundColor: '#34D399' }]} />
-                      <Text style={[styles.stageDotLabel, { color: colors.onSurfaceVariant }]}>FTS5</Text>
-                    </View>
+                  <View style={styles.stageDotItem}>
+                    <View style={[styles.stageDot, { backgroundColor: '#F59E0B' }]} />
+                    <Text style={[styles.stageDotLabel, { color: pendingCount > 0 ? colors.onSurface : colors.onSurfaceVariant }]}>
+                      {`${pendingCount.toLocaleString()} Pending`}
+                    </Text>
                   </View>
-
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onPress={handleRescan}
-                    isDisabled={isSyncing}
-                    className="rounded-full px-3.5 py-1.5 self-start mt-1"
-                  >
-                    <IconView 
-                      name="sync" 
-                      size={14} 
-                      weight="medium"
-                      tintColor={colors.onSecondaryContainer} 
-                    />
-                    <Button.Label style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
-                      {isSyncing ? 'Scanning...' : 'Rescan'}
-                    </Button.Label>
-                  </Button>
+                  <View style={styles.stageDotItem}>
+                    <View style={[
+                      styles.stageDot, 
+                      { backgroundColor: failedCount > 0 ? '#EF4444' : 'rgba(239, 68, 68, 0.35)' }
+                    ]} />
+                    <Text style={[
+                      styles.stageDotLabel, 
+                      { color: failedCount > 0 ? '#EF4444' : colors.onSurfaceVariant }
+                    ]}>
+                      {`${failedCount.toLocaleString()} Failed`}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            ) : (
-              <View style={styles.semicircleWrapper}>
-                <View style={styles.semicircleChartContainer}>
-                  <RadialChart.Root
-                    data={chartData}
-                    variant="semicircle"
-                    barWidth={9}
-                    gap={5}
-                    style={{ width: '100%', height: 110 }}
-                  >
-                    <RadialChart.Tracks color={trackColor} />
-                    <RadialChart.Bars />
-                    <RadialChart.Label
-                      placeholder="Search Ready"
-                      placeholderValue={`${readyPercentage}%`}
-                      valueStyle={[styles.semiCenterValue, { color: colors.onSurface }]}
-                      labelStyle={[styles.semiCenterLabel, { color: colors.onSurfaceVariant }]}
-                    />
-                  </RadialChart.Root>
-                </View>
-
-                <View style={styles.semiFooterRow}>
-                  <View style={styles.metricGroup}>
-                    <Text style={[styles.metricNumberSmall, { color: colors.onSurface }]}>
-                      {completedCount.toLocaleString()} indexed
-                    </Text>
-                    <View style={styles.stageDotsRow}>
-                      <View style={styles.stageDotItem}>
-                        <View style={[styles.stageDot, { backgroundColor: '#38BDF8' }]} />
-                        <Text style={[styles.stageDotLabel, { color: colors.onSurfaceVariant }]}>Intake</Text>
-                      </View>
-                      <View style={styles.stageDotItem}>
-                        <View style={[styles.stageDot, { backgroundColor: '#A78BFA' }]} />
-                        <Text style={[styles.stageDotLabel, { color: colors.onSurfaceVariant }]}>OCR</Text>
-                      </View>
-                      <View style={styles.stageDotItem}>
-                        <View style={[styles.stageDot, { backgroundColor: '#34D399' }]} />
-                        <Text style={[styles.stageDotLabel, { color: colors.onSurfaceVariant }]}>FTS5</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onPress={handleRescan}
-                    isDisabled={isSyncing}
-                    className="rounded-full px-3.5 py-1.5 self-center"
-                  >
-                    <IconView 
-                      name="sync" 
-                      size={14} 
-                      weight="medium"
-                      tintColor={colors.onSecondaryContainer} 
-                    />
-                    <Button.Label style={[styles.rescanText, { color: colors.onSecondaryContainer }]}>
-                      {isSyncing ? 'Scanning...' : 'Rescan'}
-                    </Button.Label>
-                  </Button>
-                </View>
-              </View>
-            )}
+            </View>
           </Card>
 
           {/* Card 2: Community & Open Source Hub */}
@@ -438,73 +341,50 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  engineTag: {
-    flexDirection: 'row',
+  sectionCaption: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    letterSpacing: 0.5,
+  },
+  headerRescanBtn: {
+    height: 28,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+  },
+  semicircleWrapper: {
+    width: '100%',
     alignItems: 'center',
     gap: 6,
   },
-  sectionCaption: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
-    letterSpacing: 0.5,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    padding: 2,
-    borderRadius: 20,
-    gap: 2,
-  },
-  toggleOption: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 16,
-  },
-  toggleOptionActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  toggleText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 10,
-  },
-  circleChartRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  circleChartWrapper: {
-    width: 104,
-    height: 104,
+  semicircleChartContainer: {
+    width: '100%',
+    height: 112,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chartCenterValue: {
+  semiCenterValue: {
     fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 18,
+    fontSize: 20,
     letterSpacing: -0.5,
   },
-  chartCenterLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 9,
-    marginTop: 1,
-  },
-  chartDetailsCol: {
-    flex: 1,
-    gap: 6,
+  semiFooterRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 2,
   },
   stageDotsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 2,
+    justifyContent: 'center',
+    gap: 14,
   },
   stageDotItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
   stageDot: {
     width: 6,
@@ -512,73 +392,12 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   stageDotLabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-  },
-  semicircleWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    gap: 8,
-  },
-  semicircleChartContainer: {
-    width: '100%',
-    height: 110,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  semiCenterValue: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 22,
-    letterSpacing: -0.5,
-  },
-  semiCenterLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  semiFooterRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  metricNumberSmall: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 18,
-    letterSpacing: -0.5,
-  },
-  metricGroup: {
-    gap: 1,
-  },
-  metricNumber: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 28,
-    letterSpacing: -0.5,
-    lineHeight: 32,
-  },
-  metricLabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-  },
-  pendingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: 2,
-  },
-  pendingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  pendingText: {
     fontFamily: 'Inter_500Medium',
     fontSize: 11,
   },
   rescanText: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 12,
+    fontSize: 11,
   },
   githubHeroRow: {
     flexDirection: 'row',
