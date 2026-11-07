@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Spinner } from 'heroui-native';
 import { IconView } from '@/ui/IconView';
@@ -16,7 +16,11 @@ export function ViewerOcrChrome({ onCancel, onScan, isScanning }: ViewerOcrChrom
 
   return (
     <>
-      <Animated.View style={[styles.topBar, { paddingTop: Math.max(insets.top, 16), zIndex: 200 }]}>
+      <Animated.View 
+        entering={FadeIn.duration(200)}
+        exiting={FadeOut.duration(180)}
+        style={[styles.topBar, { paddingTop: Math.max(insets.top, 16), zIndex: 200 }]}
+      >
         <TouchableOpacity 
           onPress={onCancel} 
           style={styles.cancelBtn}
@@ -28,7 +32,11 @@ export function ViewerOcrChrome({ onCancel, onScan, isScanning }: ViewerOcrChrom
         <View style={styles.cancelBtn} pointerEvents="none" />
       </Animated.View>
       
-      <Animated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24), zIndex: 200 }]}>
+      <Animated.View 
+        entering={FadeIn.duration(200)}
+        exiting={FadeOut.duration(180)}
+        style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24), zIndex: 200 }]}
+      >
         <Button
           size="lg"
           variant="primary"

@@ -54,16 +54,18 @@ export default function ViewerScreen() {
   });
 
   useEffect(() => {
-    if (paramW > 0 && paramH > 0) return;
     if (!uri) return;
     ImageManipulator.manipulateAsync(uri, [])
       .then((meta) => {
         if (meta.width > 0 && meta.height > 0) {
-          setImgDims({ width: meta.width, height: meta.height });
+          setImgDims((prev) => {
+            if (prev.width === meta.width && prev.height === meta.height) return prev;
+            return { width: meta.width, height: meta.height };
+          });
         }
       })
       .catch(() => {});
-  }, [uri, paramW, paramH]);
+  }, [uri]);
 
   // Compute safe viewport geometry for OCR mode
   const geo = useMemo(() => {

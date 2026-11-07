@@ -63,23 +63,26 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH, bounds }: CropOv
         const curW = boxW.value;
         const curH = boxH.value;
 
-        // Proximity checks for edges and corners
-        const isNearLeft = Math.abs(x - curX) <= EDGE_HIT_SLOP && y >= curY - CORNER_HIT_SLOP && y <= curY + curH + CORNER_HIT_SLOP;
-        const isNearRight = Math.abs(x - (curX + curW)) <= EDGE_HIT_SLOP && y >= curY - CORNER_HIT_SLOP && y <= curY + curH + CORNER_HIT_SLOP;
-        const isNearTop = Math.abs(y - curY) <= EDGE_HIT_SLOP && x >= curX - CORNER_HIT_SLOP && x <= curX + curW + CORNER_HIT_SLOP;
-        const isNearBottom = Math.abs(y - (curY + curH)) <= EDGE_HIT_SLOP && x >= curX - CORNER_HIT_SLOP && x <= curX + curW + CORNER_HIT_SLOP;
+        // 1. Direct Corner Proximity Checks (44px square hit target at each corner)
+        const isNearTL = Math.abs(x - curX) <= CORNER_HIT_SLOP && Math.abs(y - curY) <= CORNER_HIT_SLOP;
+        const isNearTR = Math.abs(x - (curX + curW)) <= CORNER_HIT_SLOP && Math.abs(y - curY) <= CORNER_HIT_SLOP;
+        const isNearBL = Math.abs(x - curX) <= CORNER_HIT_SLOP && Math.abs(y - (curY + curH)) <= CORNER_HIT_SLOP;
+        const isNearBR = Math.abs(x - (curX + curW)) <= CORNER_HIT_SLOP && Math.abs(y - (curY + curH)) <= CORNER_HIT_SLOP;
 
-        // 1. Check Corners
-        if (isNearTop && isNearLeft) dragMode.value = 'tl';
-        else if (isNearTop && isNearRight) dragMode.value = 'tr';
-        else if (isNearBottom && isNearLeft) dragMode.value = 'bl';
-        else if (isNearBottom && isNearRight) dragMode.value = 'br';
-        // 2. Check Edges
+        // 2. Direct Edge Proximity Checks (28px band along each edge)
+        const isNearTop = Math.abs(y - curY) <= EDGE_HIT_SLOP && x >= curX && x <= curX + curW;
+        const isNearBottom = Math.abs(y - (curY + curH)) <= EDGE_HIT_SLOP && x >= curX && x <= curX + curW;
+        const isNearLeft = Math.abs(x - curX) <= EDGE_HIT_SLOP && y >= curY && y <= curY + curH;
+        const isNearRight = Math.abs(x - (curX + curW)) <= EDGE_HIT_SLOP && y >= curY && y <= curY + curH;
+
+        if (isNearTL) dragMode.value = 'tl';
+        else if (isNearTR) dragMode.value = 'tr';
+        else if (isNearBL) dragMode.value = 'bl';
+        else if (isNearBR) dragMode.value = 'br';
         else if (isNearTop) dragMode.value = 'top';
         else if (isNearBottom) dragMode.value = 'bottom';
         else if (isNearLeft) dragMode.value = 'left';
         else if (isNearRight) dragMode.value = 'right';
-        // 3. Check Inside Box (Center Pan)
         else if (x >= curX && x <= curX + curW && y >= curY && y <= curY + curH) {
           dragMode.value = 'center';
         } else {
@@ -132,11 +135,6 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH, bounds }: CropOv
           boxW.value = Math.max(MIN_SIZE, Math.min(startW.value + e.translationX, maxX - boxX.value));
         }
       })
-      .onEnd(() => {
-        'worklet';
-        dragMode.value = 'none';
-        gridOpacity.value = withTiming(0, { duration: 200 });
-      })
       .onFinalize(() => {
         'worklet';
         dragMode.value = 'none';
@@ -182,10 +180,11 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH, bounds }: CropOv
     opacity: gridOpacity.value,
   }));
 
-  if (!isActive) return null;
-
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, containerStyle, { zIndex: 10 }]} pointerEvents="box-none">
+    <Animated.View 
+      style={[StyleSheet.absoluteFill, containerStyle, { zIndex: 10 }]} 
+      pointerEvents={isActive ? 'box-none' : 'none'}
+    >
       <GestureDetector gesture={panCrop}>
         <Animated.View style={StyleSheet.absoluteFill}>
           {/* ─── Dimming Masks ─── */}
@@ -259,6 +258,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderColor: '#ffffff',
+    borderWidth: 0,
   },
   tl: { top: -2, left: -2, borderTopWidth: 3.5, borderLeftWidth: 3.5 },
   tr: { top: -2, right: -2, borderTopWidth: 3.5, borderRightWidth: 3.5 },
