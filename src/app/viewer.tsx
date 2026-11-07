@@ -199,10 +199,10 @@ export default function ViewerScreen() {
 
   const toggleOcrMode = useCallback(() => {
     if (!isOcrMode) {
-      // Enter OCR mode: smoothly animate image into safe framed viewport
-      scale.value = withSpring(geo.targetScale, SPRING);
-      translateX.value = withSpring(0, SPRING);
-      translateY.value = withSpring(geo.targetTranslateY, SPRING);
+      // Enter OCR mode: cleanly transition image into safe framed viewport
+      scale.value = withTiming(geo.targetScale, { duration: 240 });
+      translateX.value = withTiming(0, { duration: 240 });
+      translateY.value = withTiming(geo.targetTranslateY, { duration: 240 });
       baseScale.value = geo.targetScale;
       baseX.value = 0;
       baseY.value = geo.targetTranslateY;
@@ -219,10 +219,10 @@ export default function ViewerScreen() {
       chromeVisible.value = withTiming(0, { duration: 180 });
       setSystemBarHidden(true);
     } else {
-      // Exit OCR mode: smoothly return image to full screen
-      scale.value = withSpring(1, SPRING);
-      translateX.value = withSpring(0, SPRING);
-      translateY.value = withSpring(0, SPRING);
+      // Exit OCR mode: cleanly return image to full screen
+      scale.value = withTiming(1, { duration: 240 });
+      translateX.value = withTiming(0, { duration: 240 });
+      translateY.value = withTiming(0, { duration: 240 });
       baseScale.value = 1;
       baseX.value = 0;
       baseY.value = 0;

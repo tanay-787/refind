@@ -1,10 +1,11 @@
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, ScrollView, Dimensions } from 'react-native';
-import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
-import { IconView } from '@/ui/IconView';
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { BottomSheet, Button } from 'heroui-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import * as Clipboard from 'expo-clipboard';
+import { IconView } from '@/ui/IconView';
+import { useThemeColors } from '@/theme';
 
 interface ViewerOcrResultPanelProps {
   text: string | null;
@@ -13,79 +14,122 @@ interface ViewerOcrResultPanelProps {
 
 export function ViewerOcrResultPanel({ text, onClose }: ViewerOcrResultPanelProps) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors({ colorScheme: 'dark' });
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const isCopied = Boolean(text && copiedText === text);
 
-  if (!text) return null;
+  const handleCopy = useCallback(async () => {
+    if (!text) return;
+    await Clipboard.setStringAsync(text);
+    setCopiedText(text);
+    setTimeout(() => {
+      setCopiedText(null);
+    }, 2000);
+  }, [text]);
 
   return (
-    <Animated.View 
-      entering={SlideInDown.springify().damping(22).stiffness(200)}
-      exiting={SlideOutDown.duration(200)}
-      style={[styles.textPanel, { paddingBottom: Math.max(insets.bottom, 24) }]}
+    <BottomSheet
+      isOpen={Boolean(text)}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
     >
-      {/* Handle notch */}
-      <View style={styles.handle} />
+      <BottomSheet.Portal>
+        <BottomSheet.Overlay />
+        <BottomSheet.Content
+          snapPoints={['45%', '85%']}
+          enableOverDrag={false}
+          enableDynamicSizing={false}
+          backgroundClassName="rounded-t-[28px]"
+          backgroundStyle={{ backgroundColor: '#18181B' }}
+          contentContainerClassName="h-full px-5 pt-1 pb-6 gap-3"
+          contentContainerProps={{
+            style: {
+              paddingBottom: Math.max(insets.bottom + 16, 28),
+            },
+          }}
+        >
+          {/* Header Row: Title on Left, Copy Button on Right */}
+          <View style={styles.headerRow}>
+            <BottomSheet.Title style={[styles.title, { color: colors.onSurface }]}>
+              Extracted Text
+            </BottomSheet.Title>
+            
+            <Button
+              size="sm"
+              variant={isCopied ? 'secondary' : 'primary'}
+              onPress={handleCopy}
+              className="rounded-full px-3.5 py-1.5 flex-row items-center gap-1.5"
+              style={isCopied ? styles.copiedBtn : styles.copyBtn}
+              accessibilityLabel={isCopied ? 'Text copied' : 'Copy extracted text'}
+            >
+              <IconView 
+                name={isCopied ? 'check' : 'content_copy'} 
+                size={14} 
+                weight="medium"
+                tintColor={isCopied ? colors.primary : '#000000'} 
+              />
+              <Button.Label 
+                style={[
+                  styles.copyBtnText, 
+                  { color: isCopied ? colors.primary : '#000000' }
+                ]}
+              >
+                {isCopied ? 'Copied' : 'Copy'}
+              </Button.Label>
+            </Button>
+          </View>
 
-      <View style={styles.textPanelHeader}>
-        <Text style={styles.textPanelTitle}>Extracted Text</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconView name="cancel" size={24} tintColor="rgba(255, 255, 255, 0.6)" />
-        </TouchableOpacity>
-      </View>
-      <ScrollView style={styles.textScrollView} showsVerticalScrollIndicator>
-        <Text selectable style={styles.extractedText}>{text}</Text>
-      </ScrollView>
-    </Animated.View>
+          {/* Scrollable Extracted Text */}
+          <BottomSheetScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator
+          >
+            <Text selectable style={[styles.extractedText, { color: colors.onSurface }]}>
+              {text}
+            </Text>
+          </BottomSheetScrollView>
+        </BottomSheet.Content>
+      </BottomSheet.Portal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  textPanel: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: SCREEN_HEIGHT * 0.42,
-    backgroundColor: '#1E1E1E',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 20,
-    zIndex: 300,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  textPanelHeader: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingVertical: 10,
   },
-  textPanelTitle: {
+  title: {
     fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: '#fff',
+    fontSize: 22,
+    letterSpacing: -0.3,
   },
-  closeBtn: {
-    padding: 4,
+  copyBtn: {
+    backgroundColor: '#ffffff',
   },
-  textScrollView: {
+  copiedBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  copyBtnText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+  },
+  scrollView: {
     flex: 1,
+    marginTop: 4,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   extractedText: {
     fontFamily: 'JetBrainsMono_400Regular',
     fontSize: 14,
-    color: '#E0E0E0',
     lineHeight: 22,
   },
 });
