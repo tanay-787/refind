@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,8 +8,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MIN_SIZE = 80;
+export interface CropBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
 
 interface CropOverlayProps {
   isActive: boolean;
@@ -17,11 +21,19 @@ interface CropOverlayProps {
   boxY: SharedValue<number>;
   boxW: SharedValue<number>;
   boxH: SharedValue<number>;
+  bounds: CropBounds;
 }
 
-export function CropOverlay({ isActive, boxX, boxY, boxW, boxH }: CropOverlayProps) {
+const MIN_SIZE = 60;
+const CORNER_HIT_SLOP = 40;
+const EDGE_HIT_SLOP = 28;
+
+type DragMode = 'none' | 'center' | 'tl' | 'tr' | 'bl' | 'br' | 'top' | 'bottom' | 'left' | 'right';
+
+export function CropOverlay({ isActive, boxX, boxY, boxW, boxH, bounds }: CropOverlayProps) {
   const opacity = useSharedValue(0);
-  const dragMode = useSharedValue<'none' | 'center' | 'tl' | 'tr' | 'bl' | 'br'>('none');
+  const gridOpacity = useSharedValue(0);
+  const dragMode = useSharedValue<DragMode>('none');
 
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
@@ -32,73 +44,112 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH }: CropOverlayPro
     opacity.value = withTiming(isActive ? 1 : 0, { duration: 250 });
   }, [isActive, opacity]);
 
-  const panCrop = Gesture.Pan()
-    .onStart((e) => {
-      'worklet';
-      startX.value = boxX.value;
-      startY.value = boxY.value;
-      startW.value = boxW.value;
-      startH.value = boxH.value;
+  const { minX, minY, maxX, maxY } = bounds;
 
-      const HIT_SLOP = 45;
-      const x = e.x;
-      const y = e.y;
+  const panCrop = useMemo(() => {
+    return Gesture.Pan()
+      .onStart((e) => {
+        'worklet';
+        startX.value = boxX.value;
+        startY.value = boxY.value;
+        startW.value = boxW.value;
+        startH.value = boxH.value;
 
-      const isLeft = x >= boxX.value - HIT_SLOP && x <= boxX.value + HIT_SLOP;
-      const isRight = x >= boxX.value + boxW.value - HIT_SLOP && x <= boxX.value + boxW.value + HIT_SLOP;
-      const isTop = y >= boxY.value - HIT_SLOP && y <= boxY.value + HIT_SLOP;
-      const isBottom = y >= boxY.value + boxH.value - HIT_SLOP && y <= boxY.value + boxH.value + HIT_SLOP;
+        const x = e.x;
+        const y = e.y;
 
-      if (isTop && isLeft) dragMode.value = 'tl';
-      else if (isTop && isRight) dragMode.value = 'tr';
-      else if (isBottom && isLeft) dragMode.value = 'bl';
-      else if (isBottom && isRight) dragMode.value = 'br';
-      else if (
-        x >= boxX.value && x <= boxX.value + boxW.value &&
-        y >= boxY.value && y <= boxY.value + boxH.value
-      ) {
-        dragMode.value = 'center';
-      } else {
+        const curX = boxX.value;
+        const curY = boxY.value;
+        const curW = boxW.value;
+        const curH = boxH.value;
+
+        // Proximity checks for edges and corners
+        const isNearLeft = Math.abs(x - curX) <= EDGE_HIT_SLOP && y >= curY - CORNER_HIT_SLOP && y <= curY + curH + CORNER_HIT_SLOP;
+        const isNearRight = Math.abs(x - (curX + curW)) <= EDGE_HIT_SLOP && y >= curY - CORNER_HIT_SLOP && y <= curY + curH + CORNER_HIT_SLOP;
+        const isNearTop = Math.abs(y - curY) <= EDGE_HIT_SLOP && x >= curX - CORNER_HIT_SLOP && x <= curX + curW + CORNER_HIT_SLOP;
+        const isNearBottom = Math.abs(y - (curY + curH)) <= EDGE_HIT_SLOP && x >= curX - CORNER_HIT_SLOP && x <= curX + curW + CORNER_HIT_SLOP;
+
+        // 1. Check Corners
+        if (isNearTop && isNearLeft) dragMode.value = 'tl';
+        else if (isNearTop && isNearRight) dragMode.value = 'tr';
+        else if (isNearBottom && isNearLeft) dragMode.value = 'bl';
+        else if (isNearBottom && isNearRight) dragMode.value = 'br';
+        // 2. Check Edges
+        else if (isNearTop) dragMode.value = 'top';
+        else if (isNearBottom) dragMode.value = 'bottom';
+        else if (isNearLeft) dragMode.value = 'left';
+        else if (isNearRight) dragMode.value = 'right';
+        // 3. Check Inside Box (Center Pan)
+        else if (x >= curX && x <= curX + curW && y >= curY && y <= curY + curH) {
+          dragMode.value = 'center';
+        } else {
+          dragMode.value = 'none';
+        }
+
+        if (dragMode.value !== 'none') {
+          gridOpacity.value = withTiming(1, { duration: 150 });
+        }
+      })
+      .onUpdate((e) => {
+        'worklet';
+        const mode = dragMode.value;
+        if (mode === 'none') return;
+
+        if (mode === 'center') {
+          boxX.value = Math.max(minX, Math.min(startX.value + e.translationX, maxX - boxW.value));
+          boxY.value = Math.max(minY, Math.min(startY.value + e.translationY, maxY - boxH.value));
+        } else if (mode === 'br') {
+          boxW.value = Math.max(MIN_SIZE, Math.min(startW.value + e.translationX, maxX - boxX.value));
+          boxH.value = Math.max(MIN_SIZE, Math.min(startH.value + e.translationY, maxY - boxY.value));
+        } else if (mode === 'tl') {
+          const newX = Math.max(minX, Math.min(startX.value + e.translationX, startX.value + startW.value - MIN_SIZE));
+          const newY = Math.max(minY, Math.min(startY.value + e.translationY, startY.value + startH.value - MIN_SIZE));
+          boxW.value = startW.value + (startX.value - newX);
+          boxH.value = startH.value + (startY.value - newY);
+          boxX.value = newX;
+          boxY.value = newY;
+        } else if (mode === 'tr') {
+          boxW.value = Math.max(MIN_SIZE, Math.min(startW.value + e.translationX, maxX - boxX.value));
+          const newY = Math.max(minY, Math.min(startY.value + e.translationY, startY.value + startH.value - MIN_SIZE));
+          boxH.value = startH.value + (startY.value - newY);
+          boxY.value = newY;
+        } else if (mode === 'bl') {
+          boxH.value = Math.max(MIN_SIZE, Math.min(startH.value + e.translationY, maxY - boxY.value));
+          const newX = Math.max(minX, Math.min(startX.value + e.translationX, startX.value + startW.value - MIN_SIZE));
+          boxW.value = startW.value + (startX.value - newX);
+          boxX.value = newX;
+        } else if (mode === 'top') {
+          const newY = Math.max(minY, Math.min(startY.value + e.translationY, startY.value + startH.value - MIN_SIZE));
+          boxH.value = startH.value + (startY.value - newY);
+          boxY.value = newY;
+        } else if (mode === 'bottom') {
+          boxH.value = Math.max(MIN_SIZE, Math.min(startH.value + e.translationY, maxY - boxY.value));
+        } else if (mode === 'left') {
+          const newX = Math.max(minX, Math.min(startX.value + e.translationX, startX.value + startW.value - MIN_SIZE));
+          boxW.value = startW.value + (startX.value - newX);
+          boxX.value = newX;
+        } else if (mode === 'right') {
+          boxW.value = Math.max(MIN_SIZE, Math.min(startW.value + e.translationX, maxX - boxX.value));
+        }
+      })
+      .onEnd(() => {
+        'worklet';
         dragMode.value = 'none';
-      }
-    })
-    .onUpdate((e) => {
-      'worklet';
-      if (dragMode.value === 'center') {
-        boxX.value = Math.max(0, Math.min(startX.value + e.translationX, SCREEN_WIDTH - boxW.value));
-        boxY.value = Math.max(0, Math.min(startY.value + e.translationY, SCREEN_HEIGHT - boxH.value));
-      } else if (dragMode.value === 'br') {
-        boxW.value = Math.max(MIN_SIZE, Math.min(startW.value + e.translationX, SCREEN_WIDTH - boxX.value));
-        boxH.value = Math.max(MIN_SIZE, Math.min(startH.value + e.translationY, SCREEN_HEIGHT - boxY.value));
-      } else if (dragMode.value === 'tl') {
-        const newX = Math.max(0, Math.min(startX.value + e.translationX, startX.value + startW.value - MIN_SIZE));
-        const newY = Math.max(0, Math.min(startY.value + e.translationY, startY.value + startH.value - MIN_SIZE));
-        boxW.value = startW.value + (startX.value - newX);
-        boxH.value = startH.value + (startY.value - newY);
-        boxX.value = newX;
-        boxY.value = newY;
-      } else if (dragMode.value === 'tr') {
-        boxW.value = Math.max(MIN_SIZE, Math.min(startW.value + e.translationX, SCREEN_WIDTH - boxX.value));
-        const newY = Math.max(0, Math.min(startY.value + e.translationY, startY.value + startH.value - MIN_SIZE));
-        boxH.value = startH.value + (startY.value - newY);
-        boxY.value = newY;
-      } else if (dragMode.value === 'bl') {
-        boxH.value = Math.max(MIN_SIZE, Math.min(startH.value + e.translationY, SCREEN_HEIGHT - boxY.value));
-        const newX = Math.max(0, Math.min(startX.value + e.translationX, startX.value + startW.value - MIN_SIZE));
-        boxW.value = startW.value + (startX.value - newX);
-        boxX.value = newX;
-      }
-    });
+        gridOpacity.value = withTiming(0, { duration: 200 });
+      })
+      .onFinalize(() => {
+        'worklet';
+        dragMode.value = 'none';
+        gridOpacity.value = withTiming(0, { duration: 200 });
+      });
+  }, [minX, minY, maxX, maxY, boxX, boxY, boxW, boxH, startX, startY, startW, startH, dragMode, gridOpacity]);
 
-  // ─── Container fades in/out, but does NOT consume touches when inactive ───
+  // ─── Container fades in/out ───────────────────────────────────────────────
   const containerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
 
-  // ─── The four dark dimming panels ────────────────────────────────────────
-  // Each panel's base style sets `position: 'absolute'` and its FIXED edges.
-  // Only the DYNAMIC dimension is driven by useAnimatedStyle.
-
+  // ─── Four dark dimming panels ─────────────────────────────────────────────
   const topDimStyle = useAnimatedStyle(() => ({
     height: boxY.value,
   }));
@@ -127,17 +178,17 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH }: CropOverlayPro
     height: boxH.value,
   }));
 
+  const gridStyle = useAnimatedStyle(() => ({
+    opacity: gridOpacity.value,
+  }));
+
   if (!isActive) return null;
 
   return (
-    // zIndex: 10 keeps us above the image but BELOW the chrome bars (zIndex: 200)
-    // box-none on the container so the frame itself doesn't consume touches,
-    // only the GestureDetector's inner surface does.
     <Animated.View style={[StyleSheet.absoluteFill, containerStyle, { zIndex: 10 }]} pointerEvents="box-none">
       <GestureDetector gesture={panCrop}>
-        {/* This view MUST be pointerEvents auto (default) so GestureDetector receives touches */}
         <Animated.View style={StyleSheet.absoluteFill}>
-          {/* ─── Dimming Masks (pointerEvents none so they don't block gestures) ─── */}
+          {/* ─── Dimming Masks ─── */}
           <Animated.View style={[styles.dimTop, topDimStyle]} pointerEvents="none" />
           <Animated.View style={[styles.dimBottom, bottomDimStyle]} pointerEvents="none" />
           <Animated.View style={[styles.dimLeft, leftDimStyle]} pointerEvents="none" />
@@ -145,10 +196,25 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH }: CropOverlayPro
 
           {/* ─── Crop Box Frame ─── */}
           <Animated.View style={[styles.box, boxStyle]} pointerEvents="none">
-            <Animated.View style={[styles.corner, styles.tl]} />
-            <Animated.View style={[styles.corner, styles.tr]} />
-            <Animated.View style={[styles.corner, styles.bl]} />
-            <Animated.View style={[styles.corner, styles.br]} />
+            {/* Rule-of-Thirds Grid */}
+            <Animated.View style={[StyleSheet.absoluteFill, gridStyle]} pointerEvents="none">
+              <View style={[styles.gridLineV, { left: '33.333%' }]} />
+              <View style={[styles.gridLineV, { left: '66.666%' }]} />
+              <View style={[styles.gridLineH, { top: '33.333%' }]} />
+              <View style={[styles.gridLineH, { top: '66.666%' }]} />
+            </Animated.View>
+
+            {/* Corner Brackets */}
+            <View style={[styles.corner, styles.tl]} />
+            <View style={[styles.corner, styles.tr]} />
+            <View style={[styles.corner, styles.bl]} />
+            <View style={[styles.corner, styles.br]} />
+
+            {/* Edge Midpoint Notches */}
+            <View style={[styles.edgeNotchH, styles.edgeTop]} />
+            <View style={[styles.edgeNotchH, styles.edgeBottom]} />
+            <View style={[styles.edgeNotchV, styles.edgeLeft]} />
+            <View style={[styles.edgeNotchV, styles.edgeRight]} />
           </Animated.View>
         </Animated.View>
       </GestureDetector>
@@ -159,7 +225,6 @@ export function CropOverlay({ isActive, boxX, boxY, boxW, boxH }: CropOverlayPro
 const DIM_COLOR = 'rgba(0,0,0,0.62)';
 
 const styles = StyleSheet.create({
-  // Each panel fixes its non-dynamic edges in the base style
   dimTop: {
     position: 'absolute',
     top: 0,
@@ -191,12 +256,48 @@ const styles = StyleSheet.create({
   },
   corner: {
     position: 'absolute',
-    width: 26,
-    height: 26,
-    borderColor: '#fff',
+    width: 24,
+    height: 24,
+    borderColor: '#ffffff',
   },
-  tl: { top: -2, left: -2, borderTopWidth: 4, borderLeftWidth: 4 },
-  tr: { top: -2, right: -2, borderTopWidth: 4, borderRightWidth: 4 },
-  bl: { bottom: -2, left: -2, borderBottomWidth: 4, borderLeftWidth: 4 },
-  br: { bottom: -2, right: -2, borderBottomWidth: 4, borderRightWidth: 4 },
+  tl: { top: -2, left: -2, borderTopWidth: 3.5, borderLeftWidth: 3.5 },
+  tr: { top: -2, right: -2, borderTopWidth: 3.5, borderRightWidth: 3.5 },
+  bl: { bottom: -2, left: -2, borderBottomWidth: 3.5, borderLeftWidth: 3.5 },
+  br: { bottom: -2, right: -2, borderBottomWidth: 3.5, borderRightWidth: 3.5 },
+  edgeNotchH: {
+    position: 'absolute',
+    width: 24,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: '#ffffff',
+    left: '50%',
+    marginLeft: -12,
+  },
+  edgeTop: { top: -2 },
+  edgeBottom: { bottom: -2 },
+  edgeNotchV: {
+    position: 'absolute',
+    width: 3.5,
+    height: 24,
+    borderRadius: 2,
+    backgroundColor: '#ffffff',
+    top: '50%',
+    marginTop: -12,
+  },
+  edgeLeft: { left: -2 },
+  edgeRight: { right: -2 },
+  gridLineV: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  gridLineH: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
 });

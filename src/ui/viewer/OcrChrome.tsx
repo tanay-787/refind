@@ -2,6 +2,8 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, Spinner } from 'heroui-native';
+import { IconView } from '@/ui/IconView';
 
 interface ViewerOcrChromeProps {
   onCancel: () => void;
@@ -15,23 +17,38 @@ export function ViewerOcrChrome({ onCancel, onScan, isScanning }: ViewerOcrChrom
   return (
     <>
       <Animated.View style={[styles.topBar, { paddingTop: Math.max(insets.top, 16), zIndex: 200 }]}>
-        <TouchableOpacity onPress={onCancel} style={[styles.iconButton, { width: 80 }]}>
+        <TouchableOpacity 
+          onPress={onCancel} 
+          style={styles.cancelBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+        >
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Adjust Crop</Text>
-        <View style={[styles.iconButton, { width: 80 }]} pointerEvents="none" />
+        <Text style={styles.title}>Adjust Selection</Text>
+        <View style={styles.cancelBtn} pointerEvents="none" />
       </Animated.View>
       
-      <Animated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24), justifyContent: 'center', zIndex: 200 }]}>
-         <TouchableOpacity 
-           onPress={onScan}
-           disabled={isScanning}
-           style={[styles.scanButton, { opacity: isScanning ? 0.7 : 1 }]}
-         >
-           <Text style={styles.scanButtonText}>
-             {isScanning ? 'Scanning...' : 'Scan Text'}
-           </Text>
-         </TouchableOpacity>
+      <Animated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24), zIndex: 200 }]}>
+        <Button
+          size="lg"
+          variant="primary"
+          isDisabled={isScanning}
+          onPress={onScan}
+          className="rounded-full px-8 py-3.5 flex-row items-center justify-center gap-2.5 bg-white"
+          style={styles.scanBtn}
+        >
+          {isScanning ? (
+            <>
+              <Spinner size="sm" color="#000000" />
+              <Button.Label style={styles.scanBtnText}>Scanning...</Button.Label>
+            </>
+          ) : (
+            <>
+              <IconView name="scan" size={20} tintColor="#000000" />
+              <Button.Label style={styles.scanBtnText}>Scan Selection</Button.Label>
+            </>
+          )}
+        </Button>
       </Animated.View>
     </>
   );
@@ -46,9 +63,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.82)',
   },
   bottomBar: {
     position: 'absolute',
@@ -56,34 +73,39 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    paddingTop: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  iconButton: {
-    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.82)',
+  },
+  cancelBtn: {
+    minWidth: 70,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
   title: {
     fontFamily: 'Newsreader_600SemiBold',
     fontSize: 20,
-    color: '#fff',
+    color: '#ffffff',
     letterSpacing: -0.3,
   },
   cancelText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontFamily: 'Inter_500Medium',
+    color: '#ffffff',
+    fontSize: 15,
   },
-  scanButton: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 24,
+  scanBtn: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  scanButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 16,
-  }
+  scanBtnText: {
+    fontFamily: 'Inter_600SemiBold',
+    color: '#000000',
+    fontSize: 15,
+  },
 });
