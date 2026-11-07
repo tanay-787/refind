@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.9.0](https://github.com/tanay-787/refind/compare/refind-v1.8.0...refind-v1.9.0) (2026-11-07)
+
+
+### Features
+
+* **about:** stack support copy above repo CTA button displaying tanay-787/refind ([9911fe1](https://github.com/tanay-787/refind/commit/9911fe14226d89b3d8f1cced59bc1f5d28fcd192))
+* **ci:** add on-the-fly debug config suffix for side-by-side install ([8245529](https://github.com/tanay-787/refind/commit/82455298a70df3e76ad1cd2697f8b54cef7c247e))
+* **home:** replace info button with micro radial chart trigger ([5b8dc0f](https://github.com/tanay-787/refind/commit/5b8dc0f09581ee276f0197e29174caf3dda8d269))
+* **jobjournal:** add notification pause and resume actions with auto-resume ([e66fc02](https://github.com/tanay-787/refind/commit/e66fc0256fb77e376e5e134a172af2494b853b2b))
+* **ui:** add RadialChart for Discovery Engine stats ([e8956a0](https://github.com/tanay-787/refind/commit/e8956a08f2ab554f9c85ad3cd314f29aa530ee69))
+* **ui:** elevate AboutCommunitySheet visual layout with HeroUI ([b3ea934](https://github.com/tanay-787/refind/commit/b3ea93418966a3716665d6f5c3c9e8e5bd7ea564))
+* **ui:** integrate HeroUI Native compound components and Uniwind ([fd9a95d](https://github.com/tanay-787/refind/commit/fd9a95d80ab6b22754a05d76a0a7213b79073f86))
+* **ui:** migrate AboutCommunitySheet to HeroUI Native BottomSheet ([3101044](https://github.com/tanay-787/refind/commit/3101044d38481185d88a839c9f17803172c6a0d9))
+* **ui:** refine Discovery Engine semicircle card layout ([fb971b7](https://github.com/tanay-787/refind/commit/fb971b77bee304e6c0407f77d7fbc0e877ebea6a))
+* **viewer:** implement safe viewport fit and interactive crop overlay ([5fb9af3](https://github.com/tanay-787/refind/commit/5fb9af36b5f66f757a92ca2422c75a73d8e79a0c))
+* **viewer:** use HeroUI BottomSheet with Copy button for OCR results ([5f949a8](https://github.com/tanay-787/refind/commit/5f949a88855fbc7dbf2b2276aa06a21b7c6ddb8f))
+
+
+### Bug Fixes
+
+* **ci:** track expo-env.d.ts and declare CSS modules for TypeScript ([bfc0868](https://github.com/tanay-787/refind/commit/bfc0868a9ce6ee6710de50d4c5bf6bed6556ccbe))
+* **deps:** pin tailwind-variants to 3.2.2 and tailwind-merge to 3.4.0 ([300b79b](https://github.com/tanay-787/refind/commit/300b79b40822fcea641c1724bd67696519c94048))
+* **onboarding:** remove blue tap highlight from Get Started button ([cf3bb7f](https://github.com/tanay-787/refind/commit/cf3bb7f4719085473c30b1bd10227ae079be1b37))
+* **scripts:** make build scripts portable and replace run:dev with dev:tunnel ([5a5f21a](https://github.com/tanay-787/refind/commit/5a5f21a1484f8c10e6828898b611a03967d68c44))
+* **search:** remove blue focus ring and match cursor/selection to muted text ([e2de46f](https://github.com/tanay-787/refind/commit/e2de46f7442a3bf3b7384469058ecdfd3fb375cc))
+* **search:** restore original SearchField classes and suppress focus ring via style ([c9c51b2](https://github.com/tanay-787/refind/commit/c9c51b247a61b0d50138f5f86a39a7c72a46b39f))
+* **system-bars:** ensure status bar is always visible on HomeScreen ([380b839](https://github.com/tanay-787/refind/commit/380b8398a11434ebb29ffc9d046a26242111dd2f))
+* **ui:** refine onboarding button, loading cards, and searchbar ([9ad582a](https://github.com/tanay-787/refind/commit/9ad582a73bd288be5085cfa58b53acf3d053d871))
+* **viewer:** polish OCR transitions, hit slop detection, and result panel ([b4503f1](https://github.com/tanay-787/refind/commit/b4503f16fb369bd3e27e0af6aac4c0a3ebbb3a17))
+
+
+### Performance Improvements
+
+* **viewer:** replace compose bottom bar with pure rn and memoize gestures ([58bb87d](https://github.com/tanay-787/refind/commit/58bb87d7973db06589fb6378c45220b5d594e529))
+
 ## [1.8.0](https://github.com/tanay-787/refind/compare/refind-v1.7.0...refind-v1.8.0) (2026-09-25)
 
 
