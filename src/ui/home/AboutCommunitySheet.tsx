@@ -188,26 +188,37 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
           </Card>
 
           {/* Card 2: Community & Open Source Hub */}
-          <Card variant="secondary" className="rounded-2xl p-3 gap-3 border border-border">
-            {/* Top: Star on GitHub Spotlight Row */}
-            <PressableFeedback
-              onPress={() => openUrl('https://github.com/tanay-787/refind')}
-              style={styles.githubHeroRow}
-            >
-              <PressableFeedback.Highlight />
-              <View style={[styles.githubLogoBox, { backgroundColor: tileBg }]}>
-                <GitHubIcon size={24} color={colors.onSurface} />
-              </View>
+          <Card variant="secondary" className="rounded-2xl p-4 gap-3.5 border border-border">
+            {/* Top: Support & Star Copy */}
+            <View style={styles.supportHeaderGroup}>
+              <Text style={[styles.itemTitle, { color: colors.onSurface }]}>
+                Want to support the project?
+              </Text>
+              <Text style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
+                Star us on GitHub to boost visibility and help the project grow.
+              </Text>
+            </View>
 
-              <View style={styles.githubTextGroup}>
-                <Text style={[styles.itemTitle, { color: colors.onSurface }]}>
-                  Star on GitHub
-                </Text>
-                <Text style={[styles.itemSubtitle, { color: colors.onSurfaceVariant }]}>
-                  Support Refind &amp; help others discover local AI
-                </Text>
-              </View>
-            </PressableFeedback>
+            {/* Hero Star Button */}
+            <Button
+              size="md"
+              variant="secondary"
+              onPress={() => openUrl('https://github.com/tanay-787/refind')}
+              className="w-full rounded-xl flex-row items-center justify-center gap-2"
+              style={styles.heroStarBtn}
+              accessibilityLabel="Star tanay-787/refind on GitHub"
+            >
+              <GitHubIcon size={18} color={colors.onSecondaryContainer ?? colors.onSurface} />
+              <Button.Label style={[styles.heroStarBtnText, { color: colors.onSecondaryContainer ?? colors.onSurface }]}>
+                tanay-787/refind
+              </Button.Label>
+              <IconView 
+                name="arrow_outward" 
+                size={14} 
+                weight="medium" 
+                tintColor={colors.onSecondaryContainer ?? colors.onSurface} 
+              />
+            </Button>
 
             <Separator variant="thin" />
 
@@ -369,24 +380,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     fontSize: 11,
   },
-  githubHeroRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 8,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  githubLogoBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  githubTextGroup: {
-    flex: 1,
-    gap: 2,
+  supportHeaderGroup: {
+    gap: 4,
+    paddingHorizontal: 2,
+    paddingTop: 2,
   },
   itemTitle: {
     fontFamily: 'Inter_600SemiBold',
@@ -394,8 +391,16 @@ const styles = StyleSheet.create({
   },
   itemSubtitle: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  heroStarBtn: {
+    height: 40,
+    borderRadius: 12,
+  },
+  heroStarBtnText: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 13,
   },
   actionTilesRow: {
     flexDirection: 'row',
