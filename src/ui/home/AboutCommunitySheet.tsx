@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   semiCenterValue: {
-    fontFamily: 'Newsreader_600SemiBold',
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 20,
     letterSpacing: -0.5,
   },
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   stageDotLabel: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 11,
   },
   rescanText: {

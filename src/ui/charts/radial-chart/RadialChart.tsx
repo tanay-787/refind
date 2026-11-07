@@ -681,13 +681,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   valueText: {
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 22,
-    fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   labelText: {
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 11,
     color: '#8A8A8E',
     textAlign: 'center',
