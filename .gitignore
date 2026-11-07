@@ -12,7 +12,6 @@ run-dc.sh
 .expo/
 dist/
 web-build/
-expo-env.d.ts
 credentials.json
 vendor/react-native-siglip/dist/
 vendor/react-native-siglip/dist/**
