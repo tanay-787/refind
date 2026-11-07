@@ -65,8 +65,16 @@ export default function ViewerScreen() {
 
   const isDismissingRef = useRef(false);
 
+  // Ensure system bars are restored when viewer unmounts
+  useEffect(() => {
+    return () => {
+      SystemBars.setHidden({ statusBar: false, navigationBar: true });
+    };
+  }, []);
+
   // Direct navigation back, bypassing Reanimated callbacks to prevent freeze bugs
   const navigateBack = useCallback((delayMs?: number) => {
+    SystemBars.setHidden({ statusBar: false, navigationBar: true });
     if (typeof delayMs === 'number' && delayMs > 0) {
       setTimeout(() => {
         setSystemBarHidden(false);
@@ -88,6 +96,7 @@ export default function ViewerScreen() {
     if (isDismissingRef.current) return;
     isDismissingRef.current = true;
     setSystemBarHidden(false);
+    SystemBars.setHidden({ statusBar: false, navigationBar: true });
     scale.value = withTiming(0.92, { duration: 180 });
     backdropOpacity.value = withTiming(0, { duration: 180 });
     chromeVisible.value = withTiming(0, { duration: 180 });
@@ -412,7 +421,7 @@ export default function ViewerScreen() {
 
   return (
     <View style={styles.root}>
-      <SystemBars style='light' hidden={isSystemBarHidden ? true : { navigationBar: true }} />
+      <SystemBars style='light' hidden={isSystemBarHidden ? true : { statusBar: false, navigationBar: true }} />
 
       {/* Scrim */}
       <Animated.View style={[styles.backdrop, backdropStyle]} />

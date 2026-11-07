@@ -5,7 +5,9 @@ import {
   Dimensions,
   ActivityIndicator,
   StyleSheet,
+  useColorScheme,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,10 +36,17 @@ const SPACING = 12;
 const ITEM_SIZE = (SCREEN_WIDTH - (SPACING * (COLUMN_COUNT + 1))) / COLUMN_COUNT;
 
 export default function HomeScreen() {
+  const colorScheme = useColorScheme();
   const [query, setQuery] = useState('');
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      SystemBars.setHidden({ statusBar: false, navigationBar: true });
+    }, [])
+  );
 
   const { results, search, loading } = useSearch();
   const [delayedLoading, setDelayedLoading] = useState(false);
@@ -138,7 +147,10 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <SystemBars hidden={{ navigationBar: true }} />
+      <SystemBars 
+        style={colorScheme === 'dark' ? 'light' : 'dark'} 
+        hidden={{ statusBar: false, navigationBar: true }} 
+      />
       
       <Header 
         insets={insets} 

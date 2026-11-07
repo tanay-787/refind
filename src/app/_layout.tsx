@@ -66,7 +66,10 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ThemedHost style={{ flex: 1 }}>
             <PermissionProvider>
-              <SystemBars style={isDark ? 'light' : 'dark'} />
+              <SystemBars 
+                style={isDark ? 'light' : 'dark'} 
+                hidden={{ statusBar: false, navigationBar: true }} 
+              />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="onboarding" />
