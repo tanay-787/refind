@@ -9,6 +9,7 @@ import {
   startDiscoveryNotification,
   stopSyncForegroundService,
   engineControl,
+  prewarmOcrEngine,
 } from '@/core/jobjournal';
 import { runForegroundProcessing } from '@/core/jobjournal/background-tasks';
 import { JobJournalErrorCode } from '@/core/jobjournal/types';
@@ -67,6 +68,9 @@ export const useJobJournalStore = create<JobJournalState>((set, get) => ({
   init: () => {
     if (isInitialized) return;
     isInitialized = true;
+
+    // Prewarm ML Kit OCR engine asynchronously off the critical path
+    void prewarmOcrEngine();
 
     // Sync store state with engineControl
     engineControl.addListener((isPaused) => {

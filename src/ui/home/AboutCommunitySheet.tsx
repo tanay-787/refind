@@ -29,7 +29,7 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
   const sync = useJobJournalStore(state => state.sync);
   const isSyncing = useJobJournalStore(state => state.isSyncing);
 
-  const appVersion = Constants.expoConfig?.version ?? '1.8.0';
+  const appVersion = Constants?.expoConfig?.version ?? '1.9.0';
 
   const {
     completedCount,
@@ -37,7 +37,7 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
     failedCount,
     readyPercentage,
     chartData,
-  } = useDiscoveryEngineStats();
+  } = useDiscoveryEngineStats({ enabled: visible });
 
   const handleRescan = useCallback(async () => {
     try {

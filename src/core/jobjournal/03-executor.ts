@@ -47,8 +47,8 @@ class Mutex {
 
 const writeMutex = new Mutex();
 
-async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: Date) {
-  const db = await getDrizzleDb();
+async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: Date, client?: any) {
+  const db = client ?? (await getDrizzleDb());
   const children = STAGE_CHILDREN[stage];
 
   if (!children || children.length === 0) {
@@ -96,14 +96,14 @@ async function enqueueReadyChildren(jobId: string, stage: JobJournalStage, now: 
       
       console.log(`[executor] Enqueued child stage ${child} for job ${jobId}`);
     } else {
-      const missing = dependencies.filter(d => !completedDeps.some(cd => cd.stage === d));
+      const missing = dependencies.filter(d => !completedDeps.some((cd: { stage: string }) => cd.stage === d));
       console.log(`[executor] Child ${child} for ${jobId} waiting for: [${missing.join(', ')}]`);
     }
   }
 }
 
-async function markJobCompletedIfTerminal(jobId: string, now: Date) {
-  const db = await getDrizzleDb();
+async function markJobCompletedIfTerminal(jobId: string, now: Date, client?: any) {
+  const db = client ?? (await getDrizzleDb());
   
   const [nonTerminalResult] = await db.select({ count: count() })
     .from(stageExecutions)
@@ -297,8 +297,8 @@ export async function completeStageExecution(
       });
 
       // 3. Chain next stages
-      await enqueueReadyChildren(jobId, stage, now);
-      await markJobCompletedIfTerminal(jobId, now);
+      await enqueueReadyChildren(jobId, stage, now, tx);
+      await markJobCompletedIfTerminal(jobId, now, tx);
     });
 
   } finally {

@@ -35,6 +35,7 @@ export {
 } from './utils/notifications';
 export { engineControl, EngineController } from './utils/engine-control';
 export { runKeywordsStage } from './stages/05-keywords.stage';
+export { prewarmOcrEngine } from './stages/02-ocr.stage';
 export { getJobJournalDatabase, getJobJournalVecStatus, initializeJobJournalDatabase } from './storage/database';
 export { JOB_JOURNAL_SCHEMA, JOB_JOURNAL_VEC_SCHEMA } from './storage/schema';
 

@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
+import { useState, useEffect, useMemo } from 'react';
 import { count } from 'drizzle-orm';
 import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
 import { useJobJournalStore } from './useJobJournalStore';
@@ -18,35 +17,60 @@ export interface DiscoveryEngineStats {
   }[];
 }
 
-export function useDiscoveryEngineStats(): DiscoveryEngineStats {
+export function useDiscoveryEngineStats(options?: { enabled?: boolean }): DiscoveryEngineStats {
+  const enabled = options?.enabled ?? true;
   const db = useJobJournalStore(state => state.db);
+  const phase = useJobJournalStore(state => state.phase);
+  const hasCompletedInitialIntake = useJobJournalStore(state => state.hasCompletedInitialIntake);
 
-  const statusQuery = useMemo(() => {
-    if (!db) return null;
-    return db
-      .select({
-        status: jobJournalJobs.status,
-        count: count(jobJournalJobs.id),
-      })
-      .from(jobJournalJobs)
-      .groupBy(jobJournalJobs.status);
-  }, [db]);
+  const [data, setData] = useState<{ status: string; count: number }[]>([]);
 
-  const { data } = useLiveQuery(statusQuery as any);
+  // During discovery and bulk ingestion on fresh install, avoid querying
+  const shouldQuery = enabled && Boolean(db) && (hasCompletedInitialIntake || (phase !== 'source' && phase !== 'intake'));
+
+  useEffect(() => {
+    if (!shouldQuery || !db) return;
+
+    let isMounted = true;
+    const fetchStats = async () => {
+      try {
+        const rows = await db
+          .select({
+            status: jobJournalJobs.status,
+            count: count(jobJournalJobs.id),
+          })
+          .from(jobJournalJobs)
+          .groupBy(jobJournalJobs.status);
+
+        if (isMounted) {
+          setData(rows);
+        }
+      } catch (err) {
+        console.warn('[useDiscoveryEngineStats] query error:', err);
+      }
+    };
+
+    void fetchStats();
+    // Refresh stats periodically while sheet is active/open
+    const timer = setInterval(fetchStats, 2000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [shouldQuery, db]);
 
   let completedCount = 0;
   let pendingCount = 0;
   let failedCount = 0;
 
-  if (data) {
-    for (const row of data) {
-      if (row.status === 'completed') {
-        completedCount += row.count;
-      } else if (row.status === 'pending' || row.status === 'running') {
-        pendingCount += row.count;
-      } else if (row.status === 'failed') {
-        failedCount += row.count;
-      }
+  for (const row of data) {
+    if (row.status === 'completed') {
+      completedCount += row.count;
+    } else if (row.status === 'pending' || row.status === 'running') {
+      pendingCount += row.count;
+    } else if (row.status === 'failed') {
+      failedCount += row.count;
     }
   }
 

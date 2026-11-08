@@ -23,6 +23,7 @@ export type { OcrBlock, OcrResult } from 'rn-mlkit-ocr';
 
 // Lazily resolved — populated on first runOcrStage() call, then reused.
 let recognizeTextFn: typeof import('rn-mlkit-ocr').recognizeText | null = null;
+let isPrewarming = false;
 
 async function getRecognizeText() {
   if (!recognizeTextFn) {
@@ -30,6 +31,23 @@ async function getRecognizeText() {
     recognizeTextFn = mlkit.recognizeText;
   }
   return recognizeTextFn!;
+}
+
+/**
+ * Pre-warms the ML Kit OCR engine in the background.
+ * Resolves the dynamic import and initializes native bindings off the critical path.
+ */
+export async function prewarmOcrEngine(): Promise<void> {
+  if (recognizeTextFn || isPrewarming) return;
+  isPrewarming = true;
+  try {
+    await getRecognizeText();
+    console.log('[ocr.stage] ML Kit OCR engine pre-warmed successfully.');
+  } catch (err) {
+    console.warn('[ocr.stage] Failed to prewarm OCR engine:', err);
+  } finally {
+    isPrewarming = false;
+  }
 }
 
 type OcrResult = { text: string; blocks: any[] };

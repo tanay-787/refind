@@ -1,9 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Chip } from 'heroui-native';
 import { useThemeColors } from '@/theme';
 import { useJobJournalStore } from '@/hooks';
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { count } from 'drizzle-orm';
 import { jobJournalJobs } from '@/core/jobjournal/storage/drizzle-schema';
 
@@ -33,23 +32,32 @@ interface NoResultsStateProps {
 export const NoResultsState = React.memo(({ query, onSuggestionTap }: NoResultsStateProps) => {
   const colors = useThemeColors();
   const db = useJobJournalStore(state => state.db);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const statusQuery = useMemo(() => {
-    if (!db) return null;
-    return db
-      .select({ status: jobJournalJobs.status, count: count(jobJournalJobs.id) })
-      .from(jobJournalJobs)
-      .groupBy(jobJournalJobs.status);
+  useEffect(() => {
+    if (!db) return;
+    let isMounted = true;
+    const fetchPending = async () => {
+      try {
+        const rows = await db
+          .select({ status: jobJournalJobs.status, count: count(jobJournalJobs.id) })
+          .from(jobJournalJobs)
+          .groupBy(jobJournalJobs.status);
+        if (!isMounted) return;
+        let pending = 0;
+        for (const row of rows) {
+          if (row.status === 'pending' || row.status === 'running') pending += row.count;
+        }
+        setPendingCount(pending);
+      } catch (e) {
+        console.warn('[NoResultsState] fetch error:', e);
+      }
+    };
+    void fetchPending();
+    return () => {
+      isMounted = false;
+    };
   }, [db]);
-
-  const { data } = useLiveQuery(statusQuery as any);
-
-  let pendingCount = 0;
-  if (data) {
-    for (const row of data) {
-      if (row.status === 'pending' || row.status === 'running') pendingCount += row.count;
-    }
-  }
 
   const chips = deriveChips(query);
   const hasChips = chips.length > 0;
