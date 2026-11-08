@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/tanay-787/refind/compare/refind-v1.9.0...refind-v1.9.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* bundle ML Kit offline models and resolve home route mount crash ([6e64816](https://github.com/tanay-787/refind/commit/6e64816b8eaed83c1d4e0aaf49fa43bc50815861))
+
 ## [1.9.0](https://github.com/tanay-787/refind/compare/refind-v1.8.0...refind-v1.9.0) (2026-11-07)
 
 
