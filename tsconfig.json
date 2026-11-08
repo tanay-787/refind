@@ -11,6 +11,9 @@
       ],
       "@/assets/*": [
         "./assets/*"
+      ],
+      "expo-mlkit-ocr": [
+        "./modules/expo-mlkit-ocr"
       ]
     }
   },

@@ -161,9 +161,6 @@ importers:
       react-native-worklets:
         specifier: 0.8.3
         version: 0.8.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)
-      rn-mlkit-ocr:
-        specifier: ^0.3.1
-        version: 0.3.1(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       tailwind-merge:
         specifier: 3.4.0
         version: 3.4.0
@@ -4853,12 +4850,6 @@ packages:
   restore-cursor@2.0.0:
     resolution: {integrity: sha512-6IzJLuGi4+R14vwagDHX+JrXmPVtPpn4mffDJ1UdR7/Edm87fl6yi8mMBIVvFtJaNTUvjughmW4hwLhRG7gC1Q==}
     engines: {node: '>=4'}
-
-  rn-mlkit-ocr@0.3.1:
-    resolution: {integrity: sha512-/kT+ZKWjvqwN4X4+mznp6DoeRHPoS2L0tes2hFp3F5As+pJgU9LqrWK0j6p2gFK5LyEZaAbpx8vpAjUchXjFqA==}
-    peerDependencies:
-      react: '*'
-      react-native: '*'
 
   safe-array-concat@1.1.4:
     resolution: {integrity: sha512-wtZlHyOje6OZTGqAoaDKxFkgRtkF9CnHAVnCHKfuj200wAgL+bSJhdsCD2l0Qx/2ekEXjPWcyKkfGb5CPboslg==}
@@ -10638,11 +10629,6 @@ snapshots:
     dependencies:
       onetime: 2.0.1
       signal-exit: 3.0.7
-
-  rn-mlkit-ocr@0.3.1(react-native@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3):
-    dependencies:
-      react: 19.2.3
-      react-native: 0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(@react-native/metro-config@0.85.3(@babel/core@7.29.0(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1)
 
   safe-array-concat@1.1.4:
     dependencies:

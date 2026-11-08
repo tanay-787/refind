@@ -68,17 +68,6 @@
       "expo-web-browser",
       "expo-background-task",
       [
-        "rn-mlkit-ocr",
-        {
-          "ocrModels": [
-            "latin",
-            "devanagari"
-          ],
-          "ocrUseBundled": true
-        }
-      ],
-      "./plugins/withMlKitBundled",
-      [
         "react-native-notify-kit",
         {
           "android": {

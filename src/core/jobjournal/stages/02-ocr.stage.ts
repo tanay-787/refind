@@ -1,15 +1,9 @@
 /* OCR stage
- * - Extracts text from screenshot image using rn-mlkit-ocr
+ * - Extracts text from screenshot image using expo-mlkit-ocr
  * - Optimized for Maximalist/Game UIs:
  *   If the image is Landscape, it performs a "Tiled Deep Scan" by splitting 
  *   the image into two halves (Left/Right). This helps ML Kit handle 
  *   small, dense, and multi-colored text in complex layouts.
- *
- * NOTE: rn-mlkit-ocr is intentionally NOT imported at the top level.
- * ML Kit initializes its TFLite model synchronously when the module is first
- * evaluated, which blocks the JS thread for several seconds. By using a
- * dynamic import inside runOcrStage(), initialization is deferred until the
- * OCR stage actually runs — well after the home screen is interactive.
  */
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -17,17 +11,19 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { getJobJournalDatabase, getMetadata } from '../storage/database';
 import type { JobJournalJob } from '../types';
 
+import type { OcrBlock, OcrResult } from 'expo-mlkit-ocr';
+
 // Re-export types so callers can still import them from here without
 // pulling in the native module at their own parse time.
-export type { OcrBlock, OcrResult } from 'rn-mlkit-ocr';
+export type { OcrBlock, OcrResult };
 
 // Lazily resolved — populated on first runOcrStage() call, then reused.
-let recognizeTextFn: typeof import('rn-mlkit-ocr').recognizeText | null = null;
+let recognizeTextFn: typeof import('expo-mlkit-ocr').recognizeText | null = null;
 let isPrewarming = false;
 
 async function getRecognizeText() {
   if (!recognizeTextFn) {
-    const mlkit = await import('rn-mlkit-ocr');
+    const mlkit = await import('expo-mlkit-ocr');
     recognizeTextFn = mlkit.recognizeText;
   }
   return recognizeTextFn!;
@@ -49,8 +45,6 @@ export async function prewarmOcrEngine(): Promise<void> {
     isPrewarming = false;
   }
 }
-
-type OcrResult = { text: string; blocks: any[] };
 
 /**
  * Merges a tiled OCR result into a base result, adjusting coordinates.

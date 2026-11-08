@@ -9,7 +9,7 @@ import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { recognizeText } from 'rn-mlkit-ocr';
+import { recognizeText } from 'expo-mlkit-ocr';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
