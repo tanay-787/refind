@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.2](https://github.com/tanay-787/refind/compare/refind-v1.9.1...refind-v1.9.2) (2026-11-08)
+
+
+### Performance Improvements
+
+* **ocr:** replace rn-mlkit-ocr with in-tree local expo module ([4c1863d](https://github.com/tanay-787/refind/commit/4c1863d64fcd8983d825e98e41872e893c2d0e54))
+
 ## [1.9.1](https://github.com/tanay-787/refind/compare/refind-v1.9.0...refind-v1.9.1) (2026-11-08)
 
 
