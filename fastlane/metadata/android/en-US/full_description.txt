@@ -1,0 +1,25 @@
+Refind: A memory, made searchable.
+
+You see something worth remembering. You take a screenshot. You move on. Days later, you need that receipt, travel confirmation, or snippet—and you spend minutes scrolling through an endless gallery.
+
+Refind is a 100% on-device, private recall search engine designed to find your screenshots using the words and terms you remember.
+
+Key Features:
+
+• Instant Private Recall Search:
+Search across your entire screenshot library using natural words. Refind uses SQLite FTS5 with trigram tokenization and dynamic token-explanation scoring to surface exact matches as you type.
+
+• Google Lens-Style Visual Text Extraction:
+Tap into any screenshot in the viewer to launch on-demand OCR. View bounding boxes overlaid directly on the image, adjust a freeform crop frame to isolate receipts or paragraphs, and instantly copy or share the extracted text.
+
+• Native High-Throughput In-Tree OCR:
+Powered by a custom Kotlin coroutines module (expo-mlkit-ocr) with bundled offline Google ML Kit models (Latin and Devanagari scripts) for fast, network-free indexing.
+
+• Resumable Background DAG Pipeline:
+A durable background processing orchestrator (JobJournal) manages intake, OCR extraction, text normalization, keyword expansion, and search indexing with foreground service notifications (Pause/Resume).
+
+• Zero Cloud, Zero Telemetry:
+Refind has no remote servers, no user accounts, no tracking SDKs, and no analytics. Your images and extracted text never leave your device.
+
+• Beautiful Material You Experience:
+Edge-to-edge Android UI with adaptive dark and light themes, fluid zoom gestures, and intuitive controls.

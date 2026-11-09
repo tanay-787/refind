@@ -1,12 +1,13 @@
 # Refind
 
 > **A memory, made searchable.**  
-> 100% on-device, zero-cloud screenshot search engine and OCR indexer for Android.
+> 100% on-device, private recall search for screenshots powered by local ML Kit OCR and SQLite FTS5.
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-green.svg)](https://developer.android.com)
 [![GitHub Release](https://img.shields.io/github/v/release/tanay-787/refind?color=orange)](https://github.com/tanay-787/refind/releases)
 [![Build](https://github.com/tanay-787/refind/actions/workflows/release-please.yml/badge.svg)](https://github.com/tanay-787/refind/actions)
+[![Add to Obtainium](https://img.shields.io/badge/Obtainium-Add%20to%20App-3DDC84?logo=android&logoColor=white)](https://api.obtainium.imranr.dev/redirect?r=https://github.com/tanay-787/refind)
 
 ---
 
@@ -52,11 +53,12 @@ Everything is processed and indexed privately, on your device, the moment a scre
 
 ## ✨ Features
 
-- 🔍 **Instant Full-Text Search**: Powered by SQLite FTS5 with trigram tokenization and token-explanation scoring for lightning-fast matching as you type.
-- 🧠 **On-Device MLKit OCR**: Fast, private text recognition with bundled offline models supporting **Latin** and **Devanagari** scripts.
-- 🔒 **Zero Cloud, Zero Telemetry**: Refind does not communicate with any external servers. Your screenshots, metadata, and extracted text never leave your device.
-- ⚡ **Resumable Ingestion Pipeline**: Asynchronous background DAG orchestrator (`JobJournal`) that monitors media changes, handles crash recovery, and provides notification controls to pause or resume indexing.
-- 📱 **Native Material You UX**: Edge-to-edge design, fluid gesture interactions, bounding-box text highlights, crop tool, and instant text copying/sharing.
+- 🔍 **Private Recall Search**: Search screenshots using natural words you remember. A dual-leg SQLite FTS5 prefix and trigram tokenization engine with dynamic query-conditioned reranking surfaces results instantly as you type.
+- 🔎 **Google Lens-Style Text Extraction**: Tap into any screenshot to launch an on-demand visual text scanner. View bounding boxes overlaid directly on the image, drag crop handles to isolate paragraphs or receipt items, and copy or share extracted text in one tap.
+- ⚡ **In-Tree Kotlin OCR Module (`expo-mlkit-ocr`)**: Built using Kotlin coroutines and modern Expo Modules JSI bindings. Bundles offline Google ML Kit models (**Latin** and **Devanagari** scripts) directly at the native Gradle level for high-throughput (~2 screenshots/sec) indexing with zero network latency.
+- 🛡️ **Durable Background DAG Pipeline (`JobJournal`)**: Resumable, crash-resilient background processing orchestrator with SQLite-backed state tracking, lease-based locking, and foreground notification controls (Pause/Resume/Progress) to prevent Android Doze kills.
+- 🔒 **Zero Cloud, Zero Telemetry**: Refind does not communicate with external servers. Your screenshots, metadata, and extracted text never leave your device.
+- 📱 **Native Material You UX**: Edge-to-edge design, fluid gesture interactions (pinch-to-zoom, pan, swipe-to-dismiss), and adaptive dark/light Material You theming built with HeroUI Native.
 
 ---
 
@@ -67,18 +69,19 @@ Refind requests only the minimal permissions required to index and search screen
 | Permission | Why Refind Needs It |
 |---|---|
 | `READ_MEDIA_IMAGES` / Storage | Detects newly taken screenshots and displays them in the viewer. |
-| `FOREGROUND_SERVICE` & `FOREGROUND_SERVICE_DATA_SYNC` | Ensures Android does not kill the OCR and SQLite indexing workers while processing screenshots. |
+| `FOREGROUND_SERVICE` & `FOREGROUND_SERVICE_DATA_SYNC` | Ensures Android does not terminate OCR and SQLite indexing workers while processing screenshots. |
 | `POST_NOTIFICATIONS` | Displays indexing progress and provides notification action buttons to pause or resume background jobs. |
 | `ACCESS_MEDIA_LOCATION` | Preserves screenshot metadata for chronological ordering. |
 
-> **Privacy Guarantee**: Refind contains no tracking SDKs, no ad networks, and no analytics. Refind will never upload your photos or search queries.
+> **Privacy Guarantee**: Refind contains no tracking SDKs, no ad networks, and no analytics. Refind will never upload your photos, extracted text, or search queries.
 
 ---
 
 ## 📦 Installation & Distribution
 
 - **Direct APK**: Download the latest release APK from [GitHub Releases](https://github.com/tanay-787/refind/releases).
-- **Auto-Updates with Obtainium**: Add `https://github.com/tanay-787/refind` to [Obtainium](https://github.com/ImranR98/Obtainium) to receive seamless update notifications directly from GitHub.
+- **Auto-Updates with Obtainium**: Tap the badge below to automatically configure Refind in [Obtainium](https://github.com/ImranR98/Obtainium) for 1-click install and background update notifications directly from GitHub:  
+  [![Add to Obtainium](https://img.shields.io/badge/Obtainium-Add%20to%20App-3DDC84?logo=android&logoColor=white)](https://api.obtainium.imranr.dev/redirect?r=https://github.com/tanay-787/refind)
 - *(Coming Soon: IzzyOnDroid & Google Play)*
 
 ---
@@ -86,25 +89,31 @@ Refind requests only the minimal permissions required to index and search screen
 ## 🏗️ Architecture
 
 ```
-Live Media Store ──> [01 Intake & Dedupe] ──> [02 Metadata Extraction]
-                                                     │
-                                                     ▼
-                                              [03 MLKit OCR]
-                                                     │
-                                                     ▼
-                                          [04 OCR Postprocess]
-                                                     │
-                                                     ▼
-                                          [05 Keyword Expansion]
-                                                     │
-                                                     ▼
-                                          [06 SQLite FTS5 Trigram Index]
-                                                     │
-                                                     ▼
-                                            [Hybrid Search UI]
+Android MediaStore (Screenshots)
+               │
+               ▼
+   [01 Source Discovery] ──> [02 Intake & Metadata Batching]
+                                        │
+                                        ▼
+                              DURABLE STAGE DAG
+                              ┌──────────────────────────────────┐
+                              │  [Stage 01: Native OCR]          │ (expo-mlkit-ocr Kotlin/JSI)
+                              │             │                    │
+                              │             ▼                    │
+                              │  [Stage 02: Postprocess]         │ (Cleaning, Script Detection)
+                              │             │                    │
+                              │             ▼                    │
+                              │  [Stage 03: Keywords]            │ (TF-IDF & Token Expansion)
+                              │             │                    │
+                              │             ▼                    │
+                              │  [Stage 04: Index FTS5]          │ (Trigram + Standard FTS5)
+                              └──────────────────────────────────┘
+                                        │
+                                        ▼
+                           [Query-Conditioned Recall Search]
 ```
 
-For in-depth details on the pipeline DAG, see [`MODULE_STRUCTURE.md`](src/core/jobjournal/MODULE_STRUCTURE.md) and the [`docs/`](.docs/) directory.
+For in-depth details on the pipeline DAG, see [`MODULE_STRUCTURE.md`](src/core/jobjournal/MODULE_STRUCTURE.md) and the [`.docs/`](.docs/) directory.
 
 ---
 
