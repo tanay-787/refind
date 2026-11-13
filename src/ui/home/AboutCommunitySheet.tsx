@@ -16,6 +16,7 @@ import { useThemeColors } from '@/theme';
 import { useJobJournalStore, useDiscoveryEngineStats } from '@/hooks';
 import { IconView } from '@/ui/IconView';
 import { GitHubIcon } from '@/ui/icons';
+import { Wordmark } from '@/ui/brand';
 import { RadialChart } from '@/ui/charts/radial-chart';
 
 interface AboutCommunitySheetProps {
@@ -81,14 +82,7 @@ export const AboutCommunitySheet = React.memo(({ visible, onDismiss }: AboutComm
           {/* Header Branding & Version */}
           <View style={styles.headerRow}>
             <View style={styles.brandingGroup}>
-              <Text 
-                style={[
-                  styles.title, 
-                  { color: colors.onSurface }
-                ]}
-              >
-                Refind
-              </Text>
+              <Wordmark height={22} color={colors.onSurface} />
               <Text 
                 style={[
                   styles.tagline, 

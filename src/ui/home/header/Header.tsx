@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/theme';
+import { Wordmark } from '@/ui/brand';
 import { LiveStatusText } from './LiveStatusText';
 import { EngineStatusTrigger } from './EngineStatusTrigger';
 
@@ -25,14 +26,7 @@ export const Header = React.memo(({ insets, onOpenAbout }: HeaderProps) => {
       ]}
     >
       <View style={styles.leftColumn}>
-        <Text 
-          style={[
-            styles.title, 
-            { color: colors.onSurface }
-          ]}
-        >
-          Refind
-        </Text>
+        <Wordmark height={26} color={colors.onSurface} style={styles.wordmark} />
         <LiveStatusText />
       </View>
 
@@ -54,11 +48,9 @@ const styles = StyleSheet.create({
   },
   leftColumn: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
-  title: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 32,
-    letterSpacing: -0.5,
+  wordmark: {
+    marginBottom: 2,
   },
 });

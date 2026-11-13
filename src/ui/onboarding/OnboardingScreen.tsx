@@ -13,6 +13,7 @@ import { Image } from 'expo-image';
 import { Button, Spinner } from 'heroui-native';
 import { useThemeColors } from '@/theme';
 import { SystemBars } from 'react-native-edge-to-edge';
+import { Wordmark } from '@/ui/brand';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -74,14 +75,7 @@ export default function OnboardingScreen() {
       >
         {/* Text Container centered vertically */}
         <View style={styles.textContainer}>
-          <Text 
-            style={[
-              styles.title,
-              { color: colors.onSurface }
-            ]}
-          >
-            Refind.
-          </Text>
+          <Wordmark height={48} color={colors.onSurface} />
           <Text 
             style={[
               styles.body,
