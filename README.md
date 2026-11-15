@@ -15,56 +15,32 @@
 
 ---
 
-You see something worth remembering.  
-You take a screenshot.  
-You move on.
+## 🏛️ The Philosophy: Instrument-Grade Memory
 
----
+Every screenshot you take is an act of intention. You paused, noticed something worth keeping, and captured it. A flight confirmation, a receipt, an address, a line of code, a quote that stopped you mid-scroll. 
 
-A few days pass. The moment you actually need it arrives, and you remember exactly what it was. A receipt. A travel itinerary. A quote that stopped you mid-scroll. You know precisely what you're looking for.
+A few days pass. The moment you actually need it arrives, and you know precisely what you're looking for.
 
-So you open your gallery.
+So you open your gallery. And you scroll. And you scroll past hundreds of memes, photos of lunch, and accidental lock-screen captures. The tragedy of modern smartphones is that they turned an act of intentional capture into an infinite scroll of dread. 
 
-And you scroll.
+**The problem was never taking the screenshot. It was finding it again.**
 
-And you scroll.
+### This is Refind.
 
-And somewhere in the slow, quiet frustration of that search, you realize: **the problem was never the screenshot. It was finding it again.**
+Not a photo gallery. Not an image manager. **A memory, made searchable.**
 
----
+You're not discovering something new — you're *refinding* something you already knew. Type what you remember. Not a date. Not a folder. Just the words, the way you actually think about it. Refind searches the text *inside* your screenshots and surfaces the exact match in three keystrokes.
 
-## This is Refind.
+### Instrument-Grade Software
 
-Not a gallery. Not a photo manager.  
-A memory, made searchable.
+Most modern software swings between two frustrating extremes:
+1. **Paternalistic Simplicity**: Dumbing down interfaces to the point where power users are blinded — stripping away numbers, hiding telemetry, and treating users like toddlers who can't handle the truth of their device.
+2. **Chaotic Spaghetti**: Dumping raw, hostile toggles, unstyled logcats, and cognitive clutter everywhere.
 
-The name is deliberate. You're not discovering something new, you're **refinding** something you already knew. Refind meets you at that moment, the one where the memory is clear but the file is buried, and it gives you back the thing you came for. Instantly.
-
-Type what you remember. Not a date. Not a folder. Just the words, the way you actually think about it. Refind searches the content *inside* your screenshots: the text, the context, the meaning. And it surfaces exactly what you were looking for.
-
----
-
-## The philosophy.
-
-Every screenshot you take is an act of intention. You paused, you noticed something worth keeping, and you captured it. That moment deserves to be honored — not buried in an infinite grid of thumbnails.
-
-Refind starts from a simple belief: **you should be able to find anything you once chose to remember.**
-
-**No cloud. No server. No account.**  
-The cloud does not deserve to see your life. Your flight bookings, medical receipts, order confirmations, and private notes belong on your silicon, inside your pocket, protected by your lock screen.
-
----
-
-## ⏱️ Design Philosophy: Instrument-Grade Software
-
-Most software swings between two frustrating extremes:
-1. **Paternalistic Simplicity**: Dumbing down interfaces to the point where power users are blinded—stripping away numbers, hiding telemetry, and treating users like toddlers who can't handle the truth of their device.
-2. **The Spaghetti Extreme**: Dumping raw, hostile toggles, unstyled logcats, and cognitive chaos everywhere.
-
-Refind takes a third path: **Instrument-Grade Software**.
+Refind takes a third path:
 - **Surface Elegance**: Fluid 120Hz spring physics, disciplined typography, edge-to-edge layout, and instantaneous search-as-you-type. The technology gets out of your way.
 - **Mechanical Honesty**: We don't hide the machine from you. The 180° radial arc gauge in the header gives you a live, analog-precision tachometer of your library's indexing state (`Ready • Pending • Failed`), rendered in crisp **JetBrains Mono**. It gives you a cockpit, not an idiot light.
-- **Structural Integrity**: Zero cloud dependencies. Every OCR token, trigram index, and search score is computed directly on your phone's processor.
+- **Data Sovereignty**: The cloud does not deserve to see your life. Your bank receipts, medical notes, tickets, and private chats belong on your silicon, inside your pocket, protected by your lock screen. Zero cloud, zero accounts, zero telemetry.
 
 ---
 
