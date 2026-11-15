@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.0](https://github.com/tanay-787/refind/compare/refind-v1.9.2...refind-v1.10.0) (2026-11-15)
+
+
+### Features
+
+* **assets:** add store screenshots, vector graphic, and showcase ([4356faa](https://github.com/tanay-787/refind/commit/4356faa89e8f84b3854e02c073f2a07a7546ea8f))
+* **brand:** introduce production wordmark and documentation ([7d9c263](https://github.com/tanay-787/refind/commit/7d9c2639d0ce11977c6ed5ab9ab1767134176d3b))
+
 ## [1.9.2](https://github.com/tanay-787/refind/compare/refind-v1.9.1...refind-v1.9.2) (2026-11-08)
 
 
