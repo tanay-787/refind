@@ -60,7 +60,7 @@ Everything is processed and indexed privately, on your device, the moment a scre
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_home_feed.png" width="19%" alt="Home Feed & Sync Counter" />
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_instant_search.png" width="19%" alt="Instant Dual-Leg FTS5 Search" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_viewer_lens_ocr.png" width="19%" alt="Google Lens-Style OCR & Extraction" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_viewer_lens_ocr.png" width="19%" alt="On-Demand OCR & Text Extraction Sheet" />
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4_engine_transparency.png" width="19%" alt="Engine Transparency Radial Arc" />
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5_background_sync.png" width="19%" alt="Resilient Background DAG Pipeline" />
 </p>
@@ -70,8 +70,8 @@ Everything is processed and indexed privately, on your device, the moment a scre
 ## ✨ Features
 
 - 🔍 **Private Recall Search**: Search screenshots using natural words you remember. A dual-leg SQLite FTS5 prefix and trigram tokenization engine with dynamic query-conditioned reranking surfaces results instantly as you type.
-- 🔎 **Google Lens-Style Text Extraction**: Tap into any screenshot to launch an on-demand visual text scanner. View bounding boxes overlaid directly on the image, drag crop handles to isolate paragraphs or receipt items, and copy or share extracted text in one tap.
-- ⚡ **In-Tree Kotlin OCR Module (`expo-mlkit-ocr`)**: Built using Kotlin coroutines and modern Expo Modules JSI bindings. Bundles offline Google ML Kit models (**Latin** and **Devanagari** scripts) directly at the native Gradle level for high-throughput (~2 screenshots/sec) indexing with zero network latency.
+- 🔎 **On-Demand Text Extraction**: Tap into any screenshot in the viewer to crop and scan text on demand. Surfaces extracted text cleanly in a bottom sheet with 1-tap copy and share. *(Interactive bounding box overlay on the roadmap).*
+- ⚡ **In-Tree Kotlin OCR Module (`expo-mlkit-ocr`)**: Built using Kotlin coroutines and modern Expo Modules JSI bindings. Bundles offline Google ML Kit models (**Latin / English** script, with Devanagari on the way) directly at the native Gradle level for high-throughput (~2 screenshots/sec) indexing with zero network latency.
 - 🛡️ **Durable Background DAG Pipeline (`JobJournal`)**: Resumable, crash-resilient background processing orchestrator with SQLite-backed state tracking, lease-based locking, and foreground notification controls (Pause/Resume/Progress) to prevent Android Doze kills.
 - 🔒 **Zero Cloud, Zero Telemetry**: Refind does not communicate with external servers. Your screenshots, metadata, and extracted text never leave your device.
 - 📱 **Native Material You UX**: Edge-to-edge design, fluid gesture interactions (pinch-to-zoom, pan, swipe-to-dismiss), and adaptive dark/light Material You theming built with HeroUI Native.

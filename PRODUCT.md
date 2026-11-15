@@ -105,7 +105,7 @@ May 2026                     June 2026                 July - Sept 2026         
 * **The Strategic Shift (November 8, 2026 - Commits `6e64816`, `4c1863d`)**:
   - Developed a custom, in-tree Expo module: **`expo-mlkit-ocr`** (`modules/expo-mlkit-ocr/`).
   - Implemented in Kotlin using structured coroutines (`Dispatchers.Default`) and modern Expo JSI bindings.
-  - Bundled offline Google ML Kit models (**Latin** and **Devanagari** scripts) directly in the Gradle build dependencies.
+  - Bundled offline Google ML Kit models (**Latin / English** script, with Devanagari on the way) directly in the Gradle build dependencies.
   - *Outcome*: Throughput doubled to **~2 screenshots/sec**, full offline capability was guaranteed, and third-party workarounds were eliminated.
 
 ---
@@ -290,14 +290,14 @@ The home screen transitions smoothly across distinct operational states:
 6. **No-Results State (`NoResultsState`)**: When a query yields no matches, the system extracts high-signal keywords (stripping common English stopwords) and presents them as interactive suggestion chips. If background indexing is active, it contextually displays a `"STILL INDEXING"` banner.
 7. **Discovery Engine Bottom Sheet (`AboutCommunitySheet`)**: Triggered via a micro radial chart in the top header. Features a 180° semicircle `RadialChart` visualizing Search Ready, Pending, and Failed counts, a manual **Rescan** trigger, app version details, and community links.
 
-### 5.4 Google Lens-Style Visual Extractor (`viewer.tsx`)
+### 5.4 On-Demand Text Extraction & Crop Scanner (`viewer.tsx`)
 Opening any screenshot launches a full-screen, hardware-accelerated viewer with gesture physics:
 * **Physics & Gestures**: Smooth pinch-to-zoom (up to 5x), continuous panning, and interactive swipe-to-dismiss mapped to backdrop opacity.
-* **OCR Mode (Google Lens Experience)**:
+* **OCR Mode & Crop Selection**:
   - Tapping the visual scan icon triggers a smooth spring animation that shrinks the image into a safe viewport bounded between the top and bottom chrome.
-  - An interactive **`CropOverlay`** appears with custom hit-slop corner handles. Users drag and resize the bounding box around any paragraph, table column, or receipt line item.
+  - An interactive **`CropOverlay`** appears with custom hit-slop corner handles. Users drag and resize the crop box around any paragraph, table column, or receipt line item.
   - Tapping **Scan Selection** crops the high-resolution source bitmap, upscales it 2x, and passes it to `expo-mlkit-ocr`.
-* **Result Bottom Sheet (`ViewerOcrResultPanel`)**: Extracted text slides up in a HeroUI `BottomSheet` with a 1-tap **Copy to Clipboard** button and native Android system sharing via `expo-sharing`.
+* **Result Bottom Sheet (`ViewerOcrResultPanel`)**: Extracted text slides up in a HeroUI `BottomSheet` with a 1-tap **Copy to Clipboard** button and native Android system sharing via `expo-sharing`. *(Direct on-canvas interactive word bounding box overlays are on the roadmap).*
 
 ---
 

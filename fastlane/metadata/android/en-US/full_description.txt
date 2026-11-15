@@ -9,11 +9,11 @@ Key Features:
 • Instant Private Recall Search:
 Search across your entire screenshot library using natural words. Refind uses SQLite FTS5 with trigram tokenization and dynamic token-explanation scoring to surface exact matches as you type.
 
-• Google Lens-Style Visual Text Extraction:
-Tap into any screenshot in the viewer to launch on-demand OCR. View bounding boxes overlaid directly on the image, adjust a freeform crop frame to isolate receipts or paragraphs, and instantly copy or share the extracted text.
+• On-Demand Text Extraction:
+Tap into any screenshot in the viewer to launch on-demand OCR. Crop the region of interest and view extracted text cleanly in a bottom sheet with 1-tap copy and share.
 
 • Native High-Throughput In-Tree OCR:
-Powered by a custom Kotlin coroutines module (expo-mlkit-ocr) with bundled offline Google ML Kit models (Latin and Devanagari scripts) for fast, network-free indexing.
+Powered by a custom Kotlin coroutines module (expo-mlkit-ocr) with bundled offline Google ML Kit models (Latin/English script, with Devanagari on the way) for fast, network-free indexing.
 
 • Resumable Background DAG Pipeline:
 A durable background processing orchestrator (JobJournal) manages intake, OCR extraction, text normalization, keyword expansion, and search indexing with foreground service notifications (Pause/Resume).
