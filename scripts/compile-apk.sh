@@ -34,11 +34,20 @@ export CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
 TARGET_BUILD=""
 
 # Parse flags
-if [[ "${1:-}" == "--release" ]] || [[ "${1:-}" == "-r" ]]; then
-  TARGET_BUILD="release"
-elif [[ "${1:-}" == "--debug" ]] || [[ "${1:-}" == "-d" ]]; then
-  TARGET_BUILD="debug"
-fi
+for arg in "${@:-}"; do
+  case "$arg" in
+    --release|-r)
+      TARGET_BUILD="release"
+      ;;
+    --debug|-d)
+      TARGET_BUILD="debug"
+      ;;
+    --demo)
+      export EXPO_PUBLIC_TARGET_DEMO="true"
+      echo "🎯 Target set to demo screenshots (EXPO_PUBLIC_TARGET_DEMO=true)"
+      ;;
+  esac
+done
 
 # Interactive prompt if no flag passed
 if [[ -z "$TARGET_BUILD" ]]; then

@@ -5,7 +5,16 @@ import { SCREENSHOT_NAME_RE } from './constants';
 const DEV_SCREENSHOT_LIMIT = 15;
 const ENFORCE_PROD_BEHAVIOR = __DEV__ && process.env.EXPO_PUBLIC_ENFORCE_PROD === 'true';
 
+/**
+ * Internal intake configuration:
+ * Set to `true` to target curated showcase/demo albums (`demo_screenshots` and `Pins`)
+ * for store captures and presentations. Set to `false` for standard production intake.
+ */
+export const DEMO_SHOWCASE_MODE = false;
+const DEMO_ALBUM_RE = /^(demo_screenshots|pins)$/i;
+
 export function isScreenshotAsset(asset: MediaLibrary.Asset) {
+  if (DEMO_SHOWCASE_MODE) return true;
   return SCREENSHOT_NAME_RE.test(asset.filename);
 }
 
@@ -24,9 +33,14 @@ export function uniqueAssets(assets: MediaLibrary.Asset[]) {
 
 export async function loadScreenshotAssets() {
   const albums = await MediaLibrary.getAlbumsAsync({ includeSmartAlbums: true });
-  const screenshotAlbums = albums.filter((album) => SCREENSHOT_NAME_RE.test(album.title));
+  const screenshotAlbums = DEMO_SHOWCASE_MODE
+    ? albums.filter((album) => DEMO_ALBUM_RE.test(album.title.trim()))
+    : albums.filter((album) => SCREENSHOT_NAME_RE.test(album.title));
 
   if (screenshotAlbums.length === 0) {
+    if (DEMO_SHOWCASE_MODE) {
+      console.warn('[screenshots.utils] DEMO_SHOWCASE_MODE is true, but no demo_screenshots or Pins album found on device!');
+    }
     return [];
   }
 
@@ -40,7 +54,7 @@ export async function loadScreenshotAssets() {
       while (hasNextPage) {
         const page = await MediaLibrary.getAssetsAsync({
           album,
-          first: (__DEV__ && !ENFORCE_PROD_BEHAVIOR) ? Math.min(DEV_SCREENSHOT_LIMIT, pageSize) : pageSize,
+          first: (__DEV__ && !ENFORCE_PROD_BEHAVIOR && !DEMO_SHOWCASE_MODE) ? Math.min(DEV_SCREENSHOT_LIMIT, pageSize) : pageSize,
           mediaType: [MediaLibrary.MediaType.photo],
           sortBy: [MediaLibrary.SortBy.creationTime],
           after,
@@ -48,7 +62,7 @@ export async function loadScreenshotAssets() {
 
         allAssets.push(...page.assets);
         after = page.endCursor;
-        hasNextPage = page.hasNextPage && !(__DEV__ && !ENFORCE_PROD_BEHAVIOR && allAssets.length >= DEV_SCREENSHOT_LIMIT);
+        hasNextPage = page.hasNextPage && !(__DEV__ && !ENFORCE_PROD_BEHAVIOR && !DEMO_SHOWCASE_MODE && allAssets.length >= DEV_SCREENSHOT_LIMIT);
       }
 
       return allAssets;
@@ -57,7 +71,7 @@ export async function loadScreenshotAssets() {
 
   const assets = uniqueAssets(albumAssets.flat()).sort((left, right) => right.creationTime - left.creationTime);
 
-  return (__DEV__ && !ENFORCE_PROD_BEHAVIOR) ? assets.slice(0, DEV_SCREENSHOT_LIMIT) : assets;
+  return (__DEV__ && !ENFORCE_PROD_BEHAVIOR && !DEMO_SHOWCASE_MODE) ? assets.slice(0, DEV_SCREENSHOT_LIMIT) : assets;
 }
 
 /**
