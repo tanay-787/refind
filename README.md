@@ -15,44 +15,18 @@
 
 ---
 
-## 🏛️ The Philosophy: Instrument-Grade Memory
+Not a gallery. Not a photo manager.  
+A memory, made searchable.
 
-Every screenshot you take is an act of intention. You paused, noticed something worth keeping, and captured it. A flight confirmation, a receipt, an address, a line of code, a quote that stopped you mid-scroll. 
+Every screenshot you take is an act of intention. You paused, you noticed something worth keeping, and you captured it. That moment deserves to be honored, not buried in an infinite grid of thumbnails.
 
-A few days pass. The moment you actually need it arrives, and you know precisely what you're looking for.
+Refind starts from a simple belief: **you should be able to find anything you once chose to remember.**
 
-So you open your gallery. And you scroll. And you scroll past hundreds of memes, photos of lunch, and accidental lock-screen captures. The tragedy of modern smartphones is that they turned an act of intentional capture into an infinite scroll of dread. 
+Type what you remember. Not a date. Not a folder. Just the words, the way you actually think about it. Refind searches the content *inside* your screenshots. And it surfaces exactly what you were looking for.
 
-**The problem was never taking the screenshot. It was finding it again.**
 
-### This is Refind.
-
-Not a photo gallery. Not an image manager. **A memory, made searchable.**
-
-You're not discovering something new — you're *refinding* something you already knew. Type what you remember. Not a date. Not a folder. Just the words, the way you actually think about it. Refind searches the text *inside* your screenshots and surfaces the exact match in three keystrokes.
-
-### Instrument-Grade Software
-
-Most modern software swings between two frustrating extremes:
-1. **Paternalistic Simplicity**: Dumbing down interfaces to the point where power users are blinded — stripping away numbers, hiding telemetry, and treating users like toddlers who can't handle the truth of their device.
-2. **Chaotic Spaghetti**: Dumping raw, hostile toggles, unstyled logcats, and cognitive clutter everywhere.
-
-Refind takes a third path:
-- **Surface Elegance**: Fluid 120Hz spring physics, disciplined typography, edge-to-edge layout, and instantaneous search-as-you-type. The technology gets out of your way.
-- **Mechanical Honesty**: We don't hide the machine from you. The 180° radial arc gauge in the header gives you a live, analog-precision tachometer of your library's indexing state (`Ready • Pending • Failed`), rendered in crisp **JetBrains Mono**. It gives you a cockpit, not an idiot light.
-- **Data Sovereignty**: The cloud does not deserve to see your life. Your bank receipts, medical notes, tickets, and private chats belong on your silicon, inside your pocket, protected by your lock screen. Zero cloud, zero accounts, zero telemetry.
-
----
-
-## 📸 Interface
-
-<p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_home_feed.png" width="19%" alt="Home Feed & Sync Counter" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_instant_search.png" width="19%" alt="Instant Dual-Leg FTS5 Search" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_viewer_lens_ocr.png" width="19%" alt="On-Demand OCR & Text Extraction Sheet" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4_engine_transparency.png" width="19%" alt="Engine Transparency Radial Arc" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5_background_sync.png" width="19%" alt="Resilient Background DAG Pipeline" />
-</p>
+**No cloud. No server. No account.**  
+The cloud does not deserve to see your life. Your flight bookings, medical receipts, order confirmations, and private notes belong on your silicon, inside your pocket, protected by your lock screen.
 
 ---
 
@@ -62,7 +36,6 @@ Refind takes a third path:
 - 🔎 **On-Demand Text Extraction**: Tap into any screenshot in the viewer to crop and scan text on demand. Surfaces extracted text cleanly in a bottom sheet with 1-tap copy and share. *(Interactive bounding box overlay on the roadmap).*
 - ⚡ **In-Tree Kotlin OCR Module (`expo-mlkit-ocr`)**: Built using Kotlin coroutines and modern Expo Modules JSI bindings. Bundles offline Google ML Kit models (**Latin / English** script, with Devanagari on the way) directly at the native Gradle level for high-throughput (~2 screenshots/sec) indexing with zero network latency.
 - 🛡️ **Durable Background DAG Pipeline (`JobJournal`)**: Resumable, crash-resilient background processing orchestrator with SQLite-backed state tracking, lease-based locking, and foreground notification controls (Pause/Resume/Progress) to prevent Android Doze kills.
-- 🔒 **Zero Cloud, Zero Telemetry**: Refind does not communicate with external servers. Your screenshots, metadata, and extracted text never leave your device.
 - 📱 **Native Material You UX**: Edge-to-edge design, fluid gesture interactions (pinch-to-zoom, pan, swipe-to-dismiss), and adaptive dark/light Material You theming built with HeroUI Native.
 
 ---

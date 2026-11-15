@@ -1,7 +1,6 @@
 # Refind Wordmark & Visual Identity Specification
 
 > **Brand Core**: Refind is a 100% on-device, private screenshot recall search engine.  
-> *"A memory, made searchable."*
 
 ---
 
@@ -12,17 +11,6 @@ Refind's primary visual identity is the **Refind Wordmark**.
 While standalone logos are often abstract emblems that require heavy brand awareness to recognize, a **typographic wordmark is inherently semantic**—it immediately communicates the product name while anchoring the visual brand.
 
 In Refind, the wordmark does not compromise between an emblem and typography: **the brand emblem IS the capital letter 'R'**, seamlessly fused with custom-kerned typography set in **Manrope SemiBold (600)**.
-
-```
-       [Screenshot Viewfinder Corner]
-             \     ______
-              ┌─┐ /      \  <--- [Recall Loop / Camera Lens]
-              │ ││        │
-              │ │ \______/
-              │ │   /
-              │ │  / \      <--- [Grounded Foot on Baseline]
-              └─┘ └───┘
-```
 
 ---
 
