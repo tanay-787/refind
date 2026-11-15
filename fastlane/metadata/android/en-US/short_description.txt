@@ -1,1 +1,1 @@
-Private on-device screenshot search engine and OCR text extraction tool
+Every word inside your screenshots. Fully searchable, entirely on-device.

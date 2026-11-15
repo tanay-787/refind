@@ -25,6 +25,16 @@ Refind is a **high-throughput, local indexing engine paired with a recall search
 * **Zero Account Footprint**: No authentication, registration, phone number, or email is required.
 * **Offline Independence**: Refind requires no internet access to function. Bundled offline machine learning models guarantee text extraction anywhere, anytime.
 
+### 1.4 Design Philosophy: Instrument-Grade Software & Mechanical Honesty
+Refind rejects the false dichotomy of modern software design:
+* **The Paternalistic Extreme (Apple-style Over-Simplification)**: Stripping away metrics, hiding numbers, and treating users like children who cannot handle the truth of their device.
+* **The Spaghetti Extreme (Android-style Chaos)**: Dumping raw, unstyled toggles and cognitive clutter everywhere.
+
+Refind pioneers **Instrument-Grade Software**:
+* **Invisible Surface Polish**: Starts with the human experience and works backward to the technology. The interface is silent, fluid (120Hz spring physics), edge-to-edge, and delivers search results in three keystrokes.
+* **Mechanical Honesty ("The Sapphire Caseback")**: Like a luxury skeleton watch, the front is disciplined and understated, but the hood is unlatched. The 180° radial arc gauge in the header gives power users a precision tachometer of their library's indexing state (`Ready • Pending • Failed`), rendered in crisp **JetBrains Mono**.
+* **Data Sovereignty as a Moral Center**: Screenshots contain intimate financial records, tickets, notes, and conversations. The cloud does not deserve to see your life. Refind builds the search engine into the silicon itself.
+
 ---
 
 ## 2. Product Metadata & Current Release State
@@ -33,7 +43,7 @@ Refind is a **high-throughput, local indexing engine paired with a recall search
 |---|---|
 | **App Name** | Refind |
 | **Package Identifier** | `com.tanay22.refind` |
-| **Current Version** | `1.9.2` (Build 25) |
+| **Current Version** | `1.10.0` (Build 26) |
 | **Platform Target** | Android 8.0+ (API Level 26+) |
 | **Target Architecture** | ARM64 (`arm64-v8a`), ARMv7 (`armeabi-v7a`), x86_64 |
 | **Core Framework** | React Native `0.85.3` / Expo SDK `56.0.11` (New Architecture ready) |
@@ -41,7 +51,7 @@ Refind is a **high-throughput, local indexing engine paired with a recall search
 | **Styling & Design** | HeroUI Native `1.0.11` + Uniwind (Tailwind CSS v4) + Material You Dynamic Color Engine |
 | **Local Storage** | SQLite (`expo-sqlite` with WAL mode & FTS5) + Drizzle ORM `0.45.2` |
 | **License** | Apache License, Version 2.0 |
-| **Distribution** | GitHub Releases, Obtainium (auto-updating via GitHub API), F-Droid / Google Play (planned) |
+| **Distribution** | GitHub Releases, Obtainium (auto-updating via GitHub API), Accrescent / Play Store (future) |
 
 ---
 

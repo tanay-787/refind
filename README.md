@@ -46,12 +46,25 @@ Type what you remember. Not a date. Not a folder. Just the words, the way you ac
 
 ## The philosophy.
 
-Every screenshot you take is an act of intention. You paused, you noticed something worth keeping, and you captured it. That moment deserves to be honored, not lost in an infinite grid of thumbnails.
+Every screenshot you take is an act of intention. You paused, you noticed something worth keeping, and you captured it. That moment deserves to be honored — not buried in an infinite grid of thumbnails.
 
 Refind starts from a simple belief: **you should be able to find anything you once chose to remember.**
 
 **No cloud. No server. No account.**  
-Everything is processed and indexed privately, on your device, the moment a screenshot is taken. What you capture belongs entirely to you.
+The cloud does not deserve to see your life. Your flight bookings, medical receipts, order confirmations, and private notes belong on your silicon, inside your pocket, protected by your lock screen.
+
+---
+
+## ⏱️ Design Philosophy: Instrument-Grade Software
+
+Most software swings between two frustrating extremes:
+1. **Paternalistic Simplicity**: Dumbing down interfaces to the point where power users are blinded—stripping away numbers, hiding telemetry, and treating users like toddlers who can't handle the truth of their device.
+2. **The Spaghetti Extreme**: Dumping raw, hostile toggles, unstyled logcats, and cognitive chaos everywhere.
+
+Refind takes a third path: **Instrument-Grade Software**.
+- **Surface Elegance**: Fluid 120Hz spring physics, disciplined typography, edge-to-edge layout, and instantaneous search-as-you-type. The technology gets out of your way.
+- **Mechanical Honesty**: We don't hide the machine from you. The 180° radial arc gauge in the header gives you a live, analog-precision tachometer of your library's indexing state (`Ready • Pending • Failed`), rendered in crisp **JetBrains Mono**. It gives you a cockpit, not an idiot light.
+- **Structural Integrity**: Zero cloud dependencies. Every OCR token, trigram index, and search score is computed directly on your phone's processor.
 
 ---
 
@@ -95,10 +108,10 @@ Refind requests only the minimal permissions required to index and search screen
 
 ## 📦 Installation & Distribution
 
-- **Direct APK**: Download the latest release APK from [GitHub Releases](https://github.com/tanay-787/refind/releases).
-- **Auto-Updates with Obtainium**: Tap the badge below to automatically configure Refind in [Obtainium](https://github.com/ImranR98/Obtainium) for 1-click install and background update notifications directly from GitHub:  
+- **Direct APK**: Download the standalone signed APK from [GitHub Releases](https://github.com/tanay-787/refind/releases/latest).
+- **Auto-Updates via Obtainium**: Refind supports 1-click install and automated background update notifications directly from GitHub Releases using [Obtainium](https://github.com/ImranR98/Obtainium):  
+
   [![Add to Obtainium](https://img.shields.io/badge/Obtainium-Add%20to%20App-3DDC84?logo=android&logoColor=white)](https://api.obtainium.imranr.dev/redirect?r=https://github.com/tanay-787/refind)
-- *(Coming Soon: IzzyOnDroid & Google Play)*
 
 ---
 
